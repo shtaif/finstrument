@@ -4,6 +4,9 @@
   "main": "dist/index.js",
   "type": "module",
   "license": "MIT",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "bun --watch ./src/index.ts",
     "dev2": "ts-node-dev --env-file=.env -- ./src/index.ts",
