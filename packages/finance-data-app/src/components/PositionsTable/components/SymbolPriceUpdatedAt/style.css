@@ -1,0 +1,7 @@
+.symbol-price-updated-at {
+  .updated-x-ago-label {
+    display: inline-block;
+    white-space: nowrap;
+    font-size: 11.5px;
+  }
+}

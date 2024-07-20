@@ -1,0 +1,24 @@
+{
+  "name": "iterable-operators",
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {},
+  "dependencies": {
+    "@reactivex/ix-esnext-esm": "^5.0.0",
+    "iter-tools": "^7.5.3",
+    "iterified": "^1.2.3",
+    "ix": "^5.0.0",
+    "shared-utils": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^20.6.0",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-standard": "^17.1.0",
+    "prettier": "^3.3.2",
+    "typescript": "5.4.5"
+  }
+}

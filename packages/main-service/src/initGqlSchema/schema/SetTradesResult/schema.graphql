@@ -1,0 +1,23 @@
+type Mutation {
+  setTrades(input: SetTradesInput!): SetTradesResult!
+}
+
+input SetTradesInput {
+  mode: SetTradesInputMode!
+  data: SetTradesInputData!
+}
+
+input SetTradesInputData {
+  csv: String!
+}
+
+type SetTradesResult {
+  tradesAddedCount: Int!
+  tradesModifiedCount: Int!
+  tradesRemovedCount: Int!
+}
+
+enum SetTradesInputMode {
+  MERGE
+  REPLACE
+}

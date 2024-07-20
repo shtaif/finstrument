@@ -1,0 +1,16 @@
+type Query {
+  portfolioStatsChanges: [PortfolioStatsChange!]!
+}
+
+type PortfolioStatsChange {
+  relatedTradeId: ID!
+  ownerId: ID!
+  forCurrency: String
+  totalPresentInvestedAmount: Float!
+  totalRealizedAmount: Float!
+  totalRealizedProfitOrLossAmount: Float!
+  totalRealizedProfitOrLossRate: Float!
+  changedAt: DateTime!
+  composition: [SymbolPortfolioPortion!]!
+  relatedHoldingStatsChange: HoldingStatsChange!
+}

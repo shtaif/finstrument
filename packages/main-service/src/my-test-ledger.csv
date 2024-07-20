@@ -1,0 +1,12 @@
+﻿Trades,Header,Asset Category,Symbol,Date/Time,Quantity,T. Price
+Trades,Data,Stocks,ADBE,"2023-01-01, 00:00:00",5,100.00
+Trades,Data,Stocks,ADBE,"2023-01-02, 00:00:00",4,120.00
+Trades,Data,Stocks,ADBE,"2023-01-03, 00:00:00",-1,140.00
+Trades,Data,Stocks,ADBE,"2023-01-04, 00:00:00",-1,160.00
+Trades,Data,Stocks,ADBE,"2023-09-09, 00:00:00",9,99.00
+Trades,Data,Stocks,AAPL,"2023-02-01, 00:00:00",5,200.00
+Trades,Data,Stocks,AAPL,"2023-02-02, 00:00:00",4,220.00
+Trades,Data,Stocks,AAPL,"2023-02-03, 00:00:00",-2,240.00
+Trades,Data,Stocks,AAPL,"2023-02-04, 00:00:00",-1,260.00
+Trades,Data,Stocks,AAPL,"2023-02-05, 00:00:00",-1,260.00
+Trades,Data,Stocks,ADBE,"2023-09-10, 00:00:00",1,99.00

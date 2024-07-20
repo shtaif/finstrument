@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "include": ["./src/**/*"],
+  "compilerOptions": {
+    "outDir": "./dist",
+    // "module": "CommonJS",
+    // "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "strict": true,
+    "noImplicitAny": true,
+    "declaration": true,
+    "sourceMap": true,
+    "esModuleInterop": true, // TODO: Attempt to refactor all necessary `import`s across project so this can be removed for saving some package size?
+    "useDefineForClassFields": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  }
+}

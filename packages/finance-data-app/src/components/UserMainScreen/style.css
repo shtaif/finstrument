@@ -1,0 +1,8 @@
+.user-main-screen {
+  display: flex;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 7rem 2rem 2rem;
+  flex-direction: column;
+  place-items: center;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "finstrument",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "scripts": {},
+  "pnpm": {
+    "overrides": {
+      "---graphql": "npm:graphql-esm@^16.5.0",
+      "---@graphql-codegen/cli>graphql": "npm:graphql-esm@^16.5.0",
+      "---graphql-tag>graphql": "^16",
+      "---@graphql-codegen/typescript-resolvers>graphql": "^16"
+    }
+  },
+  "---@graphql-codegen/add>graphql": "npm:graphql@16.5.0",
+  "---@graphql-codegen/cli>graphql": "npm:graphql@16.5.0",
+  "---@graphql-codegen/introspection>graphql": "npm:graphql@16.5.0",
+  "---@graphql-codegen/typescript>graphql": "npm:graphql@16.5.0",
+  "---@graphql-codegen/typescript-resolvers>graphql": "npm:graphql@16.5.0",
+  "---@graphql-tools/schema>graphql": "npm:graphql@16.5.0",
+  "---@graphql-tools/utils>graphql": "npm:graphql@16.5.0"
+}

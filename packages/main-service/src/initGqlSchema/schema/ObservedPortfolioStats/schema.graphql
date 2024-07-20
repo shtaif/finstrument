@@ -1,0 +1,27 @@
+type Subscription {
+  portfolioStats: [ObservedPortfolioStatsUpdate!]!
+}
+
+type ObservedPortfolioStatsUpdate {
+  type: ObservedPortfolioStatsUpdateType!
+  data: ObservedPortfolioStats!
+}
+
+enum ObservedPortfolioStatsUpdateType {
+  SET
+  REMOVE
+}
+
+type ObservedPortfolioStats {
+  ownerId: ID!
+  relatedTradeId: ID!
+  forCurrency: String
+  lastChangedAt: DateTime!
+  totalPresentInvestedAmount: Float!
+  totalRealizedAmount: Float!
+  totalRealizedProfitOrLossAmount: Float!
+  totalRealizedProfitOrLossRate: Float!
+  unrealizedPnl: ProfitOrLoss!
+  # composition: [SymbolPortfolioPortion!]!
+  # relatedHoldingStats: HoldingStats!
+}

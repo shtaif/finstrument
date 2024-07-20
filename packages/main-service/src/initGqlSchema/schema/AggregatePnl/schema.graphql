@@ -1,0 +1,30 @@
+type Subscription {
+  aggregatePnl(
+    holdings: [AggregatePnlHoldingSpecifier!]
+    positions: [AggregatePnlPositionSpecifier!]
+  ): AggregatePnlChangeResult!
+}
+
+input AggregatePnlHoldingSpecifier {
+  symbol: ID!
+}
+
+input AggregatePnlPositionSpecifier {
+  positionId: ID!
+}
+
+type AggregatePnlChangeResult {
+  aggregates: [AggregatePnlResultItem!]!
+  translatedAggregates(currencies: [ID!]!): [AggregatePnlResultItemTranslated!]!
+}
+
+type AggregatePnlResultItem {
+  currency: ID
+  pnlAmount: Float!
+  pnlPercent: Float!
+}
+
+type AggregatePnlResultItemTranslated {
+  currency: ID!
+  pnlAmount: Float!
+}

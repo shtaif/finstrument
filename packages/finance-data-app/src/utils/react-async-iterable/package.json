@@ -1,0 +1,50 @@
+{
+  "name": "react-async-iterable",
+  "version": "0.0.1",
+  "author": "Dor Shtaif <dorshtaif@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/shtaif/react-async-iterable",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shtaif/react-async-iterable"
+  },
+  "description": "",
+  "sideEffects": false,
+  "keywords": [],
+  "main___": "./dist/cjs/index.js",
+  "module___": "./dist/esm/index.js",
+  "types___": "./dist/cjs/index.d.ts",
+  "exports___": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "ts-mocha -p ./tsconfig-cjs.json",
+    "build": "rimraf ./dist && tsc -p tsconfig-esm.json && tsc -p tsconfig-cjs.json && ts-node ./scripts/set-module-type-in-dist-builds.ts",
+    "check-typings": "tsc --noEmit -p ./tsconfig-esm.json",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^20.4.5",
+    "@types/sinon": "^10.0.16",
+    "@typescript-eslint/eslint-plugin": "^6.2.1",
+    "@typescript-eslint/parser": "^6.2.1",
+    "eslint": "^8.46.0",
+    "eslint-config-prettier": "^8.9.0",
+    "eslint-config-standard": "^17.1.0",
+    "expect": "^29.6.2",
+    "mocha": "^10.2.0",
+    "prettier": "^3.0.2",
+    "rimraf": "^5.0.1",
+    "sinon": "^15.2.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.2.2"
+  }
+}

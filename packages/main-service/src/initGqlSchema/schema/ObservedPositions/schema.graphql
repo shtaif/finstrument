@@ -1,0 +1,32 @@
+type Subscription {
+  positions(filters: PositionsSubscriptionFilters!): [ObservedPositionUpdate!]!
+}
+
+type ObservedPositionUpdate {
+  type: ObservedPositionUpdateType!
+  data: ObservedPosition!
+}
+
+enum ObservedPositionUpdateType {
+  SET
+  REMOVE
+}
+
+type ObservedPosition {
+  id: ID!
+  ownerId: ID!
+  openingTradeId: ID!
+  symbol: ID!
+  originalQuantity: Float!
+  remainingQuantity: Float!
+  realizedProfitOrLoss: Float!
+  openedAt: DateTime!
+  recordCreatedAt: DateTime!
+  recordUpdatedAt: DateTime!
+  priceData: InstrumentMarketData!
+  unrealizedPnl: ProfitOrLoss!
+}
+
+input PositionsSubscriptionFilters {
+  ids: [ID!]!
+}

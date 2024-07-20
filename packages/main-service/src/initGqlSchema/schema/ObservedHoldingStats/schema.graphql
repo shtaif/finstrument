@@ -1,0 +1,34 @@
+type Subscription {
+  holdingStats(filters: HoldingStatsSubscriptionFilters): [ObservedHoldingStatsUpdate!]!
+}
+
+input HoldingStatsSubscriptionFilters {
+  symbols: [ID!]
+}
+
+type ObservedHoldingStatsUpdate {
+  type: ObservedHoldingStatsUpdateType!
+  data: ObservedHoldingStats!
+}
+
+enum ObservedHoldingStatsUpdateType {
+  SET
+  REMOVE
+}
+
+type ObservedHoldingStats {
+  ownerId: ID!
+  lastRelatedTradeId: ID!
+  symbol: ID!
+  lastChangedAt: DateTime!
+  totalPositionCount: Int!
+  totalQuantity: Int!
+  totalPresentInvestedAmount: Float!
+  totalRealizedAmount: Float!
+  totalRealizedProfitOrLossAmount: Float!
+  totalRealizedProfitOrLossRate: Float!
+  currentPortfolioPortion: Float
+  breakEvenPrice: Float
+  priceData: InstrumentMarketData!
+  unrealizedPnl: ProfitOrLoss!
+}

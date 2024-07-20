@@ -1,0 +1,16 @@
+type InstrumentInfo {
+  symbol: ID!
+  name: String
+  currency: String
+  marketState: HoldingStatsMarketState!
+  regularMarketTime: DateTime!
+  regularMarketPrice: Float!
+  exchange: ExchangeInfo!
+}
+
+type ExchangeInfo {
+  mic: String
+  acronym: String
+  fullName: String
+  countryCode: String
+}

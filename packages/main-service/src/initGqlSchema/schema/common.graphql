@@ -1,0 +1,41 @@
+type RevenueInfo {
+  amount: Float!
+  percent: Float!
+}
+
+type PnlInfo {
+  amount: Float!
+  percent: Float!
+  currencyAdjusted(currency: String!): CurrencyAdjustedPnlInfo!
+}
+
+type CurrencyAdjustedPnlInfo {
+  currency: String!
+  exchangeRate: Float!
+  amount: Float!
+}
+
+"""
+Deprecated; use `PnlInfo` type instead
+"""
+type ProfitOrLoss {
+  amount: Float!
+  percent: Float!
+  currencyAdjusted(currency: String!): CurrencyAdjustedPnlInfo!
+}
+
+type InstrumentMarketData {
+  currency: String
+  marketState: HoldingStatsMarketState!
+  regularMarketTime: DateTime!
+  regularMarketPrice: Float!
+}
+
+enum HoldingStatsMarketState {
+  REGULAR
+  CLOSED
+  PRE
+  PREPRE
+  POST
+  POSTPOST
+}

@@ -1,0 +1,72 @@
+scalar DateTime
+
+type Query {
+  hello: String!
+  getSymbolPriceDataForTest: SymbolPriceData!
+  getSymbolHoldingForTest: HoldingRevenueChangeNotification!
+}
+
+type Subscription {
+  observePricesData(input: ObservePricesDataInput!): PriceDataChangeNotification!
+}
+
+input ObservePricesDataInput {
+  symbols: [String!]!
+}
+
+type PriceDataChangeNotification {
+  priceUpdates: [SymbolPriceData!]!
+}
+
+type SymbolPriceData {
+  symbol: ID!
+  regularMarketPrice: Float!
+  regularMarketTime: DateTime!
+}
+
+type Subscription {
+  observeHoldingRevenue(input: ObserveHoldingRevenueInput!): HoldingRevenueChangeNotification!
+}
+
+input ObserveHoldingRevenueInput {
+  userAlias: ID!
+}
+
+type HoldingRevenueChangeNotification {
+  changes: [HoldingRevenueChange!]!
+}
+
+type HoldingRevenueChange {
+  userAlias: ID!
+  symbol: ID!
+  holding: SymbolHolding!
+  revenue: RevenueInfo!
+  priceData: SymbolPriceData!
+}
+
+# ===============================================================
+
+type SymbolHolding {
+  userAlias: ID!
+  symbol: ID!
+  totalQuantity: Float!
+  breakEvenPrice: Float!
+  unrealizedProfit: PositionProfitInfo!
+  # priceData: SymbolPriceData!
+  positions: [SymbolPosition!]!
+}
+
+type PositionProfitInfo {
+  amount: Float!
+  percent: Float!
+}
+
+type SymbolPosition {
+  # symbol: ID!
+  createdAt: DateTime!
+  quantity: Int!
+  price: Float!
+  isRealized: Boolean!
+  realizedQuantity: Int!
+  # realizations: [SymbolPositionRealization!]!
+}

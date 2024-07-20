@@ -1,0 +1,25 @@
+type Query {
+  holdingStats(filters: HoldingStatsFilters): [HoldingStats!]!
+}
+
+type HoldingStats {
+  ownerId: ID!
+  lastRelatedTradeId: ID!
+  symbol: ID!
+  lastChangedAt: DateTime!
+  totalPositionCount: Int!
+  totalQuantity: Int!
+  totalPresentInvestedAmount: Float!
+  totalRealizedAmount: Float!
+  totalRealizedProfitOrLossAmount: Float!
+  totalRealizedProfitOrLossRate: Float!
+  currentPortfolioPortion: Float
+  breakEvenPrice: Float
+  instrument: InstrumentInfo!
+  relatedPortfolioStats: PortfolioStats!
+  unrealizedPnl: ProfitOrLoss!
+}
+
+input HoldingStatsFilters {
+  symbols: [ID!]
+}

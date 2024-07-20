@@ -1,0 +1,48 @@
+{
+  "name": "live-market-data-service",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "bun --watch ./src/index.ts",
+    "dev2": "ts-node-dev --env-file=.env -- ./src/index.ts",
+    "dev3": "tsx watch --clear-screen=false --env-file=.env ./src/index.ts",
+    "build": "rm -rf ./dist && tsc"
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^0.5.2",
+    "@reactivex/ix-esnext-esm": "^5.0.0",
+    "better-sse": "^0.9.0",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "http-terminator": "^3.2.0",
+    "iter-tools": "^7.5.3",
+    "iterable-operators": "workspace:^",
+    "iterified": "^1.2.5",
+    "lodash": "^4.17.21",
+    "shared-utils": "workspace:^",
+    "ws": "^8.18.0",
+    "yahoo-finance2": "^2.11.3",
+    "znv": "^0.4.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/body-parser": "^1.19.2",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.21",
+    "@types/lodash": "^4.14.195",
+    "@types/node": "^20.14.11",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
+    "eslint": "^8.45.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-standard": "^17.1.0",
+    "latest": "link:@types/node/latest",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.3.3",
+    "typescript": "5.5.3"
+  }
+}

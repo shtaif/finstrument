@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "files": ["./src/index.ts"],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "target": "ESNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "declaration": true,
+    "sourceMap": true,
+    "esModuleInterop": true, // TODO: Attempt to refactor all necessary `import`s across project so this can be removed for saving some package size?
+    "useDefineForClassFields": false,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
+}

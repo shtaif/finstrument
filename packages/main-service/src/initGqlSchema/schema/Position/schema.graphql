@@ -1,0 +1,27 @@
+type Query {
+  positions(filters: PositionsFilters): [Position!]!
+}
+
+type Position {
+  id: ID!
+  ownerId: ID!
+  openingTradeId: ID!
+  symbol: ID!
+  remainingQuantity: Float!
+  realizedProfitOrLoss: Float!
+  openedAt: DateTime!
+  recordCreatedAt: DateTime!
+  recordUpdatedAt: DateTime!
+  # owner: User!
+  instrument: InstrumentInfo!
+  priceData: InstrumentMarketData!
+  unrealizedPnl: ProfitOrLoss!
+}
+
+input PositionsFilters {
+  ids: [ID!]
+  symbols: [ID!]
+}
+
+# owner!: UserModel;
+# positionClosings!: PositionClosingModel[];
