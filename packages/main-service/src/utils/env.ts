@@ -10,8 +10,8 @@ const envShapeDef = {
   LIVE_MARKET_PRICES_SERVICE_WS_URL: z.string().url().min(1),
   REDIS_CONNECTION_URL: z.string().url().min(1),
   POSTGRES_DB_CONNECTION_URL: z.string().url().min(1),
-  DB_LOGGING: z.boolean().default(false),
-  ENABLE_NGROK_TUNNEL: z.boolean().default(false),
+  DB_LOGGING: z.coerce.boolean().default(false),
+  ENABLE_NGROK_TUNNEL: z.coerce.boolean().default(false),
   NGROK_TUNNEL_AUTH_TOKEN: z.string().optional(),
 };
 
