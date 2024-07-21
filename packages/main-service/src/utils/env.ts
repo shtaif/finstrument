@@ -3,14 +3,14 @@ import { parseEnv, z, port } from 'znv';
 export { parsedEnvPatchedWithExplicitTyping as env };
 
 const envShapeDef = {
+  NODE_ENV: z.enum(['test', 'development', 'production']).default('development'),
+  PORT: port().default(3000),
   INSTRUMENT_INFO_SERVICE_URL: z.string().url().min(1),
   LIVE_MARKET_PRICES_SERVICE_URL: z.string().url().min(1),
   LIVE_MARKET_PRICES_SERVICE_WS_URL: z.string().url().min(1),
-  DB_LOGGING: z.boolean().default(false),
   REDIS_CONNECTION_URL: z.string().url().min(1),
   POSTGRES_DB_CONNECTION_URL: z.string().url().min(1),
-  PORT: port().default(3000),
-  NODE_ENV: z.enum(['test', 'development', 'production']).default('development'),
+  DB_LOGGING: z.boolean().default(false),
   ENABLE_NGROK_TUNNEL: z.boolean().default(false),
   NGROK_TUNNEL_AUTH_TOKEN: z.string().optional(),
 };
