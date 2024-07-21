@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { keyBy } from 'lodash';
 import { z } from 'zod';
 import { parse as csvParse } from 'csv-parse/sync';
@@ -9,10 +8,9 @@ export { getIso10383MarketIdentifiersData, type MicDatasetRecord };
 async function getIso10383MarketIdentifiersData(): Promise<{ [mic: string]: MicDatasetRecord }> {
   entireMicDatasetPromise ??= (async () => {
     return pipe(
-      parseCsvMicDataset(
-        await readFile(new URL(`./iso10383-market-identifiers-data.csv`, import.meta.url), 'utf-8')
-      ),
-      micDatasetArray => keyBy(micDatasetArray, ({ mic }) => mic)
+      await import('./iso10383-market-identifiers-data-csv.js'),
+      mod => parseCsvMicDataset(mod.iso10383marketIdentifiersDataCsv),
+      micDatasetArr => keyBy(micDatasetArr, ({ mic }) => mic)
     );
   })();
   return entireMicDatasetPromise;
