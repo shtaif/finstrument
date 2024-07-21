@@ -2,10 +2,8 @@ FROM node:22-alpine AS build
 WORKDIR /app
 RUN npm i --global pnpm
 COPY . .
-RUN \
-  pnpm i --no-frozen-lockfile --filter=main-service && \
-  cd ./packages/main-service && \
-  pnpm build-and-deploy
+RUN pnpm i --no-frozen-lockfile
+RUN cd ./packages/main-service && pnpm build-and-deploy
 
 FROM oven/bun:1.1.20-alpine
 WORKDIR /app
