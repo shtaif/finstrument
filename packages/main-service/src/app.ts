@@ -91,7 +91,21 @@ async function startApp(): Promise<() => Promise<void>> {
     gracefulTerminationTimeout: 4500,
   });
 
-  await Promise.all([initDbSchema(), mainRedisClient.connect(), subscriberRedisClient.connect()]);
+  await Promise.all([
+    initDbSchema(),
+    mainRedisClient.connect().catch((err: any) => {
+      throw new Error(
+        `Failed to connect to Redis with url "${mainRedisClient.options?.url}" (should recheck all other options as well!)`,
+        { cause: err }
+      );
+    }),
+    subscriberRedisClient.connect().catch((err: any) => {
+      throw new Error(
+        `Failed to connect to Redis with url "${subscriberRedisClient.options?.url}" (should recheck all other options as well!)`,
+        { cause: err }
+      );
+    }),
+  ]);
 
   const [[user] /*, testLedgerCsv*/] = await Promise.all([
     UserModel.findOrCreate({ where: { alias: 'dorshtaif' } }),
