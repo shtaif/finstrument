@@ -16,11 +16,11 @@
     "dev:app1___": "ts-node-dev --inspect --env-file=.env -- ./src/index.ts",
     "dev:app2___": "tsx watch --clear-screen=false --env-file=.env ./src/index.ts",
     "dev:app3___": "NODE_OPTIONS=\"--env-file=.env\" ts-node-esm ./src/index.ts",
-    "dev:gql-codegen-watch": "cd ../finance-data-service-gql-codegen && pnpm start",
+    "dev:gql-codegen-watch": "cd ../main-service-gql-codegen && pnpm start",
     "dev:gql-codegen-watch___": "graphql-codegen-esm --config ./gql-codegen-config.ts",
     "test": "NODE_COMPILE_CACHE=./_node_compile_cache vitest run --config ./spec/vitest.config.ts",
     "dev:test": "NODE_COMPILE_CACHE=./_node_compile_cache vitest --config ./spec/vitest.config.ts",
-    "dev:test-with-gql-codegen": "concurrently -r -P \"cd ../finance-data-service-gql-codegen && pnpm start\" \"pnpm dev:test {*}\"",
+    "dev:test-with-gql-codegen": "concurrently -r -P \"cd ../main-service-gql-codegen && pnpm start\" \"pnpm dev:test {*}\"",
     "build": "rm -rf ./dist && tsc --outDir ./dist && copyfiles -u 1 ./src/**/*.graphql ./dist/",
     "build-and-deploy": "pnpm build && pnpm deploy --prod --filter=${npm_package_name} ./deployed"
   },

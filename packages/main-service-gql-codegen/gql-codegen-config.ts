@@ -4,9 +4,9 @@ export default {
   watch: true,
   overwrite: true,
   emitLegacyCommonJSImports: false,
-  schema: '../finance-data-service/src/initGqlSchema/**/*.graphql',
+  schema: '../main-service/src/initGqlSchema/**/*.graphql',
   generates: {
-    '../finance-data-service/src/generated/graphql-schema.d.ts': {
+    '../main-service/src/generated/graphql-schema.d.ts': {
       plugins: [
         'typescript',
         'typescript-resolvers',

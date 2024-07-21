@@ -1,5 +1,5 @@
 {
-  "name": "finance-data-service-gql-codegen",
+  "name": "main-service-gql-codegen",
   "version": "0.0.1",
   "main": "index.js",
   "type": "module",
