@@ -2,8 +2,8 @@
 
 docker buildx build \
   -t finstrument/main-service \
-  -f "$(dirname "$0")"/main-service.dockerfile \
-  "$(dirname "$0")"/.
+  -f "$(dirname "$0")"/dockerfile \
+  "$(dirname "$0")"/../../.
 
 # docker run \
 #   -it \
