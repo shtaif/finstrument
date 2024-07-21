@@ -9,10 +9,12 @@ export { createGraphqlAppMiddleware };
 async function createGraphqlAppMiddleware(): Promise<{
   graphqlAppMiddleware: express.RequestHandler;
 }> {
-  const apolloServer = new ApolloServer<object>({
+  const apolloServer = new ApolloServer<{}>({
     schema: initedGqlSchema,
     plugins: [],
     introspection: true,
+    status400ForVariableCoercionErrors: true,
+    nodeEnv: 'development', // This is given to enable the GraphQL Explorer for us ALSO in production for the meantime
   });
 
   await apolloServer.start();
