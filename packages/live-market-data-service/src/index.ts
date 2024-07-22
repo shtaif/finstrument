@@ -17,7 +17,7 @@ import { appApiRoutes } from './appApiRoutes/index.js';
       .use('/api', appApiRoutes)
   );
 
-  const webSocketApp = listenWebSocketApp({ port: env.WS_PORT });
+  const webSocketApp = listenWebSocketApp({ server: httpServer });
 
   const httpTerminator = createHttpTerminator({
     server: httpServer,
@@ -62,13 +62,3 @@ import { appApiRoutes } from './appApiRoutes/index.js';
     );
   }
 })();
-
-/*
-
-const serviceBaseUrl = 'http://localhost:3002';
-const es = new EventSource(`${serviceBaseUrl}/api/live-symbol-prices?symbols=voo,splg,intc,nvda`);
-es.addEventListener('message', ev => {
-	console.log(JSON.parse(ev.data));
-});
-
-*/

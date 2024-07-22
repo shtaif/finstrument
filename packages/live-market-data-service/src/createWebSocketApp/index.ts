@@ -1,6 +1,6 @@
 import { once } from 'node:events';
 import { z } from 'zod';
-import { WebSocket, WebSocketServer, type RawData } from 'ws';
+import { WebSocket, WebSocketServer, type RawData, type ServerOptions } from 'ws';
 import { itMap, itSwitchMap, itTakeUntil } from 'iterable-operators';
 import { pipe } from 'shared-utils';
 import { itOnNodeEvent } from '../utils/itOnNodeEvent.js';
@@ -8,11 +8,9 @@ import { observeMarketData } from '../utils/observeMarketData/index.js';
 
 export { listenWebSocketApp };
 
-function listenWebSocketApp(params: { port: number }): WebSocketServer {
-  const { port } = params;
-
+function listenWebSocketApp(opts: Omit<ServerOptions, 'path'>): WebSocketServer {
   const webSocketApp = new WebSocketServer({
-    port,
+    ...opts,
     path: '/market-data',
   });
 
