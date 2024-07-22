@@ -45,7 +45,6 @@ import { appApiRoutes } from './appApiRoutes/index.js';
   console.log(
     [
       `🚀 Server listening on port ${env.PORT}`,
-      `🚀 WS server listening to port ${env.WS_PORT}`,
       ngrokPublicUrl ? `, public URL: ${ngrokPublicUrl}` : '',
     ]
       .filter(Boolean)
