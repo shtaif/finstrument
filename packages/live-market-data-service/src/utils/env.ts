@@ -5,7 +5,6 @@ export { parsedEnvPatchedWithExplicitTyping as env };
 const envShapeDef = {
   NODE_ENV: z.enum(['test', 'development', 'production']).default('development'),
   PORT: port().default(3000),
-  WS_PORT: port().default(3001),
   SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS: z.coerce.number().default(2000),
   MOCK_SYMBOLS_MARKET_DATA: z.coerce.boolean().default(false),
   ENABLE_NGROK_TUNNEL: z.coerce.boolean().default(false),
