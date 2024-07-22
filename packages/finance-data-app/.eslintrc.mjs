@@ -1,10 +1,9 @@
-module.exports = {
+export default {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
     'prettier',
-    // TODO: Should I do `pnpm add -D eslint-config-prettier` and consequently add here `prettier`?...
   ],
   env: {
     browser: true,

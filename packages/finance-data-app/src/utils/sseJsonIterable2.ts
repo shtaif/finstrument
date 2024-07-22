@@ -64,13 +64,13 @@ function sseJsonIterable2<T>(
             mergedEventsIterator.return!();
             eventSource.close();
             return {
-              done: true,
+              done: true as const,
               value: undefined,
             };
           },
         };
       },
     },
-    iter => shareAsyncIter(iter)
+    shareAsyncIter()
   );
 }

@@ -5,14 +5,12 @@ import { createClient as createGqlWsClient } from 'graphql-ws';
 
 export { gqlClient, gqlWsClient };
 
-const BACKEND_DOMAIN_AND_PATH = 'localhost:3001/graphql';
-
 const gqlWsClient = createGqlWsClient({
-  url: `ws://${BACKEND_DOMAIN_AND_PATH}`,
+  url: `ws://${process.env.API_HOST || 'localhost:3001'}/graphql`,
 });
 
 const httpLink = new HttpLink({
-  uri: `http://${BACKEND_DOMAIN_AND_PATH}`,
+  uri: `http://${process.env.API_HOST || 'localhost:3001'}/graphql`,
 });
 
 const wsLink = new GraphQLWsLink(gqlWsClient);

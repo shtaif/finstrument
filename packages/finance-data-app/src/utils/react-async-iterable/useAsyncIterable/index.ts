@@ -88,7 +88,7 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   }, [asyncIterOrValue]);
 
   if (!isAsyncIterable(asyncIterOrValue)) {
-    return [asyncIterOrValue, false, false, undefined];
+    return [asyncIterOrValue as ExtractAsyncIterableValue<TValue>, false, false, undefined];
   }
   if (isPendingFirstIteration) {
     return [currValue, true, false, undefined];
@@ -134,6 +134,8 @@ function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIt
 // type ___1 = ExtractAsyncIterableValue<AsyncIterable<'a' | 'b'>>;
 // type ___2 = ExtractAsyncIterableValue<Promise<'a' | 'b'>>;
 // type ___3 = ExtractAsyncIterableValue<'a' | 'b'>;
+
+/*
 
 // type MyTuple = ['a', 'b', 'c', 'd'];
 type MyTuple = ['a', 'b', ...([true] | [false])];
@@ -256,3 +258,5 @@ type TupleSplitTail<T, N extends number, O extends any[] = []> = O['length'] ext
 type TupleSplit<T extends any[], N extends number> = [TupleSplitHead<T, N>, TupleSplitTail<T, N>];
 
 type ModifiedTupleSplit = TupleSplitHead<MyTuple2<string>, 2>;
+
+*/

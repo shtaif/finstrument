@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+// import { type MaybeAsyncIterable } from 'iterable-operators';
 
 export { useAsyncIterableState, type UseAsyncIterableStateReturn };
 
@@ -79,7 +80,12 @@ function useAsyncIterableState<TValue, TInitialValue = undefined>(
   }, [asyncIterOrValue]);
 
   if (!isAsyncIterable(asyncIterOrValue)) {
-    return [asyncIterOrValue, false, false, undefined];
+    return [
+      asyncIterOrValue as ExtractAsyncIterableValue<TValue> | TInitialValue,
+      false,
+      false,
+      undefined,
+    ];
   }
   if (isPendingFirstIteration) {
     return [currValue, true, false, undefined];
@@ -107,6 +113,16 @@ function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIt
   return typeof (input as any)?.[Symbol.asyncIterator] === 'function';
 }
 
+// function isAsyncIterable3<T>(input: T): input is T extends AsyncIterable<infer J> ? T & AsyncIterable<ExtractAsyncIterableValue<T>> {
+//   return typeof (input as any)?.[Symbol.asyncIterator] === 'function';
+// }
+
+// function isAsyncIterable2<T extends MaybeAsyncIterable<unknown>>(
+//   input: T
+// ): input is T & AsyncIterable<unknown> {
+//   return typeof (input as any)?.[Symbol.asyncIterator] === 'function';
+// }
+
 // ##################################################################################################################################
 // ##################################################################################################################################
 // ##################################################################################################################################
@@ -124,6 +140,8 @@ function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIt
 
 type ExtractAsyncIterableValue<T> = T extends AsyncIterable<infer Val> ? Val : T;
 
+/*
+
 // type ___1 = ExtractAsyncIterableValue<AsyncIterable<'a' | 'b'>>;
 // type ___2 = ExtractAsyncIterableValue<Promise<'a' | 'b'>>;
 // type ___3 = ExtractAsyncIterableValue<'a' | 'b'>;
@@ -133,7 +151,7 @@ type MyTuple = ['a', 'b', ...([true] | [false])];
 
 type MyFunction = (...args: [] | MyTuple) => void;
 
-const myFunction: MyFunction = (param1, param2) => {};
+const myFunction: MyFunction = ((param1: any, param2: any) => {}) as any;
 
 type MyTuple2<TValue, TInitialValue = undefined> = [
   lastRecentValue: TValue | TInitialValue,
@@ -177,7 +195,7 @@ type MyFunction2<TValue, TInitialValue = undefined> =
 //   | ((...args: MyTuple2SlicedToTwo<TValue, TInitialValue>) => void)
 //   | ((...args: MyTuple2SlicedToOne<TValue, TInitialValue>) => void);
 
-const myFunction2: MyFunction2<string, undefined> = (arg1, arg2) => {
+const myFunction2: MyFunction2<string, undefined> = (arg1: any, arg2: any) => {
   // if (!arg3) {
   //   // arg4;
   // }
@@ -197,10 +215,10 @@ type MyFunction3<TFunc extends (...args: any) => any> = TFunc extends (
 ) => any
   ? (...args: ['a1', 'b1', 'c1'] | ['a2', 'b2']) => void
   : TFunc extends (arg1: any, arg2: any) => any
-  ? (...args: ['a2', 'b2']) => void
-  : TFunc extends (arg1: any) => any
-  ? (...args: ['a3']) => void
-  : never;
+    ? (...args: ['a2', 'b2']) => void
+    : TFunc extends (arg1: any) => any
+      ? (...args: ['a3']) => void
+      : never;
 
 const myFunction3 = <TFunc extends (...args: any) => any>(inputFn: MyFunction3<TFunc>) => {
   // return inputFn();
@@ -228,7 +246,7 @@ type MyFunction4<TValue, TInitialValue = undefined> =
       error: undefined
     ) => void);
 
-const myFunction4: MyFunction4<string, undefined> = (a, b, c, d) => {};
+const myFunction4: MyFunction4<string, undefined> = (a: any, b: any, c: any, d: any) => {};
 
 // type ParametersExceptLast<F> = F extends (...rest: infer R, lastArg: any) => any ? R : never;
 
@@ -237,15 +255,17 @@ const myFunction4: MyFunction4<string, undefined> = (a, b, c, d) => {};
 type TupleSplitHead<T extends any[], N extends number> = T['length'] extends N
   ? T
   : T extends [...infer R, any]
-  ? TupleSplitHead<R, N>
-  : never;
+    ? TupleSplitHead<R, N>
+    : never;
 
 type TupleSplitTail<T, N extends number, O extends any[] = []> = O['length'] extends N
   ? T
   : T extends [infer F, ...infer R]
-  ? TupleSplitTail<[...R], N, [...O, F]>
-  : never;
+    ? TupleSplitTail<[...R], N, [...O, F]>
+    : never;
 
 type TupleSplit<T extends any[], N extends number> = [TupleSplitHead<T, N>, TupleSplitTail<T, N>];
 
 type ModifiedTupleSplit = TupleSplitHead<MyTuple2<string>, 2>;
+
+*/

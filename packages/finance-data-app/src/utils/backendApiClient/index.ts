@@ -58,7 +58,7 @@ async function getCurrentRevenueData(params: { userAlias: string }): Promise<Rev
   }
 }
 
-const backendApiBaseUrl = 'http://localhost:3001/api';
+const backendApiBaseUrl = `http://${process.env.API_HOST || 'localhost:3001'}/api`;
 
 type RevenueDataMessage = {
   updatesBySymbol: {
