@@ -1,5 +1,5 @@
-import { iterified } from 'iterified';
 import { on } from 'node:events';
+import { iterified } from 'iterified';
 
 export { itOnNodeEvent };
 
@@ -13,7 +13,7 @@ function itOnNodeEvent<TValues extends unknown[] = any[]>(
     (async () => {
       const emissions = on(emitter, eventName, {
         signal: abortCtrl.signal,
-      });
+      }) as AsyncIterableIterator<TValues>;
 
       try {
         for await (const emission of emissions) {
