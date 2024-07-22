@@ -8,8 +8,8 @@ docker buildx build \
 # docker run \
 #   -it \
 #   --init \
-#   -e NODE_ENV="production" \
 #   -p 3001:3001 \
+#   -e NODE_ENV="production" \
 #   -e PORT="3001" \
 #   -e LIVE_MARKET_PRICES_SERVICE_URL="http://host.docker.internal:3002" \
 #   -e LIVE_MARKET_PRICES_SERVICE_WS_URL="ws://host.docker.internal:3003" \

@@ -1,0 +1,20 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+RUN npm i --global pnpm
+COPY . .
+RUN pnpm i --no-frozen-lockfile
+RUN cd ./packages/live-market-data-service && pnpm build-and-deploy
+
+FROM oven/bun:1.1.20-alpine
+WORKDIR /app
+COPY --from=build ./app/packages/live-market-data-service/deployed .
+EXPOSE 3000
+ENV \
+  NODE_ENV=production \
+  PORT=3000 \
+  WS_PORT=3001 \
+  MOCK_SYMBOLS_MARKET_DATA=false \
+  SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS=1000 \
+  ENABLE_NGROK_TUNNEL=false \
+  NGROK_TUNNEL_AUTH_TOKEN=
+ENTRYPOINT ["bun", "./dist/index.js"]
