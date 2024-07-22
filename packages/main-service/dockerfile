@@ -3,11 +3,15 @@ WORKDIR /app
 RUN npm i --global pnpm
 COPY . .
 RUN pnpm i --no-frozen-lockfile
-RUN cd ./packages/main-service && pnpm build-and-deploy
+RUN \
+  cd ./packages/main-service && \
+  pnpm deploy --prod --filter=main-service ./dist && \
+  pnpm exec tsc --outDir ./dist && \
+  pnpm exec copyfiles -u 1 ./src/**/*.graphql ./dist
 
 FROM oven/bun:1.1.20-alpine
 WORKDIR /app
-COPY --from=build ./app/packages/main-service/deployed .
+COPY --from=build ./app/packages/main-service/dist .
 EXPOSE 3000
 ENV \
   NODE_ENV=production \
@@ -20,6 +24,6 @@ ENV \
   ENABLE_NGROK_TUNNEL=$ENABLE_NGROK_TUNNEL \
   NGROK_TUNNEL_AUTH_TOKEN=$NGROK_TUNNEL_AUTH_TOKEN \
   DB_LOGGING=$DB_LOGGING
-ENTRYPOINT ["bun", "./dist/index.js"]
+ENTRYPOINT ["bun", "./index.js"]
 
 # https://github.com/pnpm/pnpm/issues/3114#issuecomment-1512805370
