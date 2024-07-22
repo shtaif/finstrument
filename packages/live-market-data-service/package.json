@@ -4,15 +4,9 @@
   "main": "dist/index.js",
   "type": "module",
   "license": "MIT",
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "dev": "bun --watch ./src/index.ts",
-    "dev2": "ts-node-dev --env-file=.env -- ./src/index.ts",
-    "dev3": "tsx watch --clear-screen=false --env-file=.env ./src/index.ts",
-    "build": "rm -rf ./dist && tsc --outDir ./dist",
-    "build-and-deploy": "pnpm build && pnpm deploy --prod --filter=${npm_package_name} ./deployed"
+    "build": "rm -rf ./dist && tsc --outDir ./dist"
   },
   "dependencies": {
     "@ngrok/ngrok": "^0.5.2",

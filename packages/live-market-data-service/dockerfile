@@ -3,11 +3,15 @@ WORKDIR /app
 RUN npm i --global pnpm
 COPY . .
 RUN pnpm i --no-frozen-lockfile
-RUN cd ./packages/live-market-data-service && pnpm build-and-deploy
+RUN \
+  cd ./packages/live-market-data-service && \
+  pnpm deploy --prod --filter=live-market-data-service ./dist && \
+  pnpm exec tsc --outDir ./dist && \
+  pnpm exec copyfiles -u 1 ./src/**/*.graphql ./dist
 
 FROM oven/bun:1.1.20-alpine
 WORKDIR /app
-COPY --from=build ./app/packages/live-market-data-service/deployed .
+COPY --from=build ./app/packages/live-market-data-service/dist .
 EXPOSE 3000
 ENV \
   NODE_ENV=production \
@@ -16,4 +20,4 @@ ENV \
   SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS=1000 \
   ENABLE_NGROK_TUNNEL=false \
   NGROK_TUNNEL_AUTH_TOKEN=
-ENTRYPOINT ["bun", "./dist/index.js"]
+ENTRYPOINT ["bun", "./index.js"]
