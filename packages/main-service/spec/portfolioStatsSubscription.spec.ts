@@ -1019,8 +1019,6 @@ describe('Subscription.portfolioStats ', () => {
               }
             }`,
         });
-        
-        // 19048h$
 
         const emissions = await pipe(subscription, itTake(3), itCollect);
 
@@ -1070,5 +1068,164 @@ describe('Subscription.portfolioStats ', () => {
         ]);
       }
     );
+
+    describe('With `unrealized.currencyAdjusted` field', () => {
+      it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+        await TradeRecordModel.bulkCreate([
+          { ...reusableTradeDatas[0], symbol: 'VUAG' },
+          { ...reusableTradeDatas[1], symbol: 'ADBE' },
+        ]);
+        await HoldingStatsChangeModel.bulkCreate([
+          {
+            ...reusableHoldingStats[0],
+            symbol: 'VUAG',
+            totalPositionCount: 2,
+            totalQuantity: 2,
+            totalPresentInvestedAmount: 2.2,
+          },
+          {
+            ...reusableHoldingStats[1],
+            symbol: 'ADBE',
+            totalPositionCount: 2,
+            totalQuantity: 2,
+            totalPresentInvestedAmount: 2.3,
+          },
+        ]);
+        await PortfolioStatsChangeModel.bulkCreate([
+          {
+            relatedTradeId: reusableTradeDatas[0].id,
+            ownerId: mockUserId1,
+            forCurrency: 'GBP',
+            changedAt: reusableTradeDatas[0].performedAt,
+            totalPresentInvestedAmount: 2.2,
+          },
+          {
+            relatedTradeId: reusableTradeDatas[1].id,
+            ownerId: mockUserId1,
+            forCurrency: 'USD',
+            changedAt: reusableTradeDatas[1].performedAt,
+            totalPresentInvestedAmount: 2.3,
+          },
+        ]);
+
+        mockMarketDataControl.onConnectionSend([
+          {
+            ['VUAG']: { regularMarketPrice: 1.5 },
+            ['ADBE']: { regularMarketPrice: 1.5 },
+            ['GBPEUR=X']: { regularMarketPrice: 2 },
+            ['USDEUR=X']: { regularMarketPrice: 3 },
+          },
+          {
+            ['VUAG']: { regularMarketPrice: 1.6 },
+            ['GBPEUR=X']: { regularMarketPrice: 2 },
+            ['USDEUR=X']: { regularMarketPrice: 3 },
+          },
+          {
+            ['ADBE']: { regularMarketPrice: 1.6 },
+            ['GBPEUR=X']: { regularMarketPrice: 2 },
+            ['USDEUR=X']: { regularMarketPrice: 3 },
+          },
+        ]);
+
+        const subscription = gqlWsClient.iterate({
+          query: `
+            subscription {
+              portfolioStats {
+                data {
+                  forCurrency
+                  unrealizedPnl {
+                    amount
+                    percent
+                    currencyAdjusted (currency: "EUR") {
+                      currency
+                      exchangeRate
+                      amount
+                    }
+                  }
+                }
+              }
+            }`,
+        });
+
+        const emissions = await asyncPipe(subscription, itTake(3), itCollect);
+
+        expect(emissions).toStrictEqual([
+          {
+            data: {
+              portfolioStats: [
+                {
+                  data: {
+                    forCurrency: 'USD',
+                    unrealizedPnl: {
+                      amount: 0.7,
+                      percent: 30.434782608696,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 3,
+                        amount: 2.1000000000000005,
+                      },
+                    },
+                  },
+                },
+                {
+                  data: {
+                    forCurrency: 'GBP',
+                    unrealizedPnl: {
+                      amount: 0.8,
+                      percent: 36.363636363636,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 1.5999999999999996,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              portfolioStats: [
+                {
+                  data: {
+                    forCurrency: 'GBP',
+                    unrealizedPnl: {
+                      amount: 1,
+                      percent: 45.454545454545,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 2,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              portfolioStats: [
+                {
+                  data: {
+                    forCurrency: 'USD',
+                    unrealizedPnl: {
+                      amount: 0.9,
+                      percent: 39.130434782609,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 3,
+                        amount: 2.700000000000001,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ]);
+      });
+    });
   });
 });

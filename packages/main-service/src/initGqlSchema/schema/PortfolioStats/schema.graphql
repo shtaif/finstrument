@@ -13,5 +13,5 @@ type PortfolioStats {
   totalRealizedProfitOrLossRate: Float!
   composition: [SymbolPortfolioPortion!]!
   relatedHoldingStats: HoldingStats!
-  unrealizedPnl: ProfitOrLoss!
+  unrealizedPnl: PnlInfo!
 }

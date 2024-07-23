@@ -15,15 +15,6 @@ type CurrencyAdjustedPnlInfo {
   amount: Float!
 }
 
-"""
-Deprecated; use `PnlInfo` type instead
-"""
-type ProfitOrLoss {
-  amount: Float!
-  percent: Float!
-  currencyAdjusted(currency: String!): CurrencyAdjustedPnlInfo!
-}
-
 type InstrumentMarketData {
   currency: String
   marketState: HoldingStatsMarketState!

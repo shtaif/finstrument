@@ -1,7 +1,7 @@
-import { intersection, isEqual } from 'lodash';
+import { compact, intersection, isEqual } from 'lodash';
 import { type Optional } from 'utility-types';
 import { pipe, typedObjectKeys } from 'shared-utils';
-import { itFilter, itLazyDefer, itMap, myIterableCleanupPatcher } from 'iterable-operators';
+import { itFilter, itLazyDefer, itMap } from 'iterable-operators';
 import type {
   Resolvers,
   Subscription,
@@ -32,7 +32,7 @@ const resolvers = {
 
         const requestedObservableFields = intersection(
           observableFields,
-          typedObjectKeys(requestedFields.data.subFields)
+          typedObjectKeys(requestedFields.data?.subFields ?? {})
         ) as typeof observableFields;
 
         const specifiers = [
@@ -43,17 +43,27 @@ const resolvers = {
           },
         ] satisfies PortfolioObjectSpecifier[];
 
+        const translateCurrency =
+          requestedFields.data?.subFields.unrealizedPnl?.subFields.currencyAdjusted?.args.currency;
+
         return pipe(
           getLiveMarketData({
             specifiers,
-            include: { unrealizedPnl: !!requestedFields.data.subFields.unrealizedPnl },
+            translateToCurrencies: compact([translateCurrency]),
+            include: { unrealizedPnl: !!requestedFields.data?.subFields.unrealizedPnl },
           }),
           itMap(updates =>
             updates.portfolios.map(({ type, portfolio, pnl }) => ({
               type,
               data: {
                 ...portfolio,
-                unrealizedPnl: { ...pnl, currencyAdjusted: {} as any },
+                unrealizedPnl: !pnl
+                  ? undefined
+                  : {
+                      percent: pnl.percent,
+                      amount: pnl.amount,
+                      currencyAdjusted: pnl.byTranslateCurrencies[0],
+                    },
               },
             }))
           ),
@@ -70,7 +80,6 @@ const resolvers = {
                     const ownerIdAndCurrency = `${update.data.ownerId}_${update.data.forCurrency ?? ''}`;
                     return (
                       update.type === 'REMOVE' ||
-                      // !allPStatsData[ownerIdAndCurrency] ||
                       requestedObservableFields.some(reqField => {
                         const [fieldPreUpdate, fieldPostUpdate] = [
                           allPStatsData[ownerIdAndCurrency]?.[reqField],
@@ -94,17 +103,7 @@ const resolvers = {
                 })
               );
             }),
-          myIterableCleanupPatcher(async function* (source) {
-            const iterator = source[Symbol.asyncIterator]();
-            const initial = await iterator.next();
-            if (!initial.done) {
-              yield initial.value;
-            }
-            yield* pipe(
-              { [Symbol.asyncIterator]: () => iterator },
-              itFilter(relevantChangedPStats => !!relevantChangedPStats.length)
-            );
-          }),
+          itFilter((relevantChangedPStats, i) => i === 0 || !!relevantChangedPStats.length),
           itMap(relevantPStatsUpdates => ({
             portfolioStats: relevantPStatsUpdates,
           }))

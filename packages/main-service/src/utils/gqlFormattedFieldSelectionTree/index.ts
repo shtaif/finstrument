@@ -1,9 +1,16 @@
+import { DeepNonNullable } from 'utility-types';
 import {
   responsePathAsArray,
   Kind,
+  getArgumentValues,
+  isObjectType,
+  getNamedType,
   type GraphQLResolveInfo,
   type FieldNode,
+  type GraphQLNamedOutputType,
+  type SelectionNode,
 } from 'graphql/index.js';
+import type { Resolver, Resolvers } from '../../generated/graphql-schema.d.js';
 
 export { gqlFormattedFieldSelectionTree };
 
@@ -27,31 +34,69 @@ function gqlFormattedFieldSelectionTree<TPossibleFields extends {}>(
   }
 
   const gqlBaseSelectionArr = currGqlSelectionsArr;
-  const formattedSelectionTree = {} as Record<string, { subFields: {} }>;
+  const gqlBaseReturnTypeDef = getNamedType(gqlResolveInfo.returnType);
+  const formattedSelectionTreeResult = {} as Record<string, { subFields: {}; args: {} }>;
 
-  (function recurse(currGqlSelectionsArr, currSelectionNode) {
+  (function recurse(
+    currGqlSelectionsArr: readonly SelectionNode[],
+    currGqlParentCurrFieldDef: GraphQLNamedOutputType,
+    currResultNode: Record<string, { subFields: {}; args: {} }>
+  ) {
+    const currChildFieldMap = isObjectType(currGqlParentCurrFieldDef)
+      ? currGqlParentCurrFieldDef.getFields()
+      : {};
+
     for (const sel of currGqlSelectionsArr) {
       if (sel.kind === Kind.FIELD) {
-        const newFieldNode = { subFields: {} };
-        currSelectionNode[sel.name.value] = newFieldNode;
-        if (sel.selectionSet) {
-          recurse(sel.selectionSet.selections, newFieldNode.subFields);
+        const selFieldDef = currChildFieldMap[sel.name.value];
+
+        const newResultNode = {
+          subFields: {},
+          args: getArgumentValues(selFieldDef, sel),
+        };
+
+        currResultNode[sel.name.value] = newResultNode;
+
+        gqlResolveInfo.schema.getType(selFieldDef.name);
+
+        const selFieldTypeUnwrapped = getNamedType(selFieldDef.type);
+
+        if (sel.selectionSet && isObjectType(selFieldTypeUnwrapped)) {
+          recurse(sel.selectionSet.selections, selFieldTypeUnwrapped, newResultNode.subFields);
         }
       }
     }
-  })(gqlBaseSelectionArr, formattedSelectionTree);
+  })(gqlBaseSelectionArr, gqlBaseReturnTypeDef, formattedSelectionTreeResult);
 
-  return formattedSelectionTree as FieldSelectionNode<TPossibleFields>;
+  return formattedSelectionTreeResult as FieldSelectionNode<TPossibleFields>;
 }
 
-type FieldSelectionNode<TPossibleFields> = {
-  [K in keyof FlattenArrayType<TPossibleFields>]: {
+type FieldSelectionNode<TPossibleFields, TCurrTypename extends string = ''> = {
+  [K in keyof FlattenArrayType<TPossibleFields>]?: {
     subFields: FlattenArrayType<NonNullable<FlattenArrayType<TPossibleFields>[K]>> extends {
       __typename?: string;
     }
-      ? FieldSelectionNode<NonNullable<FlattenArrayType<TPossibleFields>[K]>>
+      ? FieldSelectionNode<
+          NonNullable<FlattenArrayType<TPossibleFields>[K]>,
+          NonNullable<
+            FlattenArrayType<NonNullable<FlattenArrayType<TPossibleFields>[K]>>['__typename']
+          >
+        >
       : {};
+
+    args: (AllResolvers & Record<string, never>)[TCurrTypename][K] extends Resolver<
+      any,
+      any,
+      any,
+      infer Args
+    >
+      ? Args
+      : never;
   };
 };
 
+// type FlattenedNonNullable<T> = NonNullable<FlattenArrayType<NonNullable<FlattenArrayType<T>>>>;
+
 type FlattenArrayType<T> = T extends unknown[] ? T[number] : T;
+
+type AllResolvers = DeepNonNullable<Resolvers>;
