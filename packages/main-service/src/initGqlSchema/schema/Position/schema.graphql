@@ -15,7 +15,7 @@ type Position {
   # owner: User!
   instrument: InstrumentInfo!
   priceData: InstrumentMarketData!
-  unrealizedPnl: ProfitOrLoss!
+  unrealizedPnl: PnlInfo!
 }
 
 input PositionsFilters {

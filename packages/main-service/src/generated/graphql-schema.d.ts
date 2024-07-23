@@ -96,7 +96,7 @@ export type HoldingStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type HoldingStatsChange = {
@@ -188,7 +188,7 @@ export type ObservedHoldingStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedHoldingStatsUpdate = {
@@ -211,7 +211,7 @@ export type ObservedPortfolioStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedPortfolioStatsUpdate = {
@@ -237,7 +237,7 @@ export type ObservedPosition = {
   recordUpdatedAt: Scalars['DateTime']['output'];
   remainingQuantity: Scalars['Float']['output'];
   symbol: Scalars['ID']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedPositionUpdate = {
@@ -274,7 +274,7 @@ export type PortfolioStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type PortfolioStatsChange = {
@@ -304,7 +304,7 @@ export type Position = {
   recordUpdatedAt: Scalars['DateTime']['output'];
   remainingQuantity: Scalars['Float']['output'];
   symbol: Scalars['ID']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type PositionProfitInfo = {
@@ -325,20 +325,6 @@ export type PositionsSubscriptionFilters = {
 export type PriceDataChangeNotification = {
   __typename?: 'PriceDataChangeNotification';
   priceUpdates: Array<SymbolPriceData>;
-};
-
-/** Deprecated; use `PnlInfo` type instead */
-export type ProfitOrLoss = {
-  __typename?: 'ProfitOrLoss';
-  amount: Scalars['Float']['output'];
-  currencyAdjusted: CurrencyAdjustedPnlInfo;
-  percent: Scalars['Float']['output'];
-};
-
-
-/** Deprecated; use `PnlInfo` type instead */
-export type ProfitOrLossCurrencyAdjustedArgs = {
-  currency: Scalars['String']['input'];
 };
 
 export type Query = {
@@ -575,7 +561,6 @@ export type ResolversTypes = {
   PositionsFilters: ResolverTypeWrapper<DeepPartial<PositionsFilters>>;
   PositionsSubscriptionFilters: ResolverTypeWrapper<DeepPartial<PositionsSubscriptionFilters>>;
   PriceDataChangeNotification: ResolverTypeWrapper<DeepPartial<PriceDataChangeNotification>>;
-  ProfitOrLoss: ResolverTypeWrapper<DeepPartial<ProfitOrLoss>>;
   Query: ResolverTypeWrapper<{}>;
   RevenueInfo: ResolverTypeWrapper<DeepPartial<RevenueInfo>>;
   SetTradesInput: ResolverTypeWrapper<DeepPartial<SetTradesInput>>;
@@ -630,7 +615,6 @@ export type ResolversParentTypes = {
   PositionsFilters: DeepPartial<PositionsFilters>;
   PositionsSubscriptionFilters: DeepPartial<PositionsSubscriptionFilters>;
   PriceDataChangeNotification: DeepPartial<PriceDataChangeNotification>;
-  ProfitOrLoss: DeepPartial<ProfitOrLoss>;
   Query: {};
   RevenueInfo: DeepPartial<RevenueInfo>;
   SetTradesInput: DeepPartial<SetTradesInput>;
@@ -711,7 +695,7 @@ export type HoldingStatsResolvers<ContextType = AppGqlContextValue, ParentType e
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -769,7 +753,7 @@ export type ObservedHoldingStatsResolvers<ContextType = AppGqlContextValue, Pare
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -788,7 +772,7 @@ export type ObservedPortfolioStatsResolvers<ContextType = AppGqlContextValue, Pa
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -810,7 +794,7 @@ export type ObservedPositionResolvers<ContextType = AppGqlContextValue, ParentTy
   recordUpdatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   remainingQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -838,7 +822,7 @@ export type PortfolioStatsResolvers<ContextType = AppGqlContextValue, ParentType
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -868,7 +852,7 @@ export type PositionResolvers<ContextType = AppGqlContextValue, ParentType exten
   recordUpdatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   remainingQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  unrealizedPnl?: Resolver<ResolversTypes['ProfitOrLoss'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['PnlInfo'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -880,13 +864,6 @@ export type PositionProfitInfoResolvers<ContextType = AppGqlContextValue, Parent
 
 export type PriceDataChangeNotificationResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['PriceDataChangeNotification'] = ResolversParentTypes['PriceDataChangeNotification']> = {
   priceUpdates?: Resolver<Array<ResolversTypes['SymbolPriceData']>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-};
-
-export type ProfitOrLossResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ProfitOrLoss'] = ResolversParentTypes['ProfitOrLoss']> = {
-  amount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  currencyAdjusted?: Resolver<ResolversTypes['CurrencyAdjustedPnlInfo'], ParentType, ContextType, RequireFields<ProfitOrLossCurrencyAdjustedArgs, 'currency'>>;
-  percent?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -981,7 +958,6 @@ export type Resolvers<ContextType = AppGqlContextValue> = {
   Position?: PositionResolvers<ContextType>;
   PositionProfitInfo?: PositionProfitInfoResolvers<ContextType>;
   PriceDataChangeNotification?: PriceDataChangeNotificationResolvers<ContextType>;
-  ProfitOrLoss?: ProfitOrLossResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RevenueInfo?: RevenueInfoResolvers<ContextType>;
   SetTradesResult?: SetTradesResultResolvers<ContextType>;

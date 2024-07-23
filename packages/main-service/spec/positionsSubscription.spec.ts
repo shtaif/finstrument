@@ -1217,6 +1217,145 @@ describe('Subscription.positions ', () => {
     });
   });
 
+  describe('With `unrealized.currencyAdjusted` field', () => {
+    it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[0], symbol: 'ADBE', price: 1.1, quantity: 2 },
+        { ...reusableTradeDatas[1], symbol: 'AAPL', price: 1.2, quantity: 2 },
+      ]);
+      const positions = await PositionModel.bulkCreate([
+        { ...reusablePositionDatas[0], symbol: 'ADBE', remainingQuantity: 2 },
+        { ...reusablePositionDatas[1], symbol: 'AAPL', remainingQuantity: 2 },
+      ]);
+
+      mockMarketDataControl.onConnectionSend([
+        {
+          ['ADBE']: { regularMarketPrice: 1.5 },
+          ['AAPL']: { regularMarketPrice: 1.5 },
+          ['USDEUR=X']: { regularMarketPrice: 2 },
+        },
+        {
+          ['ADBE']: { regularMarketPrice: 1.6 },
+          ['USDEUR=X']: { regularMarketPrice: 2 },
+        },
+        {
+          ['AAPL']: { regularMarketPrice: 1.6 },
+          ['USDEUR=X']: { regularMarketPrice: 2 },
+        },
+      ]);
+
+      const subscription = gqlWsClient.iterate({
+        query: `
+          subscription {
+            positions (
+              filters: {
+                ids: [
+                  "${positions[0].id}"
+                  "${positions[1].id}"
+                ]
+              }
+            ) {
+              data {
+                id
+                unrealizedPnl {
+                  amount
+                  percent
+                  currencyAdjusted (currency: "EUR") {
+                    currency
+                    exchangeRate
+                    amount
+                  }
+                }
+              }
+            }
+          }`,
+      });
+
+      await using _ = {
+        [Symbol.asyncDispose]: async () => void (await subscription.return!()),
+      };
+
+      const emissions = await asyncPipe(subscription, itTake(3), itCollect);
+
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            positions: [
+              {
+                data: {
+                  id: positions[1].id,
+                  unrealizedPnl: {
+                    amount: 0.6,
+                    percent: 25,
+                    currencyAdjusted: {
+                      currency: 'EUR',
+                      exchangeRate: 2,
+                      amount: 1.2000000000000002,
+                    },
+                  },
+                },
+              },
+              {
+                data: {
+                  id: positions[0].id,
+                  unrealizedPnl: {
+                    amount: 0.8,
+                    percent: 36.363636363636,
+                    currencyAdjusted: {
+                      currency: 'EUR',
+                      exchangeRate: 2,
+                      amount: 1.5999999999999996,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            positions: [
+              {
+                data: {
+                  id: positions[0].id,
+                  unrealizedPnl: {
+                    amount: 1,
+                    percent: 45.454545454545,
+                    currencyAdjusted: {
+                      currency: 'EUR',
+                      exchangeRate: 2,
+                      amount: 2,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            positions: [
+              {
+                data: {
+                  id: positions[1].id,
+                  unrealizedPnl: {
+                    amount: 0.8,
+                    percent: 33.333333333333,
+                    currencyAdjusted: {
+                      currency: 'EUR',
+                      exchangeRate: 2,
+                      amount: 1.6000000000000005,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ]);
+    });
+  });
+
   describe('With `priceData` field', () => {
     it('Emits updates correctly in conjunction with incoming market price data changes', async () => {
       await TradeRecordModel.bulkCreate([
@@ -1230,26 +1369,26 @@ describe('Subscription.positions ', () => {
 
       const subscription = gqlWsClient.iterate({
         query: `
-        subscription {
-          positions (
-            filters: {
-              ids: [
-                "${positions[0].id}"
-                "${positions[1].id}"
-              ]
-            }
-          ) {
-            data {
-              id
-              priceData {
-                currency
-                marketState
-                regularMarketTime
-                regularMarketPrice
+          subscription {
+            positions (
+              filters: {
+                ids: [
+                  "${positions[0].id}"
+                  "${positions[1].id}"
+                ]
+              }
+            ) {
+              data {
+                id
+                priceData {
+                  currency
+                  marketState
+                  regularMarketTime
+                  regularMarketPrice
+                }
               }
             }
-          }
-        }`,
+          }`,
       });
 
       await using _ = {

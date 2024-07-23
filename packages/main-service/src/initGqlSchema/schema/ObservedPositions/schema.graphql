@@ -24,7 +24,7 @@ type ObservedPosition {
   recordCreatedAt: DateTime!
   recordUpdatedAt: DateTime!
   priceData: InstrumentMarketData!
-  unrealizedPnl: ProfitOrLoss!
+  unrealizedPnl: PnlInfo!
 }
 
 input PositionsSubscriptionFilters {

@@ -1,6 +1,6 @@
-import { intersection, isEqual } from 'lodash';
+import { compact, intersection, isEqual } from 'lodash';
 import { pipe, typedObjectKeys } from 'shared-utils';
-import { itFilter, itLazyDefer, itMap, myIterableCleanupPatcher } from 'iterable-operators';
+import { itFilter, itLazyDefer, itMap } from 'iterable-operators';
 import { type Optional } from 'utility-types';
 import type {
   Resolvers,
@@ -38,7 +38,7 @@ const resolvers = {
 
         const requestedObservableFields = intersection(
           observableFields,
-          typedObjectKeys(requestedFields.data.subFields)
+          typedObjectKeys(requestedFields.data?.subFields ?? {})
         ) as typeof observableFields;
 
         const specifiers = args.filters?.symbols?.length
@@ -54,12 +54,16 @@ const resolvers = {
               },
             ];
 
+        const translateCurrency =
+          requestedFields.data?.subFields.unrealizedPnl?.subFields.currencyAdjusted?.args.currency;
+
         return pipe(
           getLiveMarketData({
             specifiers,
+            translateToCurrencies: compact([translateCurrency]),
             include: {
-              priceData: !!requestedFields.data.subFields.priceData,
-              unrealizedPnl: !!requestedFields.data.subFields.unrealizedPnl,
+              priceData: !!requestedFields.data?.subFields.priceData,
+              unrealizedPnl: !!requestedFields.data?.subFields.unrealizedPnl,
             },
           }),
           itMap(updates =>
@@ -68,7 +72,13 @@ const resolvers = {
               data: {
                 ...holding,
                 priceData,
-                unrealizedPnl: !pnl ? undefined : { ...pnl, currencyAdjusted: {} as any },
+                unrealizedPnl: !pnl
+                  ? undefined
+                  : {
+                      percent: pnl.percent,
+                      amount: pnl.amount,
+                      currencyAdjusted: pnl.byTranslateCurrencies[0],
+                    },
               },
             }))
           ),
@@ -111,17 +121,7 @@ const resolvers = {
                 })
               );
             }),
-          myIterableCleanupPatcher(async function* (source) {
-            const iterator = source[Symbol.asyncIterator]();
-            const initial = await iterator.next();
-            if (!initial.done) {
-              yield initial.value;
-            }
-            yield* pipe(
-              { [Symbol.asyncIterator]: () => iterator },
-              itFilter(relevantHoldingUpdates => !!relevantHoldingUpdates.length)
-            );
-          }),
+          itFilter((relevantHoldingUpdates, i) => i === 0 || !!relevantHoldingUpdates.length),
           itMap(relevantHoldingUpdates => ({
             holdingStats: relevantHoldingUpdates,
           }))

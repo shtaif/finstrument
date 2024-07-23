@@ -30,5 +30,5 @@ type ObservedHoldingStats {
   currentPortfolioPortion: Float
   breakEvenPrice: Float
   priceData: InstrumentMarketData!
-  unrealizedPnl: ProfitOrLoss!
+  unrealizedPnl: PnlInfo!
 }

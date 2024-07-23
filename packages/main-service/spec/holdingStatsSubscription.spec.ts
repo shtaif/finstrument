@@ -483,7 +483,7 @@ describe('Subscription.holdingStats ', () => {
     }
   });
 
-  it('When all holding stats of existing symbols get erased emits corresponding updates correctly', async () => {
+  it("When entire existing symbols' holding stats get erased emits corresponding updates correctly", async () => {
     const trades = await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -1260,6 +1260,147 @@ describe('Subscription.holdingStats ', () => {
           },
         },
       ]);
+    });
+
+    describe('With `unrealized.currencyAdjusted` field', () => {
+      it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+        await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
+        await HoldingStatsChangeModel.bulkCreate([
+          {
+            ...reusableHoldingStats[0],
+            totalPositionCount: 1,
+            totalQuantity: 2,
+            totalPresentInvestedAmount: 2.2,
+            totalRealizedAmount: 0,
+            totalRealizedProfitOrLossAmount: 0,
+            totalRealizedProfitOrLossRate: 0,
+          },
+          {
+            ...reusableHoldingStats[1],
+            totalPositionCount: 1,
+            totalQuantity: 2,
+            totalPresentInvestedAmount: 2.4,
+            totalRealizedAmount: 0,
+            totalRealizedProfitOrLossAmount: 0,
+            totalRealizedProfitOrLossRate: 0,
+          },
+        ]);
+
+        mockMarketDataControl.onConnectionSend([
+          {
+            ADBE: { regularMarketPrice: 1.5 },
+            AAPL: { regularMarketPrice: 1.5 },
+            'USDEUR=X': { regularMarketPrice: 2 },
+          },
+          {
+            ADBE: { regularMarketPrice: 1.6 },
+            'USDEUR=X': { regularMarketPrice: 2 },
+          },
+          {
+            AAPL: { regularMarketPrice: 1.6 },
+            'USDEUR=X': { regularMarketPrice: 2 },
+          },
+        ]);
+
+        await using subscription = iterateGqlSubscriptionDisposable({
+          query: `
+            subscription {
+              holdingStats {
+                data {
+                  symbol
+                  unrealizedPnl {
+                    amount
+                    percent
+                    currencyAdjusted (currency: "EUR") {
+                      currency
+                      exchangeRate
+                      amount
+                    }
+                  }
+                }
+              }
+            }`,
+        });
+
+        const emissions = await asyncPipe(subscription, itTake(3), itCollect);
+
+        expect(emissions).toStrictEqual([
+          {
+            data: {
+              holdingStats: [
+                {
+                  data: {
+                    symbol: 'AAPL',
+                    unrealizedPnl: {
+                      amount: 0.6,
+                      percent: 25,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 1.2000000000000002,
+                      },
+                    },
+                  },
+                },
+                {
+                  data: {
+                    symbol: 'ADBE',
+                    unrealizedPnl: {
+                      amount: 0.8,
+                      percent: 36.363636363636,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 1.5999999999999996,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              holdingStats: [
+                {
+                  data: {
+                    symbol: 'ADBE',
+                    unrealizedPnl: {
+                      amount: 1,
+                      percent: 45.454545454545,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 2,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              holdingStats: [
+                {
+                  data: {
+                    symbol: 'AAPL',
+                    unrealizedPnl: {
+                      amount: 0.8,
+                      percent: 33.333333333333,
+                      currencyAdjusted: {
+                        currency: 'EUR',
+                        exchangeRate: 2,
+                        amount: 1.6000000000000005,
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ]);
+      });
     });
   });
 
