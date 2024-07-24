@@ -134,6 +134,7 @@ async function retrievePositions(params: {
       const match = ((err.original?.message ?? '') as string).match(/.+"(.+)"$/);
       const invalidInputGiven = match?.[1] ?? '';
       throw new CustomError({
+        type: 'INVALID_UUID_FORMAT',
         message: `Some input data expected as a UUID formatted string was received in invalid format; UUID strings must adhere to the form "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" but instead got "${invalidInputGiven}"`,
         details: {
           invalidInputGiven,

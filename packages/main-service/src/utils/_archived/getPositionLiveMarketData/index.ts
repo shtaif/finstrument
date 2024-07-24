@@ -94,10 +94,13 @@ function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: 
             map(v, pos => {
               const pnlAmount =
                 pos.remainingQuantity *
-                (allSymbolPriceData[pos.symbol].regularMarketPrice - pos.openingTrade.price);
+                ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) -
+                  pos.openingTrade.price);
 
               const pnlPercent =
-                (allSymbolPriceData[pos.symbol].regularMarketPrice / pos.openingTrade.price - 1) *
+                ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) /
+                  pos.openingTrade.price -
+                  1) *
                 100;
 
               const pnlByTranslateCurrencies = pipe(

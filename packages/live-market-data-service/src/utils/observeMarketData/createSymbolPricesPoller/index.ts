@@ -24,16 +24,18 @@ function createSymbolPricesPoller(params: {
 
   return pipe(
     yahooMarketPricesIterable({ symbols }),
-    itStartWith(undefined),
+    itStartWith({} as SymbolPrices),
     itPairwise(),
-    itMap(([prevPrices = {}, nowsPrices]) => {
-      const changedOrInitialPrices = pickBy(
-        nowsPrices!,
-        (_, symbol) =>
-          nowsPrices![symbol].regularMarketTime?.getTime() !==
-            prevPrices[symbol]?.regularMarketTime?.getTime() ||
-          nowsPrices![symbol].regularMarketPrice !== prevPrices[symbol]?.regularMarketPrice
-      );
+    itMap(([prevPrices, nowsPrices]) => {
+      const changedOrInitialPrices = pickBy(nowsPrices!, (_, symbol) => {
+        const [nowsPriceTime, previousPriceTime, nowsPrice, previousPrice] = [
+          nowsPrices[symbol]?.regularMarketTime?.getTime(),
+          prevPrices[symbol]?.regularMarketTime?.getTime(),
+          nowsPrices[symbol]?.regularMarketPrice,
+          prevPrices[symbol]?.regularMarketPrice,
+        ];
+        return nowsPriceTime !== previousPriceTime || nowsPrice !== previousPrice;
+      });
       // TODO: Possibly, right now, the `prevPrices` prices from which the `changedFromLast` are calculated from are stateful and persisting so might be not up to date when there are some time gaps during consumption of this
       return {
         prices: {

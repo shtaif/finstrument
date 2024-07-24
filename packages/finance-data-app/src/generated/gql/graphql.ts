@@ -94,7 +94,7 @@ export type HoldingStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type HoldingStatsChange = {
@@ -187,7 +187,7 @@ export type ObservedHoldingStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedHoldingStatsUpdate = {
@@ -211,7 +211,7 @@ export type ObservedPortfolioStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedPortfolioStatsUpdate = {
@@ -238,7 +238,7 @@ export type ObservedPosition = {
   recordUpdatedAt: Scalars['DateTime']['output'];
   remainingQuantity: Scalars['Float']['output'];
   symbol: Scalars['ID']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type ObservedPositionUpdate = {
@@ -276,7 +276,7 @@ export type PortfolioStats = {
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type PortfolioStatsChange = {
@@ -306,7 +306,7 @@ export type Position = {
   recordUpdatedAt: Scalars['DateTime']['output'];
   remainingQuantity: Scalars['Float']['output'];
   symbol: Scalars['ID']['output'];
-  unrealizedPnl: ProfitOrLoss;
+  unrealizedPnl: PnlInfo;
 };
 
 export type PositionProfitInfo = {
@@ -327,20 +327,6 @@ export type PositionsSubscriptionFilters = {
 export type PriceDataChangeNotification = {
   __typename?: 'PriceDataChangeNotification';
   priceUpdates: Array<SymbolPriceData>;
-};
-
-/** Deprecated; use `PnlInfo` type instead */
-export type ProfitOrLoss = {
-  __typename?: 'ProfitOrLoss';
-  amount: Scalars['Float']['output'];
-  currencyAdjusted: CurrencyAdjustedPnlInfo;
-  percent: Scalars['Float']['output'];
-};
-
-
-/** Deprecated; use `PnlInfo` type instead */
-export type ProfitOrLossCurrencyAdjustedArgs = {
-  currency: Scalars['String']['input'];
 };
 
 export type Query = {
@@ -468,7 +454,7 @@ export type SymbolPriceData = {
 export type HoldingStatsDataSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'ProfitOrLoss', amount: number, percent: number } } }> };
+export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
 
 
 export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"holdingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;

@@ -2,7 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
 import { type SubscribePayload } from 'graphql-ws';
 import { asyncPipe, pipe } from 'shared-utils';
-import { itCollect, itTake } from 'iterable-operators';
+import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
   HoldingStatsChangeModel,
   InstrumentInfoModel,
@@ -1260,6 +1260,57 @@ describe('Subscription.holdingStats ', () => {
           },
         },
       ]);
+    });
+
+    it('Emits updates correctly in conjunction with changes to holding symbols whose market data cannot be found', async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[0], symbol: 'ADBE' },
+        { ...reusableTradeDatas[1], symbol: 'AAPL' },
+        { ...reusableTradeDatas[2], symbol: 'NVDA' },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        { ...reusableHoldingStats[0], symbol: 'ADBE' },
+        { ...reusableHoldingStats[1], symbol: 'AAPL' },
+        { ...reusableHoldingStats[2], symbol: 'NVDA' },
+      ]);
+
+      mockMarketDataControl.onConnectionSend([
+        {
+          ADBE: { regularMarketPrice: 10 },
+          AAPL: null,
+          NVDA: null,
+        },
+      ]);
+
+      await using subscription = iterateGqlSubscriptionDisposable({
+        query: `
+          subscription {
+            holdingStats {
+              data {
+                symbol
+                unrealizedPnl {
+                  amount
+                  percent
+                }
+              }
+            }
+          }`,
+      });
+
+      const firstEmission = await pipe(subscription, itTakeFirst());
+
+      expect(firstEmission).toStrictEqual({
+        data: null,
+        errors: [
+          {
+            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
+            extensions: {
+              type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
+              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
+            },
+          },
+        ],
+      });
     });
 
     describe('With `unrealized.currencyAdjusted` field', () => {

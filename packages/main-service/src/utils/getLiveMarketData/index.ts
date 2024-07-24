@@ -1,6 +1,7 @@
-import { assign, compact, identity, filter, isEqual } from 'lodash';
+import { assign, compact, identity, filter, isEqual, pickBy, keys } from 'lodash';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
-import { pipe } from 'shared-utils';
+import { type DeepNonNullable } from 'utility-types';
+import { pipe, CustomError } from 'shared-utils';
 import {
   itMap,
   itFilter,
@@ -10,6 +11,7 @@ import {
   itPairwise,
   itStartWith,
   itTakeFirst,
+  itTap,
 } from 'iterable-operators';
 import {
   marketDataService,
@@ -92,11 +94,7 @@ function getLiveMarketData(params: {
       ? (async function* () {})()
       : pipe(
           observedStatsObjectsIter,
-          itMap(({ changes, current }) => ({
-            // TODO: Handle also the `.remove` changes throughout this iterable rather then only the `.set` ones
-            // portfolioStatsChanges: changes.portfolioStats.set,
-            // holdingStatsChanges: changes.holdingStats.set,
-            // positionChanges: changes.positions.set,
+          itMap(({ current }) => ({
             portfolioStatsChanges: Object.values(current.portfolioStats),
             holdingStatsChanges: Object.values(current.holdingStats),
             positionChanges: Object.values(current.positions),
@@ -158,7 +156,21 @@ function getLiveMarketData(params: {
           //   console.log('nextChangedSymbols', nextChangedSymbols);
           //   return nextChangedSymbols;
           // }),
-          symbolsIter => marketDataService.observeMarketData({ symbols: symbolsIter })
+          symbolsIter => marketDataService.observeMarketData({ symbols: symbolsIter }),
+          itTap(changedSymbols => {
+            const symbolsNotFound = pipe(
+              pickBy(changedSymbols, changedSymbol => changedSymbol === null),
+              keys
+            );
+            if (symbolsNotFound.length) {
+              throw new CustomError({
+                type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
+                message: `Couldn't find market data for some symbols: ${symbolsNotFound.map(s => `"${s}"`).join(', ')}`,
+                details: { symbolsNotFound },
+              });
+            }
+            return changedSymbols as DeepNonNullable<UpdatedSymbolPriceMap>;
+          })
         );
 
   return pipe(
@@ -191,12 +203,14 @@ function getLiveMarketData(params: {
     // }),
     statsOrPriceDataChangeIter =>
       itLazyDefer(() => {
-        let allCurrStats: StatsObjectChanges2['current'] = {
-          portfolioStats: Object.create(null),
-          holdingStats: Object.create(null),
-          positions: Object.create(null),
-        };
-        const allCurrSymbolPriceData = Object.create(null) as UpdatedSymbolPriceMap;
+        let allCurrStats = {
+          portfolioStats: objectCreateNullProto(),
+          holdingStats: objectCreateNullProto(),
+          positions: objectCreateNullProto(),
+        } as StatsObjectChanges2['current'];
+
+        const allCurrSymbolPriceData =
+          objectCreateNullProto<DeepNonNullable<UpdatedSymbolPriceMap>>();
 
         const initialLoadOfSymbolPricesPromise = (async () => {
           const changedSymbols = await pipe(symbolPriceDataIter, itTakeFirst());
@@ -430,7 +444,7 @@ function portfolioStatsCalcPnl(
       totalPresentInvestedAmount: number;
     }[];
   },
-  instrumentMarketData: UpdatedSymbolPriceMap
+  instrumentMarketData: DeepNonNullable<UpdatedSymbolPriceMap>
 ): {
   pnlAmount: number;
   pnlPercent: number;
@@ -463,7 +477,7 @@ function calcHoldingRevenue(input: { holding: HoldingStats; priceInfo: UpdatedSy
 } {
   const { holding, priceInfo } = input;
 
-  if (holding.breakEvenPrice === null) {
+  if (holding.breakEvenPrice === null || priceInfo === null) {
     return { amount: 0, percent: 0 };
   }
 
@@ -516,6 +530,10 @@ function calcPnlInTranslateCurrencies<TTranslateCurrencies extends string = stri
     }),
     compact
   );
+}
+
+function objectCreateNullProto<T extends {}>(): T {
+  return Object.create(null);
 }
 
 type MarketDataUpdate<
@@ -571,7 +589,7 @@ type PositionMarketStatsUpdate<
 };
 
 type InstrumentMarketPriceInfo = Pick<
-  UpdatedSymbolPrice,
+  NonNullable<UpdatedSymbolPrice>,
   'marketState' | 'currency' | 'regularMarketTime' | 'regularMarketPrice'
 >;
 

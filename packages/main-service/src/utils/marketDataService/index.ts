@@ -253,13 +253,15 @@ async function wsSendPromisified(
 
 const updatedSymbolPriceMapSchema = z.record(
   z.string().min(1),
-  z.object({
-    quoteSourceName: z.string().optional(),
-    currency: z.string().length(3).optional(),
-    marketState: z.enum(['REGULAR', 'CLOSED', 'PRE', 'PREPRE', 'POST', 'POSTPOST']),
-    regularMarketTime: z.coerce.date(),
-    regularMarketPrice: z.number().positive(),
-  })
+  z
+    .object({
+      quoteSourceName: z.string().optional(),
+      currency: z.string().length(3).optional(),
+      marketState: z.enum(['REGULAR', 'CLOSED', 'PRE', 'PREPRE', 'POST', 'POSTPOST']),
+      regularMarketTime: z.coerce.date(),
+      regularMarketPrice: z.number().positive(),
+    })
+    .nullable()
 );
 
 const observePricesDataMessageSchema = z.discriminatedUnion('success', [

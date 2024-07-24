@@ -137,7 +137,7 @@ function getPortfolioLiveMarketData<TTranslateCurrencies extends string>(params:
             map(v, ({ portfolio, holdings }) => {
               const holdingsTotalMarketWorth = holdings.reduce(
                 (total, h) =>
-                  total + allSymbolPriceData[h.symbol].regularMarketPrice * h.totalQuantity,
+                  total + (allSymbolPriceData[h.symbol]?.regularMarketPrice ?? 0) * h.totalQuantity,
                 0
               );
 
