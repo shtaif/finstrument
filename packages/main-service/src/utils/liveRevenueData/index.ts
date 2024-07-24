@@ -104,13 +104,13 @@ function liveRevenueData(params: {
         const { breakEvenPrice, totalQuantity } = changedHoldings.find(h => h.symbol === symbol)!;
         return {
           price: {
-            regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
-            regularMarketTime: priceUpdateForSymbol.regularMarketTime,
-            marketState: priceUpdateForSymbol.marketState,
+            regularMarketPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
+            regularMarketTime: priceUpdateForSymbol?.regularMarketTime,
+            marketState: priceUpdateForSymbol?.marketState,
           },
           profitOrLoss: calcRevenueForPosition({
             startPrice: breakEvenPrice,
-            changedPrice: priceUpdateForSymbol.regularMarketPrice,
+            changedPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
             quantity: totalQuantity,
           }),
           // individualPositionRevenues: !detailedPositionsToInclude.has(symbol)

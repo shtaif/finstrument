@@ -1215,10 +1215,121 @@ describe('Subscription.positions ', () => {
         },
       ]);
     });
+
+    it('Emits updates correctly in conjunction with changes to position symbols whose market data cannot be found', async () => {
+      await TradeRecordModel.bulkCreate([
+        {
+          id: mockTradeIds[0],
+          ownerId: mockUserId1,
+          symbol: 'ADBE',
+          performedAt: '2024-01-01T00:00:00.000Z',
+          quantity: 2,
+          price: 1.1,
+        },
+        {
+          id: mockTradeIds[1],
+          ownerId: mockUserId1,
+          symbol: 'AAPL',
+          performedAt: '2024-01-01T00:00:01.000Z',
+          quantity: 2,
+          price: 1.2,
+        },
+        {
+          id: mockTradeIds[2],
+          ownerId: mockUserId1,
+          symbol: 'NVDA',
+          performedAt: '2024-01-01T00:00:02.000Z',
+          quantity: 2,
+          price: 1.3,
+        },
+      ]);
+
+      const positions = await PositionModel.bulkCreate([
+        {
+          id: mockUuidFromNumber(0),
+          ownerId: mockUserId1,
+          openingTradeId: mockTradeIds[0],
+          symbol: 'ADBE',
+          remainingQuantity: 2,
+          realizedProfitOrLoss: 0,
+          openedAt: '2024-01-01T00:00:00.000Z',
+          recordCreatedAt: '2024-01-01T00:00:00.000Z',
+          recordUpdatedAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: mockUuidFromNumber(1),
+          ownerId: mockUserId1,
+          openingTradeId: mockTradeIds[1],
+          symbol: 'AAPL',
+          remainingQuantity: 2,
+          realizedProfitOrLoss: 0,
+          openedAt: '2024-01-01T00:00:01.000Z',
+          recordCreatedAt: '2024-01-01T00:00:01.000Z',
+          recordUpdatedAt: '2024-01-01T00:00:01.000Z',
+        },
+        {
+          id: mockUuidFromNumber(2),
+          ownerId: mockUserId1,
+          openingTradeId: mockTradeIds[2],
+          symbol: 'NVDA',
+          remainingQuantity: 2,
+          realizedProfitOrLoss: 0,
+          openedAt: '2024-01-01T00:00:02.000Z',
+          recordCreatedAt: '2024-01-01T00:00:02.000Z',
+          recordUpdatedAt: '2024-01-01T00:00:02.000Z',
+        },
+      ]);
+
+      mockMarketDataControl.onConnectionSend([
+        {
+          ADBE: { regularMarketPrice: 10 },
+          AAPL: null,
+          NVDA: null,
+        },
+      ]);
+
+      const subscription = gqlWsClient.iterate({
+        query: `
+          subscription {
+            positions (
+              filters: {
+                ids: [
+                  "${positions[0].id}"
+                  "${positions[1].id}"
+                  "${positions[2].id}"
+                ]
+              }
+            ) {
+              data {
+                id
+                unrealizedPnl {
+                  amount
+                  percent
+                }
+              }
+            }
+          }`,
+      });
+
+      const firstEmission = await pipe(subscription, itTakeFirst());
+
+      expect(firstEmission).toStrictEqual({
+        data: null,
+        errors: [
+          {
+            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
+            extensions: {
+              type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
+              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
+            },
+          },
+        ],
+      });
+    });
   });
 
   describe('With `unrealized.currencyAdjusted` field', () => {
-    it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+    it('Emits updates correctly in conjunction with changes to position symbols currency-adjusted market data', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE', price: 1.1, quantity: 2 },
         { ...reusableTradeDatas[1], symbol: 'AAPL', price: 1.2, quantity: 2 },

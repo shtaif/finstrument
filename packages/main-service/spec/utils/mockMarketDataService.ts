@@ -67,13 +67,17 @@ mockMarketDataService.on('connection', async ws => {
     }),
     itMap(nextMockMarketData => ({
       success: true as const,
-      data: mapValues(nextMockMarketData, symbolData => ({
-        currency: 'USD',
-        marketState: 'REGULAR',
-        regularMarketTime: '2024-01-01T00:00:00.000Z',
-        quoteSourceName: undefined,
-        ...symbolData,
-      })),
+      data: mapValues(nextMockMarketData, symbolData =>
+        symbolData === null
+          ? null
+          : {
+              currency: 'USD',
+              marketState: 'REGULAR',
+              regularMarketTime: '2024-01-01T00:00:00.000Z',
+              quoteSourceName: undefined,
+              ...symbolData,
+            }
+      ),
     })),
     itTakeUntil(once(ws, 'close'))
   );
@@ -201,17 +205,21 @@ mockMarketDataService.on('connection', async ws => {
 // );
 
 // let mockMarketDataActivatedIterable: AsyncIterable<{
-//   nextData: { [symbol: string]: Partial<SymbolMarketData> };
+//   nextData: { [symbol: string]: null | Partial<SymbolMarketData> };
 //   notifyMessageHandledCb: () => void;
 // }>;
-let mockMarketDataActivatedIterable: AsyncIterable<{ [symbol: string]: Partial<SymbolMarketData> }>;
+let mockMarketDataActivatedIterable: AsyncIterable<{
+  [symbol: string]: null | Partial<SymbolMarketData>;
+}>;
 
 let messageHandleFeedbackActivatedIterator: AsyncIterator<void>;
 
 let whenSymbolsAreRequested = Promise.withResolvers<void>();
 
 const mockMarketDataControl = new (class {
-  #mockMarketDataChannel = iterifiedUnwrapped<{ [symbol: string]: Partial<SymbolMarketData> }>();
+  #mockMarketDataChannel = iterifiedUnwrapped<{
+    [symbol: string]: null | Partial<SymbolMarketData>;
+  }>();
   messageHandleFeedbackChannel = iterifiedUnwrapped<void>();
   newSymbolsRequestedIterified = iterifiedUnwrapped<string[]>();
 
@@ -223,17 +231,19 @@ const mockMarketDataControl = new (class {
     return this.newSymbolsRequestedIterified.iterable;
   }
 
-  async next(nextMarketUpdate: { [symbol: string]: Partial<SymbolMarketData> }): Promise<void> {
+  async next(nextMarketUpdate: {
+    [symbol: string]: null | Partial<SymbolMarketData>;
+  }): Promise<void> {
     this.#mockMarketDataChannel.next(nextMarketUpdate);
     await messageHandleFeedbackActivatedIterator.next();
   }
 
   async onConnectionSend(
     marketUpdatesIter:
-      | AsyncIterable<{ [symbol: string]: Partial<SymbolMarketData> }>
-      | Iterable<{ [symbol: string]: Partial<SymbolMarketData> }>
-      | (() => AsyncIterable<{ [symbol: string]: Partial<SymbolMarketData> }>)
-      | (() => Iterable<{ [symbol: string]: Partial<SymbolMarketData> }>)
+      | AsyncIterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>
+      | Iterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>
+      | (() => AsyncIterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>)
+      | (() => Iterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>)
   ): Promise<void> {
     await whenSymbolsAreRequested.promise;
     const iter = typeof marketUpdatesIter === 'function' ? marketUpdatesIter() : marketUpdatesIter;

@@ -21,16 +21,19 @@ async function getSymbolsCurrentPrices(params: {
   });
 
   return pipe(
-    results.map<[string, SymbolPriceData]>(quote => [
-      quote.symbol,
-      {
-        quoteSourceName: quote.quoteSourceName,
-        marketState: quote.marketState,
-        currency: quote.currency,
-        regularMarketTime: quote.regularMarketTime,
-        regularMarketPrice: quote.regularMarketPrice,
-      },
-    ]),
+    [
+      ...symbols.map(symbol => [symbol, null]),
+      ...results.map(quote => [
+        quote.symbol,
+        {
+          quoteSourceName: quote.quoteSourceName,
+          marketState: quote.marketState,
+          currency: quote.currency,
+          regularMarketTime: quote.regularMarketTime,
+          regularMarketPrice: quote.regularMarketPrice,
+        },
+      ]),
+    ] as [string, SymbolPriceData][],
     entries => objectFromEntriesTyped(entries)
   );
 }
@@ -87,7 +90,7 @@ async function getYahooFinanceQuotesAutoRecoveredFromCookieErrors(
       // console.error(err);
       if (err.message === 'Invalid Cookie' && invalidCookieErrorRetriesDid < 2) {
         invalidCookieErrorRetriesDid++;
-        await setTimeout(1000);
+        await setTimeout(1000, { signal });
       } else {
         throw err;
       }
@@ -99,7 +102,7 @@ type SymbolPrices<TSymbols extends string = string> = {
   [K in TSymbols]: SymbolPriceData;
 };
 
-type SymbolPriceData = {
+type SymbolPriceData = null | {
   quoteSourceName: string | undefined;
   currency: string | undefined;
   marketState: QuoteDataFromYahooFinanceLib['marketState'];

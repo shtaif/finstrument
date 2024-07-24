@@ -1069,8 +1069,100 @@ describe('Subscription.portfolioStats ', () => {
       }
     );
 
+    it('Emits updates correctly in conjunction with changes to position symbols whose market data cannot be found', async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[0], symbol: 'VUAG' },
+        { ...reusableTradeDatas[1], symbol: 'ADBE' },
+        { ...reusableTradeDatas[2], symbol: 'AAPL' },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        {
+          ...reusableHoldingStats[0],
+          symbol: 'VUAG',
+          totalPositionCount: 2,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 100,
+        },
+        {
+          ...reusableHoldingStats[1],
+          symbol: 'ADBE',
+          totalPositionCount: 2,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 100,
+        },
+        {
+          ...reusableHoldingStats[2],
+          symbol: 'AAPL',
+          totalPositionCount: 2,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 100,
+        },
+      ]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[0].id,
+          ownerId: mockUserId1,
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[0].performedAt,
+          totalPresentInvestedAmount: 0,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[1].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[1].performedAt,
+          totalPresentInvestedAmount: 200,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[2].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[2].performedAt,
+          totalPresentInvestedAmount: 400,
+        },
+      ]);
+
+      mockMarketDataControl.onConnectionSend([
+        {
+          VUAG: { regularMarketPrice: 100 },
+          ADBE: null,
+          AAPL: null,
+        },
+      ]);
+
+      const subscription = gqlWsClient.iterate({
+        query: `
+          subscription {
+            portfolioStats {
+              data {
+                forCurrency
+                unrealizedPnl {
+                  amount
+                  percent
+                }
+              }
+            }
+          }`,
+      });
+
+      const firstEmission = await pipe(subscription, itTakeFirst());
+
+      expect(firstEmission).toStrictEqual({
+        data: null,
+        errors: [
+          {
+            message: 'Couldn\'t find market data for some symbols: "AAPL", "ADBE"',
+            extensions: {
+              type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
+              details: { symbolsNotFound: ['AAPL', 'ADBE'] },
+            },
+          },
+        ],
+      });
+    });
+
     describe('With `unrealized.currencyAdjusted` field', () => {
-      it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+      it("Emits updates correctly in conjunction with changes to portfolio stats' underlying holdings currency-adjusted market data", async () => {
         await TradeRecordModel.bulkCreate([
           { ...reusableTradeDatas[0], symbol: 'VUAG' },
           { ...reusableTradeDatas[1], symbol: 'ADBE' },

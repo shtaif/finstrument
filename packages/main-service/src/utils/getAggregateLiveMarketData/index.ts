@@ -120,7 +120,7 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
                     holdings,
                     (total, h) =>
                       total +
-                      h.totalQuantity * allSymbolPriceData[h.symbol].regularMarketPrice -
+                      h.totalQuantity * (allSymbolPriceData[h.symbol]?.regularMarketPrice ?? 0) -
                       h.totalPresentInvestedAmount,
                     0
                   );
@@ -143,7 +143,7 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
                     (total, pos) =>
                       total +
                       pos.remainingQuantity *
-                        (allSymbolPriceData[pos.symbol].regularMarketPrice -
+                        ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) -
                           pos.openingTrade.price),
                     0
                   );
@@ -192,7 +192,8 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
                 pnl: {
                   amount: nativeCurrencies.reduce((total, { nativeCurrency, pnl }) => {
                     const exchangeSymbol = `${nativeCurrency}${translateCurrency}=X`;
-                    const exchangeRate = allSymbolPriceData[exchangeSymbol]?.regularMarketPrice;
+                    const exchangeRate =
+                      allSymbolPriceData[exchangeSymbol]?.regularMarketPrice ?? 0;
                     return total + pnl.amount * exchangeRate;
                   }, 0),
                 },

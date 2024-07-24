@@ -14,6 +14,6 @@ function createInstrumentCurrentMarketDataLoader(): DataLoader<
       marketDataService.observeMarketData({ symbols }),
       itTakeFirst()
     ))!;
-    return symbols.map(symbol => instMarketDatas[symbol]);
+    return symbols.map(symbol => instMarketDatas[symbol] ?? undefined);
   });
 }

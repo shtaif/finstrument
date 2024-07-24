@@ -144,9 +144,9 @@ async function gatherPositions(
       (askedPosId, pos) => askedPosId === pos.id
     );
     throw new CustomError({
+      type: 'INVALID_POSITION_IDS',
       message:
         `Some of the requested positions could not be found (${unmatchedPositionsIds.length} in total):\n${unmatchedPositionsIds.map(id => `ID "${id}"`).join(',\n')}` as const,
-      type: 'INVALID_POSITION_IDS',
       details: {
         positionIdsGiven,
         unmatchedPositionsIds,

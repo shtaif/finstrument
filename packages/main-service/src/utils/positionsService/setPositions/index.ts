@@ -61,6 +61,7 @@ async function setPositions(params: {
 
   if (!targetOwnerId) {
     throw new CustomError({
+      type: 'OWNER_NOT_FOUND',
       message: `No such user with alias "${ownerAlias}" could be found`,
     });
   }
