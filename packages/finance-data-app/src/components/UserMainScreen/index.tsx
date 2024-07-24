@@ -176,7 +176,7 @@ function UserMainScreen() {
       const fileContents: string = await (file as any).text();
 
       return await axios({
-        url: `http://${process.env.API_HOST || 'localhost:3001'}/api/positions/${userAlias}`,
+        url: `http://${import.meta.env.VITE_API_HOST || 'localhost:3001'}/api/positions/${userAlias}`,
         method: 'post',
         data: {
           csvData: fileContents,
