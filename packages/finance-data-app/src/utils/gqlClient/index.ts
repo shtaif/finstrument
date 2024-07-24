@@ -6,11 +6,11 @@ import { createClient as createGqlWsClient } from 'graphql-ws';
 export { gqlClient, gqlWsClient };
 
 const gqlWsClient = createGqlWsClient({
-  url: `ws://${process.env.API_HOST || 'localhost:3001'}/graphql`,
+  url: `ws://${import.meta.env.VITE_API_HOST || 'localhost:3001'}/graphql`,
 });
 
 const httpLink = new HttpLink({
-  uri: `http://${process.env.API_HOST || 'localhost:3001'}/graphql`,
+  uri: `http://${import.meta.env.VITE_API_HOST || 'localhost:3001'}/graphql`,
 });
 
 const wsLink = new GraphQLWsLink(gqlWsClient);
