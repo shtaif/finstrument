@@ -1,4 +1,4 @@
-import { mapValues, uniq } from 'lodash';
+import { mapValues, pickBy, uniq } from 'lodash';
 import { pipe } from 'shared-utils';
 // import { from, AsyncSink } from '@reactivex/ix-esnext-esm/asynciterable';
 // import { switchMap } from '@reactivex/ix-esnext-esm/asynciterable/operators/switchmap';
@@ -100,35 +100,42 @@ function liveRevenueData(params: {
       )
     ),
     itMap(({ pricesData, changedHoldings }) => ({
-      updatesBySymbol: mapValues(pricesData, (priceUpdateForSymbol, symbol) => {
-        const { breakEvenPrice, totalQuantity } = changedHoldings.find(h => h.symbol === symbol)!;
-        return {
-          price: {
-            regularMarketPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
-            regularMarketTime: priceUpdateForSymbol?.regularMarketTime,
-            marketState: priceUpdateForSymbol?.marketState,
-          },
-          profitOrLoss: calcRevenueForPosition({
-            startPrice: breakEvenPrice,
-            changedPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
-            quantity: totalQuantity,
-          }),
-          // individualPositionRevenues: !detailedPositionsToInclude.has(symbol)
-          //   ? undefined
-          //   : positions.map(({ date, remainingQuantity, price }) => ({
-          //       position: {
-          //         date,
-          //         remainingQuantity,
-          //         price,
-          //       },
-          //       revenue: calcRevenueForPosition({
-          //         startPrice: price,
-          //         changedPrice: priceUpdateForSymbol.regularMarketPrice,
-          //         quantity: remainingQuantity,
-          //       }),
-          //     })),
-        };
-      }),
+      updatesBySymbol: pipe(
+        pricesData,
+        pricesData => pickBy(pricesData, (price): price is NonNullable<typeof price> => !!price),
+        priceData =>
+          mapValues(priceData, (priceUpdateForSymbol, symbol) => {
+            const { breakEvenPrice, totalQuantity } = changedHoldings.find(
+              h => h.symbol === symbol
+            )!;
+            return {
+              price: {
+                regularMarketPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
+                regularMarketTime: priceUpdateForSymbol?.regularMarketTime,
+                marketState: priceUpdateForSymbol?.marketState,
+              },
+              profitOrLoss: calcRevenueForPosition({
+                startPrice: breakEvenPrice,
+                changedPrice: priceUpdateForSymbol?.regularMarketPrice ?? 0,
+                quantity: totalQuantity,
+              }),
+              // individualPositionRevenues: !detailedPositionsToInclude.has(symbol)
+              //   ? undefined
+              //   : positions.map(({ date, remainingQuantity, price }) => ({
+              //       position: {
+              //         date,
+              //         remainingQuantity,
+              //         price,
+              //       },
+              //       revenue: calcRevenueForPosition({
+              //         startPrice: price,
+              //         changedPrice: priceUpdateForSymbol.regularMarketPrice,
+              //         quantity: remainingQuantity,
+              //       }),
+              //     })),
+            };
+          })
+      ),
     }))
   );
 }

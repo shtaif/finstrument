@@ -1,12 +1,7 @@
-import { compact, intersection, isEqual } from 'lodash';
-import { type Optional } from 'utility-types';
-import { pipe, typedObjectKeys } from 'shared-utils';
-import { itFilter, itLazyDefer, itMap } from 'iterable-operators';
-import type {
-  Resolvers,
-  Subscription,
-  ObservedPosition,
-} from '../../../generated/graphql-schema.d.ts';
+import { compact } from 'lodash';
+import { pipe } from 'shared-utils';
+import { itMap } from 'iterable-operators';
+import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
 
@@ -16,20 +11,7 @@ const resolvers = {
   Subscription: {
     positions: {
       subscribe(_, args, _ctx, info) {
-        const observableFields = [
-          'remainingQuantity',
-          'realizedProfitOrLoss',
-          'recordUpdatedAt',
-          'priceData',
-          'unrealizedPnl',
-        ] as const satisfies (keyof ObservedPosition)[];
-
         const requestedFields = gqlFormattedFieldSelectionTree<Subscription['positions']>(info);
-
-        const requestedObservableFields = intersection(
-          observableFields,
-          typedObjectKeys(requestedFields.data?.subFields ?? {})
-        ) as typeof observableFields;
 
         const specifiers = args.filters.ids.map(id => ({
           type: 'POSITION' as const,
@@ -43,9 +25,37 @@ const resolvers = {
           getLiveMarketData({
             specifiers,
             translateToCurrencies: compact([translateCurrency]),
-            include: {
-              priceData: !!requestedFields.data?.subFields.priceData,
-              unrealizedPnl: !!requestedFields.data?.subFields.unrealizedPnl,
+            fields: {
+              positions: {
+                type: !!requestedFields.type,
+                position: pipe(requestedFields.data?.subFields, fields => ({
+                  id: !!fields?.id,
+                  ownerId: !!fields?.ownerId,
+                  openingTradeId: !!fields?.openingTradeId,
+                  symbol: !!fields?.symbol,
+                  originalQuantity: !!fields?.originalQuantity,
+                  remainingQuantity: !!fields?.remainingQuantity,
+                  realizedProfitOrLoss: !!fields?.realizedProfitOrLoss,
+                  openedAt: !!fields?.openedAt,
+                  recordCreatedAt: !!fields?.recordCreatedAt,
+                  recordUpdatedAt: !!fields?.recordUpdatedAt,
+                })),
+                priceData: pipe(requestedFields.data?.subFields.priceData?.subFields, fields => ({
+                  currency: !!fields?.currency,
+                  marketState: !!fields?.marketState,
+                  regularMarketTime: !!fields?.regularMarketTime,
+                  regularMarketPrice: !!fields?.regularMarketPrice,
+                })),
+                pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
+                  amount: !!fields?.amount,
+                  percent: !!fields?.percent,
+                  byTranslateCurrencies: pipe(fields?.currencyAdjusted?.subFields, fields => ({
+                    amount: !!fields?.amount,
+                    currency: !!fields?.currency,
+                    exchangeRate: !!fields?.exchangeRate,
+                  })),
+                })),
+              },
             },
           }),
           itMap(updates =>
@@ -59,46 +69,11 @@ const resolvers = {
                   : {
                       percent: pnl.percent,
                       amount: pnl.amount,
-                      currencyAdjusted: pnl.byTranslateCurrencies[0],
+                      currencyAdjusted: pnl.byTranslateCurrencies?.[0],
                     },
               },
             }))
           ),
-          source =>
-            itLazyDefer(() => {
-              const allPositionsData: {
-                [posId: string]: Optional<ObservedPosition, 'priceData' | 'unrealizedPnl'>;
-              } = Object.create(null);
-
-              return pipe(
-                source,
-                itMap(positionUpdates => {
-                  const updatesRelevantToRequestor = positionUpdates.filter(update => {
-                    return (
-                      update.type == 'REMOVE' ||
-                      requestedObservableFields.some(reqField => {
-                        const fieldPreUpdate = allPositionsData[update.data.id]?.[reqField];
-                        const fieldPostUpdate = update.data[reqField];
-                        return !isEqual(fieldPreUpdate, fieldPostUpdate);
-                      })
-                    );
-                  });
-
-                  Object.assign(allPositionsData, positionUpdates);
-
-                  for (const { type, data } of updatesRelevantToRequestor) {
-                    if (type === 'SET') {
-                      allPositionsData[data.id] = data;
-                    } else {
-                      delete allPositionsData[data.id];
-                    }
-                  }
-
-                  return updatesRelevantToRequestor;
-                })
-              );
-            }),
-          itFilter((relevantChangedPositions, i) => i === 0 || !!relevantChangedPositions.length),
           itMap(relevantPositionUpdates => ({
             positions: relevantPositionUpdates,
           }))

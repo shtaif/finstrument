@@ -1,7 +1,4 @@
-import {
-  type Resolvers,
-  type HoldingStatsMarketState,
-} from '../../../generated/graphql-schema.d.js';
+import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 
 export { resolvers };
 
@@ -12,7 +9,7 @@ const resolvers = {
         ownerId: ctx.activeUser.id,
         symbol: instrumentInfo.symbol!,
       });
-      return currMarketData.priceData.marketState as HoldingStatsMarketState;
+      return currMarketData.priceData.marketState;
     },
 
     async regularMarketTime(instrumentInfo, _, ctx) {

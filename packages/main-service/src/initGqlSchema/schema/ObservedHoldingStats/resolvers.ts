@@ -1,12 +1,7 @@
-import { compact, intersection, isEqual } from 'lodash';
-import { pipe, typedObjectKeys } from 'shared-utils';
-import { itFilter, itLazyDefer, itMap } from 'iterable-operators';
-import { type Optional } from 'utility-types';
-import type {
-  Resolvers,
-  Subscription,
-  ObservedHoldingStats,
-} from '../../../generated/graphql-schema.d.ts';
+import { compact } from 'lodash';
+import { pipe } from 'shared-utils';
+import { itMap } from 'iterable-operators';
+import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
 
@@ -16,30 +11,7 @@ const resolvers = {
   Subscription: {
     holdingStats: {
       subscribe(_, args, ctx, info) {
-        const observableFields = [
-          'breakEvenPrice',
-          'currentPortfolioPortion',
-          'lastChangedAt',
-          'lastRelatedTradeId',
-          'totalPositionCount',
-          'totalPresentInvestedAmount',
-          'totalQuantity',
-          'totalRealizedAmount',
-          'totalRealizedProfitOrLossAmount',
-          'totalRealizedProfitOrLossRate',
-          'priceData',
-          'unrealizedPnl',
-          // 'unrealizedPnl.amount',
-          // 'unrealizedPnl.percent',
-          // 'unrealizedPnl.currencyAdjusted',
-        ] as const satisfies (keyof Subscription['holdingStats'][number]['data'])[];
-
         const requestedFields = gqlFormattedFieldSelectionTree<Subscription['holdingStats']>(info);
-
-        const requestedObservableFields = intersection(
-          observableFields,
-          typedObjectKeys(requestedFields.data?.subFields ?? {})
-        ) as typeof observableFields;
 
         const specifiers = args.filters?.symbols?.length
           ? args.filters.symbols.map(symbol => ({
@@ -61,9 +33,43 @@ const resolvers = {
           getLiveMarketData({
             specifiers,
             translateToCurrencies: compact([translateCurrency]),
-            include: {
-              priceData: !!requestedFields.data?.subFields.priceData,
-              unrealizedPnl: !!requestedFields.data?.subFields.unrealizedPnl,
+            fields: {
+              holdings: {
+                // type: !!requestedFields.type,
+                // holding: mapValues(requestedFields.data?.subFields, Boolean),
+                // priceData: mapValues(requestedFields.data?.subFields.priceData?.subFields, Boolean),
+                // pnl: mapValues(requestedFields.data?.subFields.unrealizedPnl?.subFields, Boolean),
+                type: !!requestedFields.type,
+                holding: pipe(requestedFields.data?.subFields, fields => ({
+                  symbol: !!fields?.symbol,
+                  ownerId: !!fields?.ownerId,
+                  lastRelatedTradeId: !!fields?.lastRelatedTradeId,
+                  totalPositionCount: !!fields?.totalPositionCount,
+                  totalQuantity: !!fields?.totalQuantity,
+                  totalPresentInvestedAmount: !!fields?.totalPresentInvestedAmount,
+                  totalRealizedAmount: !!fields?.totalRealizedAmount,
+                  totalRealizedProfitOrLossAmount: !!fields?.totalRealizedProfitOrLossAmount,
+                  totalRealizedProfitOrLossRate: !!fields?.totalRealizedProfitOrLossRate,
+                  currentPortfolioPortion: !!fields?.currentPortfolioPortion,
+                  breakEvenPrice: !!fields?.breakEvenPrice,
+                  lastChangedAt: !!fields?.lastChangedAt,
+                })),
+                priceData: pipe(requestedFields.data?.subFields.priceData?.subFields, fields => ({
+                  currency: !!fields?.currency,
+                  marketState: !!fields?.marketState,
+                  regularMarketTime: !!fields?.regularMarketTime,
+                  regularMarketPrice: !!fields?.regularMarketPrice,
+                })),
+                pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
+                  amount: !!fields?.amount,
+                  percent: !!fields?.percent,
+                  byTranslateCurrencies: pipe(fields?.currencyAdjusted?.subFields, fields => ({
+                    amount: !!fields?.amount,
+                    currency: !!fields?.currency,
+                    exchangeRate: !!fields?.exchangeRate,
+                  })),
+                })),
+              },
             },
           }),
           itMap(updates =>
@@ -77,51 +83,11 @@ const resolvers = {
                   : {
                       percent: pnl.percent,
                       amount: pnl.amount,
-                      currencyAdjusted: pnl.byTranslateCurrencies[0],
+                      currencyAdjusted: pnl.byTranslateCurrencies?.[0],
                     },
               },
             }))
           ),
-          source =>
-            itLazyDefer(() => {
-              const allHoldingsData: {
-                [ownerIdAndSymbol: string]: Optional<
-                  ObservedHoldingStats,
-                  'priceData' | 'unrealizedPnl'
-                >;
-              } = Object.create(null);
-
-              return pipe(
-                source,
-                itMap(holdingUpdates => {
-                  const updatesRelevantToRequestor = holdingUpdates.filter(update => {
-                    const ownerIdAndSymbol = `${update.data.ownerId}_${update.data.symbol}`;
-                    return (
-                      update.type === 'REMOVE' ||
-                      requestedObservableFields.some(reqField => {
-                        const [fieldPreUpdate, fieldPostUpdate] = [
-                          allHoldingsData[ownerIdAndSymbol]?.[reqField],
-                          update.data[reqField],
-                        ];
-                        return !isEqual(fieldPreUpdate, fieldPostUpdate);
-                      })
-                    );
-                  });
-
-                  for (const { type, data } of updatesRelevantToRequestor) {
-                    const key = `${data.ownerId}_${data.symbol}`;
-                    if (type === 'SET') {
-                      allHoldingsData[key] = data;
-                    } else {
-                      delete allHoldingsData[key];
-                    }
-                  }
-
-                  return updatesRelevantToRequestor;
-                })
-              );
-            }),
-          itFilter((relevantHoldingUpdates, i) => i === 0 || !!relevantHoldingUpdates.length),
           itMap(relevantHoldingUpdates => ({
             holdingStats: relevantHoldingUpdates,
           }))
@@ -130,3 +96,27 @@ const resolvers = {
     },
   },
 } satisfies Resolvers;
+
+// const ___ = getLiveMarketData({
+//   specifiers: [],
+//   translateToCurrencies: ['ILS', 'CAD'] as const,
+//   fields: {
+//     holdings: {
+//       priceData: {
+//         currency: true,
+//       },
+//       pnl: {
+//         amount: true,
+//         byTranslateCurrencies: {
+//           amount: true,
+//         },
+//       },
+//     },
+//   },
+// });
+
+// for await (const update of ___) {
+//   update.holdings[0].priceData.currency;
+//   update.holdings[0].pnl.amount;
+//   update.holdings[0].pnl.byTranslateCurrencies[0].amount;
+// }

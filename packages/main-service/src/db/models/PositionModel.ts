@@ -109,6 +109,7 @@ class PositionModel extends Model<PositionModelAttributes, PositionModelCreation
   } satisfies HasManyOptions)
   positionClosings!: Self<PositionClosingModel>[];
 }
+
 type PositionModelAttributes = InferAttributes<PositionModel>;
 
 type PositionModelCreationAttributes = {
