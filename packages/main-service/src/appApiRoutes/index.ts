@@ -1,6 +1,8 @@
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { execPipe as pipe, asyncMap } from 'iter-tools';
+import { keyBy, mapValues } from 'lodash';
+import { itMap, itLazyDefer } from 'iterable-operators';
+import { pipe } from 'shared-utils';
 import express, { Request, RequestHandler, ErrorRequestHandler } from 'express';
 // import { json as expressJson } from 'body-parser';
 import { z } from 'zod';
@@ -8,8 +10,8 @@ import { UserModel } from '../db/index.js';
 import streamSseDownToHttpResponse from '../utils/streamSseDownToHttpResponse.js';
 // import observePricesData from '../utils/observePricesData';
 import { marketDataService } from '../utils/marketDataService/index.js';
-import liveRevenueData from '../utils/liveRevenueData/index.js';
 import positionsService from '../utils/positionsService/index.js';
+import { getLiveMarketData } from '../utils/getLiveMarketData/index.js';
 
 const appApiRoutes: RequestHandler = express()
   // .use(expressCors(), expressJson({ limit: '100kb' }))
@@ -56,17 +58,51 @@ const appApiRoutes: RequestHandler = express()
 
       .get(
         '/live-revenue-data/:userAlias',
-        (
-          req: Request<{ userAlias: string }, any, void, { detailedPositionsFor?: string }>,
-          res
-        ) => {
+        (req: Request<{ userAlias: string }, any, void, {}>, res) => {
           pipe(
-            liveRevenueData({
-              userAlias: req.params.userAlias,
-              includeDetailedPositionsFor: req.query.detailedPositionsFor
-                ?.split(',')
-                .map(sym => sym.trim()),
+            itLazyDefer(async () => {
+              const ownerId = (await UserModel.findOne({
+                where: { alias: req.params.userAlias },
+              }))!.id;
+
+              return getLiveMarketData({
+                specifiers: [{ type: 'HOLDING', holdingPortfolioOwnerId: ownerId }],
+                fields: {
+                  holdings: {
+                    holding: {
+                      symbol: true,
+                    },
+                    priceData: {
+                      regularMarketPrice: true,
+                      regularMarketTime: true,
+                      marketState: true,
+                    },
+                    pnl: {
+                      amount: true,
+                      percent: true,
+                    },
+                  },
+                },
+              });
             }),
+            itMap(({ holdings }) => ({
+              updatesBySymbol: pipe(
+                holdings,
+                holdings => keyBy(holdings, ({ holding }) => holding.symbol),
+                holdingsBySymbol =>
+                  mapValues(holdingsBySymbol, ({ priceData, pnl }) => ({
+                    price: {
+                      regularMarketPrice: priceData.regularMarketPrice,
+                      regularMarketTime: priceData.regularMarketTime,
+                      marketState: priceData.marketState,
+                    },
+                    profitOrLoss: {
+                      amount: pnl.amount,
+                      percent: pnl.percent,
+                    },
+                  }))
+              ),
+            })),
             revenueDataIter => streamSseDownToHttpResponse(req, res, revenueDataIter)
           );
         }
@@ -76,7 +112,7 @@ const appApiRoutes: RequestHandler = express()
         const ownerId = (await UserModel.findOne({ where: { alias: req.params.userAlias } }))!.id;
         pipe(
           positionsService.observeHoldingChanges([{ ownerId }]),
-          asyncMap(changedHoldings => ({ positions: changedHoldings })),
+          itMap(changedHoldings => ({ positions: changedHoldings })),
           positionDataIter => streamSseDownToHttpResponse(req, res, positionDataIter)
         );
       })
