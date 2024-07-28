@@ -2,17 +2,11 @@ import { keyBy } from 'lodash';
 import { pipe } from 'shared-utils';
 import { itTakeFirst } from 'iterable-operators';
 import DataLoader from 'dataloader';
-import {
-  getLiveMarketData,
-  type PositionMarketStatsUpdate,
-} from '../../utils/getLiveMarketData/index.js';
+import { getLiveMarketData } from '../../utils/getLiveMarketData/index.js';
 
-export { createPositionMarketDataLoader, type PositionMarketStatsUpdate };
+export { createPositionMarketDataLoader, type PositionPnlUpdate };
 
-function createPositionMarketDataLoader(): DataLoader<
-  string,
-  PositionMarketStatsUpdate<true, true> | undefined
-> {
+function createPositionMarketDataLoader(): DataLoader<string, PositionPnlUpdate | undefined> {
   return new DataLoader(async positionIds => {
     const positionMarketDatas = (await pipe(
       getLiveMarketData({
@@ -20,7 +14,15 @@ function createPositionMarketDataLoader(): DataLoader<
           type: 'POSITION',
           positionId,
         })),
-        include: { priceData: true, unrealizedPnl: true },
+        fields: {
+          positions: {
+            position: { id: true },
+            pnl: {
+              amount: true,
+              percent: true,
+            },
+          },
+        },
       }),
       itTakeFirst()
     ))!;
@@ -30,3 +32,13 @@ function createPositionMarketDataLoader(): DataLoader<
     return positionIds.map(positionId => positionDatasById[positionId]);
   });
 }
+
+type PositionPnlUpdate = {
+  position: {
+    id: string;
+  };
+  pnl: {
+    amount: number;
+    percent: number;
+  };
+};

@@ -1,7 +1,7 @@
 import { getTestUserId } from '../utils/getTestUserId.js';
 import {
   createHoldingMarketDataLoader,
-  type HoldingMarketStatsUpdate,
+  type HoldingMarketStats,
 } from './loaders/createHoldingMarketDataLoader.js';
 import { createLiveHoldingMarketDataLoader } from './loaders/createLiveHoldingMarketDataLoader.js';
 import { createPortfolioStatsLoader } from './loaders/createPortfolioStatsLoader.js';
@@ -9,7 +9,7 @@ import { createPortfolioStatsChangesLoader } from './loaders/createPortfolioStat
 import { createHoldingStatsChangesLoader } from './loaders/createHoldingStatsChangesLoader.js';
 import {
   createPositionMarketDataLoader,
-  type PositionMarketStatsUpdate,
+  type PositionPnlUpdate,
 } from './loaders/createPositionMarketDataLoader.js';
 import {
   createInstrumentInfoLoader,
@@ -27,8 +27,8 @@ import {
 export {
   appGqlContext,
   type AppGqlContextValue,
-  type HoldingMarketStatsUpdate,
-  type PositionMarketStatsUpdate,
+  type HoldingMarketStats,
+  type PositionPnlUpdate,
   type InstrumentInfo,
   type UpdatedSymbolPrice,
 };

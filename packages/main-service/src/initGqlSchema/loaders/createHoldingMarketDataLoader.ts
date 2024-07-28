@@ -7,11 +7,11 @@ import {
   type HoldingMarketStatsUpdate,
 } from '../../utils/getLiveMarketData/index.js';
 
-export { createHoldingMarketDataLoader, type HoldingMarketStatsUpdate };
+export { createHoldingMarketDataLoader, type HoldingMarketStats };
 
 function createHoldingMarketDataLoader(): DataLoader<
   { ownerId: string; symbol: string },
-  HoldingMarketStatsUpdate<true, true>
+  HoldingMarketStats
 > {
   return new DataLoader(
     async inputs => {
@@ -22,9 +22,33 @@ function createHoldingMarketDataLoader(): DataLoader<
             holdingPortfolioOwnerId: input.ownerId,
             holdingSymbol: input.symbol,
           })),
-          include: {
-            priceData: true,
-            unrealizedPnl: true,
+          fields: {
+            holdings: {
+              holding: {
+                symbol: true,
+                ownerId: true,
+                lastRelatedTradeId: true,
+                totalPositionCount: true,
+                totalQuantity: true,
+                totalPresentInvestedAmount: true,
+                totalRealizedAmount: true,
+                totalRealizedProfitOrLossAmount: true,
+                totalRealizedProfitOrLossRate: true,
+                currentPortfolioPortion: true,
+                breakEvenPrice: true,
+                lastChangedAt: true,
+              },
+              priceData: {
+                currency: true,
+                marketState: true,
+                regularMarketTime: true,
+                regularMarketPrice: true,
+              },
+              pnl: {
+                amount: true,
+                percent: true,
+              },
+            },
           },
         }),
         itTakeFirst()
@@ -32,7 +56,7 @@ function createHoldingMarketDataLoader(): DataLoader<
 
       const marketDatasByOwnerIdsAndSymbols: {
         [ownerId: string]: {
-          [symbol: string]: HoldingMarketStatsUpdate<true, true>;
+          [symbol: string]: HoldingMarketStats;
         };
       } = pipe(
         groupBy(currMarketData.holdings, ({ holding }) => holding.ownerId),
@@ -46,3 +70,12 @@ function createHoldingMarketDataLoader(): DataLoader<
     }
   );
 }
+
+type HoldingMarketStats = {
+  holding: HoldingMarketStatsUpdate['holding'];
+  priceData: HoldingMarketStatsUpdate['priceData'];
+  pnl: {
+    amount: HoldingMarketStatsUpdate['pnl']['amount'];
+    percent: HoldingMarketStatsUpdate['pnl']['percent'];
+  };
+};

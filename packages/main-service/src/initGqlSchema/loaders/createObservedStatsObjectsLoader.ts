@@ -10,7 +10,7 @@ export { createObservedStatsObjectsLoader, type HoldingMarketStatsUpdate };
 
 function createObservedStatsObjectsLoader(): DataLoader<
   { ownerId: string; symbol: string },
-  AsyncIterable<HoldingMarketStatsUpdate<true, true>>
+  AsyncIterable<HoldingMarketStatsUpdate>
 > {
   return new DataLoader(async inputs => {
     const holdingMarketStats = getLiveMarketData({
@@ -19,9 +19,39 @@ function createObservedStatsObjectsLoader(): DataLoader<
         holdingPortfolioOwnerId: input.ownerId,
         holdingSymbol: input.symbol,
       })),
-      include: {
-        priceData: true,
-        unrealizedPnl: true,
+      fields: {
+        holdings: {
+          type: true,
+          holding: {
+            symbol: true,
+            ownerId: true,
+            lastRelatedTradeId: true,
+            totalPositionCount: true,
+            totalQuantity: true,
+            totalPresentInvestedAmount: true,
+            totalRealizedAmount: true,
+            totalRealizedProfitOrLossAmount: true,
+            totalRealizedProfitOrLossRate: true,
+            currentPortfolioPortion: true,
+            breakEvenPrice: true,
+            lastChangedAt: true,
+          },
+          priceData: {
+            currency: true,
+            marketState: true,
+            regularMarketTime: true,
+            regularMarketPrice: true,
+          },
+          pnl: {
+            amount: true,
+            percent: true,
+            byTranslateCurrencies: {
+              amount: true,
+              currency: true,
+              exchangeRate: true,
+            },
+          },
+        },
       },
     });
 

@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { isEmpty, uniq, pick } from 'lodash';
+import { isEmpty, uniq, pick, isEqual } from 'lodash';
 import { z } from 'zod';
 import WebSocket from 'ws';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';
@@ -11,6 +11,8 @@ import {
   itTakeUntil,
   itTap,
   itSwitchMap,
+  itStartWith,
+  itPairwise,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
 import { iterified, iterifiedUnwrapped } from 'iterified';
@@ -29,6 +31,14 @@ function observePricesDataMultiplexed<TSymbols extends string = string>(params: 
   return pipe(
     Symbol.asyncIterator in params.symbols ? params.symbols : of(params.symbols),
     itMap(uniq),
+    source =>
+      pipe(
+        source,
+        itStartWith([] as TSymbols[]),
+        itPairwise(),
+        itFilter(([prev, next], i) => i === 0 || !isEqual(prev, next)),
+        itMap(([, nextDistinctSymbolSet]) => nextDistinctSymbolSet)
+      ),
     itSwitchMap(newSymbols =>
       pipe(
         {

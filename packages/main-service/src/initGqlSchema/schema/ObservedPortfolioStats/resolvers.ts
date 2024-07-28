@@ -1,12 +1,7 @@
-import { compact, intersection, isEqual } from 'lodash';
-import { type Optional } from 'utility-types';
-import { pipe, typedObjectKeys } from 'shared-utils';
-import { itFilter, itLazyDefer, itMap } from 'iterable-operators';
-import type {
-  Resolvers,
-  Subscription,
-  ObservedPortfolioStats,
-} from '../../../generated/graphql-schema.d.ts';
+import { compact } from 'lodash';
+import { pipe } from 'shared-utils';
+import { itMap } from 'iterable-operators';
+import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { type PortfolioObjectSpecifier } from '../../../utils/observeStatsObjectChanges/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
@@ -17,23 +12,8 @@ const resolvers = {
   Subscription: {
     portfolioStats: {
       subscribe(_, _args, ctx, info) {
-        const observableFields = [
-          'relatedTradeId',
-          'lastChangedAt',
-          'totalPresentInvestedAmount',
-          'totalRealizedAmount',
-          'totalRealizedProfitOrLossAmount',
-          'totalRealizedProfitOrLossRate',
-          'unrealizedPnl',
-        ] as const satisfies (keyof ObservedPortfolioStats)[];
-
         const requestedFields =
           gqlFormattedFieldSelectionTree<Subscription['portfolioStats']>(info);
-
-        const requestedObservableFields = intersection(
-          observableFields,
-          typedObjectKeys(requestedFields.data?.subFields ?? {})
-        ) as typeof observableFields;
 
         const specifiers = [
           {
@@ -50,7 +30,30 @@ const resolvers = {
           getLiveMarketData({
             specifiers,
             translateToCurrencies: compact([translateCurrency]),
-            include: { unrealizedPnl: !!requestedFields.data?.subFields.unrealizedPnl },
+            fields: {
+              portfolios: {
+                type: !!requestedFields.type,
+                portfolio: pipe(requestedFields.data?.subFields, fields => ({
+                  relatedTradeId: !!fields?.relatedTradeId,
+                  ownerId: !!fields?.ownerId,
+                  forCurrency: !!fields?.forCurrency,
+                  totalPresentInvestedAmount: !!fields?.totalPresentInvestedAmount,
+                  totalRealizedAmount: !!fields?.totalRealizedAmount,
+                  totalRealizedProfitOrLossAmount: !!fields?.totalRealizedProfitOrLossAmount,
+                  totalRealizedProfitOrLossRate: !!fields?.totalRealizedProfitOrLossRate,
+                  lastChangedAt: !!fields?.lastChangedAt,
+                })),
+                pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
+                  amount: !!fields?.amount,
+                  percent: !!fields?.percent,
+                  byTranslateCurrencies: pipe(fields?.currencyAdjusted?.subFields, fields => ({
+                    amount: !!fields?.amount,
+                    currency: !!fields?.currency,
+                    exchangeRate: !!fields?.exchangeRate,
+                  })),
+                })),
+              },
+            },
           }),
           itMap(updates =>
             updates.portfolios.map(({ type, portfolio, pnl }) => ({
@@ -62,48 +65,11 @@ const resolvers = {
                   : {
                       percent: pnl.percent,
                       amount: pnl.amount,
-                      currencyAdjusted: pnl.byTranslateCurrencies[0],
+                      currencyAdjusted: pnl.byTranslateCurrencies?.[0],
                     },
               },
             }))
           ),
-          source =>
-            itLazyDefer(() => {
-              const allPStatsData: {
-                [ownerIdAndCurrency: string]: Optional<ObservedPortfolioStats, 'unrealizedPnl'>;
-              } = Object.create(null);
-
-              return pipe(
-                source,
-                itMap(pStatsUpdates => {
-                  const updatesRelevantToRequestor = pStatsUpdates.filter(update => {
-                    const ownerIdAndCurrency = `${update.data.ownerId}_${update.data.forCurrency ?? ''}`;
-                    return (
-                      update.type === 'REMOVE' ||
-                      requestedObservableFields.some(reqField => {
-                        const [fieldPreUpdate, fieldPostUpdate] = [
-                          allPStatsData[ownerIdAndCurrency]?.[reqField],
-                          update.data[reqField],
-                        ];
-                        return !isEqual(fieldPreUpdate, fieldPostUpdate);
-                      })
-                    );
-                  });
-
-                  for (const { type, data } of updatesRelevantToRequestor) {
-                    const key = `${data.ownerId}_${data.forCurrency ?? ''}`;
-                    if (type === 'SET') {
-                      allPStatsData[key] = data;
-                    } else {
-                      delete allPStatsData[key];
-                    }
-                  }
-
-                  return updatesRelevantToRequestor;
-                })
-              );
-            }),
-          itFilter((relevantChangedPStats, i) => i === 0 || !!relevantChangedPStats.length),
           itMap(relevantPStatsUpdates => ({
             portfolioStats: relevantPStatsUpdates,
           }))
