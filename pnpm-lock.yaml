@@ -504,9 +504,6 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
-      simplytyped:
-        specifier: ^3.3.0
-        version: 3.3.0(typescript@5.5.3)
       ts-toolbelt:
         specifier: ^9.6.0
         version: 9.6.0
@@ -4796,11 +4793,6 @@ packages:
 
   signedsource@1.0.0:
     resolution: {integrity: sha512-6+eerH9fEnNmi/hyM1DXcRK3pWdoMQtlkQ+ns0ntzunjKqp5i3sKCc80ym8Fib3iaYhdJUOPdhlJWj1tvge2Ww==}
-
-  simplytyped@3.3.0:
-    resolution: {integrity: sha512-mz4RaNdKTZiaKXgi6P1k/cdsxV3gz+y1Wh2NXHWD40dExktLh4Xx/h6MFakmQWODZHj/2rKe59acacpL74ZhQA==}
-    peerDependencies:
-      typescript: '>=2.8.0'
 
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
@@ -11077,10 +11069,6 @@ snapshots:
   signal-exit@4.1.0: {}
 
   signedsource@1.0.0: {}
-
-  simplytyped@3.3.0(typescript@5.5.3):
-    dependencies:
-      typescript: 5.5.3
 
   slash@3.0.0: {}
 
