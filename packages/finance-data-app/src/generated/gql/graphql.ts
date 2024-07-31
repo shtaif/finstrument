@@ -154,6 +154,11 @@ export type InstrumentMarketData = {
   regularMarketTime: Scalars['DateTime']['output'];
 };
 
+export type MeInfo = {
+  __typename?: 'MeInfo';
+  user?: Maybe<User>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   setTrades: SetTradesResult;
@@ -336,6 +341,7 @@ export type Query = {
   hello: Scalars['String']['output'];
   holdingStats: Array<HoldingStats>;
   holdingStatsChanges: Array<HoldingStatsChange>;
+  me: MeInfo;
   portfolioStats: PortfolioStats;
   portfolioStatsChanges: Array<PortfolioStatsChange>;
   positions: Array<Position>;
@@ -451,10 +457,16 @@ export type SymbolPriceData = {
   symbol: Scalars['ID']['output'];
 };
 
+export type User = {
+  __typename?: 'User';
+  alias: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+};
+
 export type HoldingStatsDataSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
 export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
 
 
-export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"holdingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;
+export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"HoldingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;
