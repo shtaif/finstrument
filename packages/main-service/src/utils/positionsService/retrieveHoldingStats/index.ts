@@ -1,5 +1,5 @@
 import { QueryTypes, type Transaction } from 'sequelize';
-import { mapValues } from 'lodash';
+import { mapValues } from 'lodash-es';
 import {
   HoldingStatsChangeModel,
   PortfolioCompositionChangeModel,

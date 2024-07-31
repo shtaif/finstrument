@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { keyBy, mapValues } from 'lodash';
+import { keyBy, mapValues } from 'lodash-es';
 import { itMap, itLazyDefer } from 'iterable-operators';
 import { pipe } from 'shared-utils';
 import express, { Request, RequestHandler, ErrorRequestHandler } from 'express';

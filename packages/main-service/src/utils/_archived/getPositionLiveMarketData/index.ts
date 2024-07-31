@@ -1,4 +1,4 @@
-import { assign, compact, filter, map } from 'lodash';
+import { assign, compact, filter, map } from 'lodash-es';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
 import { pipe } from 'shared-utils';
 import {

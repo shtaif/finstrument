@@ -1,4 +1,4 @@
-import { isEmpty, pick } from 'lodash';
+import { isEmpty, pick } from 'lodash-es';
 import { z } from 'zod';
 import { pipe } from 'shared-utils';
 import {

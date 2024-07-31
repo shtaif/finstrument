@@ -1,4 +1,4 @@
-import { intersectionWith } from 'lodash';
+import { intersectionWith } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import { subscriberRedisClient as redisSubscriber } from '../redisClients.js';

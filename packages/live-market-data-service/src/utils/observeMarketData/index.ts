@@ -1,6 +1,5 @@
 import { setImmediate } from 'node:timers/promises';
-import { uniq, flatten } from 'lodash';
-import { pick as fpPick } from 'lodash/fp.js';
+import { uniq, flatten, pick } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { iterifiedUnwrapped } from 'iterified';
 import { asyncIterMap, itTakeFirst, myIterableCleanupPatcher } from 'iterable-operators';
@@ -41,12 +40,12 @@ function observeMarketData(params: { symbols: string[] }): AsyncIterable<SymbolP
           async return() {
             observedSymbolsChangeNotifications.next({ remove: symbolsNormalized });
             await pricesIterator.return!();
-            return { done: true, value: undefined as unknown };
+            return { done: true as const, value: undefined };
           },
         });
       },
     })),
-    asyncIterMap(fpPick(symbolsNormalized))
+    asyncIterMap(prices => pick(prices!, symbolsNormalized))
   );
 }
 

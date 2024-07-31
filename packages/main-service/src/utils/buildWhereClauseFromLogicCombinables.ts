@@ -1,4 +1,4 @@
-import { each } from 'lodash';
+import { each } from 'lodash-es';
 import { pipe } from 'shared-utils';
 
 export { buildWhereClauseFromLogicCombinables, type LogicCombinable };

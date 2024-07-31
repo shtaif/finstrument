@@ -1,4 +1,4 @@
-import { differenceWith, groupBy } from 'lodash';
+import { differenceWith, groupBy } from 'lodash-es';
 import { CustomError, asyncPipe, pipe } from 'shared-utils';
 import {
   positionsService,

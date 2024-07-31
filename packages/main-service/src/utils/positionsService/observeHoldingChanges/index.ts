@@ -1,4 +1,4 @@
-import { groupBy, mapValues } from 'lodash';
+import { groupBy, mapValues } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itFilter, itMap, myIterableCleanupPatcher } from 'iterable-operators';
 import { subscriberRedisClient as redisSubscriber } from '../../redisClients.js';

@@ -1,4 +1,4 @@
-import { map, keyBy, mapValues, compact } from 'lodash';
+import { map, keyBy, mapValues, compact } from 'lodash-es';
 import { Op } from 'sequelize';
 import yahooFinance from 'yahoo-finance2';
 import { asyncPipe } from 'shared-utils';
