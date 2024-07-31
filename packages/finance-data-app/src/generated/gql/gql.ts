@@ -13,7 +13,7 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  * Therefore it is highly recommended to use the babel or swc plugin for production.
  */
 const documents = {
-    "\n  subscription holdingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.HoldingStatsDataSubscriptionDocument,
+    "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.HoldingStatsDataSubscriptionDocument,
 };
 
 /**
@@ -33,7 +33,7 @@ export function graphql(source: string): unknown;
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  subscription holdingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription holdingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

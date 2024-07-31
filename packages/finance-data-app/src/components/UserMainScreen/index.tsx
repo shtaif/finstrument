@@ -1,17 +1,15 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import axios from 'axios';
-import { useEffect, useMemo } from 'react';
 import { useLocalStorage, useAsyncFn, useKey, useFirstMountState } from 'react-use';
-import { itFilter, itLazyDefer, itMap, itShare, itTake, itTap } from 'iterable-operators';
 import { useVisibilityChange } from '@uidotdev/usehooks';
 import { useParams } from 'react-router-dom';
 import { Upload, UploadFile, Switch, Spin, notification } from 'antd';
 import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
-import { print as gqlPrint, type ExecutionResult, type GraphQLError } from 'graphql';
+import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { empty } from 'ix/asynciterable/empty';
-import { useAsyncIterable, Iterate } from '../../utils/react-async-iterable/index.ts';
+import { Iterate } from '../../utils/react-async-iterable/index.ts';
 import { pipe } from 'shared-utils';
+import { itLazyDefer, itMap, itShare, itTake, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { PositionsTable } from '../PositionsTable/index.tsx';
@@ -19,82 +17,10 @@ import './style.css';
 
 export { UserMainScreen };
 
-// (async function () {
-//   const iter = observePositionAndRevenueData({ userAlias: 'dorshtaif' });
-//   for await (const item of iter) {
-//     console.log('ITEM', item);
-//     break;
-//   }
-//   console.log('DONE');
-// })();
-
-const gen = (async function* () {
-  for (const item of ['a', 'b', 'c', '🏁'] as const) {
-    yield item;
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
-})();
-
-const concreteVal = 'a' as const;
-
 function UserMainScreen() {
-  // const { data: myHoldingStatsQueryData, loading: myHoldingStatsQueryLoading } =
-  //   useQuery(myHoldingStatsQuery);
-
-  // const { data: holdingStatsSubsData, loading: holdingStatsSubsLoading } = useSubscription(
-  //   holdingStatsDataSubscription
-  // );
-
-  // console.log({
-  //   myHoldingStatsQueryLoading,
-  //   myHoldingStatsQueryData,
-  //   holdingStatsSubsLoading,
-  //   holdingStatsSubsData,
-  // });
-
-  // return (
-  //   <div>
-  //     <div
-  //       style={{
-  //         whiteSpace: 'break-spaces',
-  //         textAlign: 'left',
-  //       }}
-  //     >
-  //       {JSON.stringify(myHoldingStatsQueryData, undefined, 2)}
-  //     </div>
-  //     <br />
-  //     <br />
-  //     <div
-  //       style={{
-  //         whiteSpace: 'break-spaces',
-  //         textAlign: 'left',
-  //       }}
-  //     >
-  //       {JSON.stringify(holdingStatsSubsData, undefined, 2)}
-  //     </div>
-  //   </div>
-  // );
-
-  // const ___1 = useAsyncIterable(gen, 'init_value' as const);
-  // const [value1, isPendingFirstIteration1, isDone1, error1] = ___1;
-  // if (!isDone1) {
-  //   error1;
-  // }
-  // if (isPendingFirstIteration1) {
-  //   isDone1;
-  //   error1;
-  // } else {
-  //   isDone1;
-  //   error1;
-  // }
-
-  // const ___2 = useAsyncIterable(concreteVal, 'init_value' as const);
-  // const [value2, isPendingFirstIteration2, isDone2, error2] = ___2;
-
   const isFirstMount = useFirstMountState();
   const userAlias = useParams<'alias'>().alias!;
-  // const isBrowserTabVisible = useVisibilityChange();
-  const isBrowserTabVisible = true;
+  const isBrowserTabVisible = useVisibilityChange();
   const [notificationInstance, notificationPlacement] = notification.useNotification();
   const [
     [liveRevenueDataOn, setLiveRevenueDataOn],
@@ -106,8 +32,8 @@ function UserMainScreen() {
 
   useKey(
     'Enter',
-    ({ shiftKey }) => {
-      if (shiftKey) {
+    ev => {
+      if (ev.shiftKey) {
         setLiveRevenueDataOn(!liveRevenueDataOn);
       }
     },
@@ -116,23 +42,18 @@ function UserMainScreen() {
   );
 
   const holdingStatsDataIter = useMemo(() => {
-    return pipe(combinedHoldingStatsIter(), holdingStatsDataSubs => {
-      console.log({
-        isFirstMount,
-        liveRevenueDataOn,
-        isBrowserTabVisible,
-      });
+    return pipe(combinedHoldingStatsIter(), $ => {
       if (isFirstMount && !liveRevenueDataOn) {
-        console.log('!!! isFirstMount && !liveRevenueDataOn');
-        return pipe(holdingStatsDataSubs, itTake(1));
+        return pipe($, itTake(1));
       }
       if (liveRevenueDataOn && isBrowserTabVisible) {
-        return holdingStatsDataSubs;
+        return $;
       }
-      console.log('!!! empty...');
-      return empty();
-    }) satisfies ReturnType<typeof combinedHoldingStatsIter>;
-  }, [liveRevenueDataOn, isBrowserTabVisible, isFirstMount]);
+      return (async function* () {})();
+    });
+  }, [liveRevenueDataOn, isBrowserTabVisible, isFirstMount]) satisfies ReturnType<
+    typeof combinedHoldingStatsIter
+  >;
 
   useEffect(() => {
     const it = holdingStatsDataIter[Symbol.asyncIterator]();
@@ -146,29 +67,26 @@ function UserMainScreen() {
           description: <>Couldn't connect to server data stream</>,
         });
         setLiveRevenueDataOn(false);
-        console.log('ERROR!!!!!!', err);
       }
     })();
     return () => void it.return!();
   }, [holdingStatsDataIter, notificationInstance, setLiveRevenueDataOn]);
 
   useEffect(() => {
-    const it = holdingStatsDataIter[Symbol.asyncIterator]();
+    const nextFetchedHoldingCount = pipe(
+      holdingStatsDataIter,
+      itMap(next => next.holdingStats.length),
+      iter => iter[Symbol.asyncIterator]()
+    );
     (async () => {
       try {
-        const countOfRecentlyFetchedHoldings = pipe(
-          { [Symbol.asyncIterator]: () => it },
-          itMap(next => next?.holdingStats.length),
-          itFilter(fetchedHoldingsCount => fetchedHoldingsCount !== undefined)
-        );
-        for await (const count of countOfRecentlyFetchedHoldings) {
+        for await (const count of {
+          [Symbol.asyncIterator]: () => nextFetchedHoldingCount,
+        })
           setLastFetchedHoldingsCount(count);
-        }
-      } catch {
-        /* ... */
-      }
+      } catch {}
     })();
-    return () => void it.return!();
+    return () => void nextFetchedHoldingCount.return!();
   }, [holdingStatsDataIter, setLastFetchedHoldingsCount]);
 
   const [{ loading: isUploadingLedger }, uploadLedger] = useAsyncFn(
@@ -197,9 +115,6 @@ function UserMainScreen() {
         showUploadList={false}
         beforeUpload={() => false}
         onChange={info => uploadLedger(info.file)}
-        // onDragEnter={() => console.log('onDragEnter')}
-        // onDragLeave={() => console.log('onDragLeave')}
-        // onDragOver={() => console.log('onDragOver')}
       >
         {isUploadingLedger ? (
           <Spin indicator={<LoadingOutlined className="loading-spinner" spin />} />
@@ -213,127 +128,37 @@ function UserMainScreen() {
         )}
       </Upload.Dragger>
 
-      <br />
-      <br />
-
-      <div className="live-revenue-data-control">
-        <label className="label">
-          <span>Live revenue data: </span>
-
-          <Switch
-            checked={liveRevenueDataOn}
-            onChange={isOn => setLiveRevenueDataOn(isOn)}
-            unCheckedChildren={<>OFF</>}
-            checkedChildren={
-              <Iterate value={holdingStatsDataIter}>
-                {(_, pendingFirstData, __, ___) =>
-                  liveRevenueDataOn && !pendingFirstData ? (
-                    <>ON</>
-                  ) : (
-                    <Spin
-                      indicator={
-                        <LoadingOutlined
-                          style={{ marginTop: -2, fontSize: 16, color: '#ffffff' }}
-                        />
-                      }
-                    />
-                  )
-                }
-              </Iterate>
-            }
-          />
-        </label>
-      </div>
-
-      <br />
-      <br />
-
-      {/* <div>
-        <Iterate initialValue={undefined} value={liveRevenueDataNotifications___2}>
-          {(value: any, isDone, isPendingFirstValue) => (
-            <>
-              <div>
-                {value?.eventType === 'open' || value?.eventType === 'message'
-                  ? 'Connected'
-                  : 'Connecting...'}
-              </div>
-
-              <PositionsTable
-                loading={isPendingFirstValue}
-                positions={Object.entries(value?.data ?? {}).map(
-                  ([symbol, { priceStatus, totalQuantity, breakEvenPrice, revenue }]) => ({
+      <Iterate value={holdingStatsDataIter}>
+        {(next, pendingFirstData, isDone, error) =>
+          error ? (
+            <div>Oh no! {(error as any)?.message}</div>
+          ) : next?.errors?.length ? (
+            <>{JSON.stringify(next, undefined, 2)}</>
+          ) : (
+            <PositionsTable
+              loading={pendingFirstData}
+              loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
+              positions={next?.holdingStats?.map(
+                ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => {
+                  return {
                     symbol,
-                    marketPrice: priceStatus.regularMarketPrice,
                     quantity: totalQuantity,
-                    breakEvenPrice,
-                    revenue,
-                  })
-                )}
-              />
-            </>
-          )}
-        </Iterate>
-      </div> */}
-
-      <>
-        <Iterate
-          // <Iterate<UpdatedPositionAndRevenueData, UpdatedPositionAndRevenueData>
-          value={holdingStatsDataIter}
-          // initialValue={{ latestPositions: {}, latestRevenue: {} } as UpdatedPositionAndRevenueData}
-        >
-          {(next, pendingFirstData, isDone, error) =>
-            error ? (
-              <div>
-                <h3>Oh no! {(error as any)?.message}</h3>
-              </div>
-            ) : next?.errors?.length ? (
-              <>{JSON.stringify(next, undefined, 2)}</>
-            ) : (
-              <PositionsTable
-                {...(() => {
-                  console.log('NEXT', { isDone, next });
-                  return {};
-                })()}
-                loading={pendingFirstData}
-                loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-                positions={next?.holdingStats?.map(
-                  ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => {
-                    return {
-                      symbol,
-                      quantity: totalQuantity,
-                      breakEvenPrice: breakEvenPrice ?? undefined,
-                      marketPrice: priceData.regularMarketPrice,
-                      timeOfPrice: priceData.regularMarketTime,
-                      marketState: priceData.marketState,
-                      revenue: {
-                        amount: unrealizedPnl.amount,
-                        percent: unrealizedPnl.percent,
-                      },
-                      rawPositions: [],
-                    };
-                  }
-                )}
-              />
-            )
-          }
-        </Iterate>
-      </>
-
-      <br />
-      <br />
-
-      {/* <div>
-        <Iterate initialValue={0}>
-          {(async function* () {
-            let count = 0;
-            while (true) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              yield <span>{count++}</span>;
-              // yield {};
-            }
-          })()}
-        </Iterate>
-      </div> */}
+                    breakEvenPrice: breakEvenPrice ?? undefined,
+                    marketPrice: priceData.regularMarketPrice,
+                    timeOfPrice: priceData.regularMarketTime,
+                    marketState: priceData.marketState,
+                    revenue: {
+                      amount: unrealizedPnl.amount,
+                      percent: unrealizedPnl.percent,
+                    },
+                    rawPositions: [],
+                  };
+                }
+              )}
+            />
+          )
+        }
+      </Iterate>
     </div>
   );
 }
@@ -359,12 +184,11 @@ function combinedHoldingStatsIter(): AsyncIterable<{
           query: gqlPrint(holdingStatsDataSubscription),
         }),
         itTap(next => {
-          for (const { type, data: hStats } of next.data?.holdingStats ?? []) {
-            if (type === 'REMOVE') {
-              delete allCurrHoldingStats[hStats.symbol];
-            } else {
-              allCurrHoldingStats[hStats.symbol] = hStats;
-            }
+          for (const update of next.data?.holdingStats ?? []) {
+            ({
+              ['SET']: () => (allCurrHoldingStats[update.data.symbol] = update.data),
+              ['REMOVE']: () => delete allCurrHoldingStats[update.data.symbol],
+            })[update.type]();
           }
         }),
         itMap(next => ({
@@ -378,7 +202,7 @@ function combinedHoldingStatsIter(): AsyncIterable<{
 }
 
 const holdingStatsDataSubscription = graphql(/* GraphQL */ `
-  subscription holdingStatsDataSubscription {
+  subscription HoldingStatsDataSubscription {
     holdingStats {
       type
       data {
