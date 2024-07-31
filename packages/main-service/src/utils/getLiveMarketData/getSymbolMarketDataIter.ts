@@ -1,4 +1,4 @@
-import { compact, identity, pickBy, keys } from 'lodash';
+import { compact, identity, pickBy, keys } from 'lodash-es';
 import { type DeepNonNullable } from 'utility-types';
 import { pipe, CustomError } from 'shared-utils';
 import { itMap, itTap } from 'iterable-operators';

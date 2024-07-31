@@ -1,4 +1,4 @@
-import { pickBy, isEmpty } from 'lodash';
+import { pickBy, isEmpty } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
 import {
   itPairwise,

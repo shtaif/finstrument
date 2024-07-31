@@ -1,7 +1,7 @@
 import { once } from 'node:events';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';
 import WebSocket, { WebSocketServer } from 'ws';
-import { mapValues, pick, isEmpty } from 'lodash';
+import { mapValues, pick, isEmpty } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import {
   itFilter,

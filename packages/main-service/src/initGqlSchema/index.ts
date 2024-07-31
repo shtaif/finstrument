@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { GraphQLSchema } from 'graphql/index.js';
-import { entries } from 'lodash';
+import { entries } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import { z } from 'zod';

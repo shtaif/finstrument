@@ -11,8 +11,7 @@ import {
   uniq,
   difference,
   keys,
-  values,
-} from 'lodash';
+} from 'lodash-es';
 import { pipe, asyncPipe, CustomError } from 'shared-utils';
 import {
   sequelize,

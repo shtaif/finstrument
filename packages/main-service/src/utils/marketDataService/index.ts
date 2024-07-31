@@ -1,5 +1,5 @@
 import { once } from 'node:events';
-import { isEmpty, uniq, pick, isEqual } from 'lodash';
+import { isEmpty, uniq, pick, isEqual } from 'lodash-es';
 import { z } from 'zod';
 import WebSocket from 'ws';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';

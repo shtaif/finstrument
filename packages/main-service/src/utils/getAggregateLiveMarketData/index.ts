@@ -9,7 +9,7 @@ import {
   every,
   keys,
   flatMap,
-} from 'lodash';
+} from 'lodash-es';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
 import { pipe } from 'shared-utils';
 import { itMap, itFilter, itMerge, itLazyDefer, itShare, itTap } from 'iterable-operators';

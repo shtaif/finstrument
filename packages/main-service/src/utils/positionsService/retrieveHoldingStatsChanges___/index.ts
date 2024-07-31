@@ -1,5 +1,5 @@
 import { QueryTypes } from 'sequelize';
-import { mapValues } from 'lodash';
+import { mapValues } from 'lodash-es';
 import { escapeDbCol } from '../../escapeDbCol.js';
 import {
   sequelize,

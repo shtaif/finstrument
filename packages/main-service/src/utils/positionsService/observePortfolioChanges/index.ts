@@ -1,4 +1,4 @@
-import { chain } from 'lodash';
+import { chain } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itFilter, itMap, myIterableCleanupPatcher } from 'iterable-operators';
 import { subscriberRedisClient as redisSubscriber } from '../../redisClients.js';

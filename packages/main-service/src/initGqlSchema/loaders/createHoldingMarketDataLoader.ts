@@ -1,7 +1,7 @@
 import { pipe } from 'shared-utils';
 import { itTakeFirst } from 'iterable-operators';
 import DataLoader from 'dataloader';
-import { keyBy, groupBy, mapValues } from 'lodash';
+import { keyBy, groupBy, mapValues } from 'lodash-es';
 import {
   getLiveMarketData,
   type HoldingMarketStatsUpdate,

@@ -5,7 +5,7 @@
 //   type WebSocket,
 //   type AppOptions,
 // } from 'uWebSockets.js';
-// import { entries } from 'lodash';
+// import { entries } from 'from 'lodash-es';
 // import { pipe } from 'shared-utils';
 // import { iterifiedUnwrapped, type IterifiedIterable, type IterifiedUnwrapped } from 'iterified';
 

@@ -1,4 +1,4 @@
-import { uniq } from 'lodash';
+import { uniq } from 'lodash-es';
 import axios from 'axios';
 import { env } from '../../env.js';
 

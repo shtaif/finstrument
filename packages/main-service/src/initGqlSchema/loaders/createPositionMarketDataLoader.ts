@@ -1,4 +1,4 @@
-import { keyBy } from 'lodash';
+import { keyBy } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itTakeFirst } from 'iterable-operators';
 import DataLoader from 'dataloader';

@@ -1,4 +1,4 @@
-import { assign, keyBy } from 'lodash';
+import { assign, keyBy } from 'lodash-es';
 import { empty, of } from '@reactivex/ix-esnext-esm/asynciterable';
 import { pipe } from 'shared-utils';
 import { itMap, itMerge, itLazyDefer, itShare } from 'iterable-operators';

@@ -1,4 +1,4 @@
-import { assign, filter, isEqual, values, isObjectLike } from 'lodash';
+import { assign, filter, isEqual, values, isObjectLike } from 'lodash-es';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
 import {
   type DeepNonNullable,

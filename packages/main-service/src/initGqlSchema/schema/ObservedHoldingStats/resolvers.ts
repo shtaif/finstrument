@@ -1,4 +1,4 @@
-import { compact } from 'lodash';
+import { compact } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';

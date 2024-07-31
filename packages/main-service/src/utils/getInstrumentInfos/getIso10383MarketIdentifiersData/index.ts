@@ -1,4 +1,4 @@
-import { keyBy } from 'lodash';
+import { keyBy } from 'lodash-es';
 import { z } from 'zod';
 import { parse as csvParse } from 'csv-parse/sync';
 import { pipe } from 'shared-utils';

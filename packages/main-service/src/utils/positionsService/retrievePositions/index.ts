@@ -1,5 +1,5 @@
 import { Sequelize, Op, type WhereOptions } from 'sequelize';
-import { mapValues } from 'lodash';
+import { mapValues } from 'lodash-es';
 import { CustomError } from 'shared-utils';
 import {
   PositionModel,

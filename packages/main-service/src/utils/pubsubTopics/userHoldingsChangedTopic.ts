@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { uniq } from 'lodash';
+import { uniq } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import { createClient, type RedisClientType } from 'redis';

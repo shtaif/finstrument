@@ -1,5 +1,5 @@
 import { Op, QueryTypes, type Transaction } from 'sequelize';
-import { mapValues } from 'lodash';
+import { mapValues } from 'lodash-es';
 import {
   sequelize,
   PortfolioStatsChangeModel,
@@ -266,7 +266,7 @@ type NumberOperators =
 // **************************************************************************************************************
 
 // import { Op, QueryTypes } from 'sequelize';
-// import { mapValues } from 'lodash';
+// import { mapValues } from 'lodash-es';
 // import { escapeDbCol } from '../../escapeDbCol';
 // import {
 //   sequelize,

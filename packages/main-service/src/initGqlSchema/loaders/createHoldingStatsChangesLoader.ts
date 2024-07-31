@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { keyBy } from 'lodash';
+import { keyBy } from 'lodash-es';
 import { positionsService, type HoldingStatsChange } from '../../utils/positionsService/index.js';
 
 export { createHoldingStatsChangesLoader };

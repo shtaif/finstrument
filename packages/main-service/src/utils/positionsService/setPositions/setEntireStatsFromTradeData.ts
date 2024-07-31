@@ -1,5 +1,5 @@
 import { Op, Transaction } from 'sequelize';
-import { groupBy, uniq, uniqBy, values, flatMap, map, findIndex } from 'lodash';
+import { groupBy, uniq, uniqBy, values, flatMap, map, findIndex } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import {
   HoldingStatsChangeModel,

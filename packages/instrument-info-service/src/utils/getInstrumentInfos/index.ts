@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { differenceWith, keyBy, mapValues } from 'lodash';
+import { differenceWith, keyBy, mapValues } from 'lodash-es';
 import { Op } from 'sequelize';
 import yahooFinance from 'yahoo-finance2';
 import { pipe } from 'shared-utils';
