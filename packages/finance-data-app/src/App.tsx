@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ApolloProvider } from '@apollo/client';
 import { UserMainScreen } from './components/UserMainScreen';
 import { gqlClient } from './utils/gqlClient';
-import './App.css';
 
 export default App;
 
