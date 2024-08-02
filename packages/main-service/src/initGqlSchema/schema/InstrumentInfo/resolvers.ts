@@ -6,7 +6,7 @@ const resolvers = {
   InstrumentInfo: {
     async marketState(instrumentInfo, _, ctx) {
       const currMarketData = await ctx.holdingMarketDataLoader.load({
-        ownerId: ctx.activeUser.id,
+        ownerId: ctx.session.activeUserId!,
         symbol: instrumentInfo.symbol!,
       });
       return currMarketData.priceData.marketState;
@@ -14,7 +14,7 @@ const resolvers = {
 
     async regularMarketTime(instrumentInfo, _, ctx) {
       const currMarketData = await ctx.holdingMarketDataLoader.load({
-        ownerId: ctx.activeUser.id,
+        ownerId: ctx.session.activeUserId!,
         symbol: instrumentInfo.symbol!,
       });
       return currMarketData.priceData.regularMarketTime;
@@ -22,7 +22,7 @@ const resolvers = {
 
     async regularMarketPrice(instrumentInfo, _, ctx) {
       const currMarketData = await ctx.holdingMarketDataLoader.load({
-        ownerId: ctx.activeUser.id,
+        ownerId: ctx.session.activeUserId!,
         symbol: instrumentInfo.symbol!,
       });
       return currMarketData.priceData.regularMarketPrice;

@@ -95,12 +95,10 @@ beforeAll(async () => {
     ]),
   ]);
 
-  mockGqlContext({
-    activeUser: {
-      id: mockUserId1,
-      alias: mockUserId1,
-    },
-  });
+  mockGqlContext(ctx => ({
+    ...ctx,
+    session: { activeUserId: mockUserId1 },
+  }));
 });
 
 beforeEach(async () => {

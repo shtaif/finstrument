@@ -18,7 +18,7 @@ const resolvers = {
         const specifiers = [
           {
             type: 'PORTFOLIO' as const,
-            portfolioOwnerId: ctx.activeUser.id,
+            portfolioOwnerId: ctx.session.activeUserId!,
             statsCurrency: undefined,
           },
         ] satisfies PortfolioObjectSpecifier[];

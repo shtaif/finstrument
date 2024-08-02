@@ -19,45 +19,49 @@ import { resolvers as observedPortfolioStatsResolvers } from './schema/ObservedP
 import { resolvers as observedHoldingStatsResolvers } from './schema/ObservedHoldingStats/resolvers.js';
 import { resolvers as observedPositionsResolvers } from './schema/ObservedPositions/resolvers.js';
 import { resolvers as setTradesResultResolvers } from './schema/SetTradesResult/resolvers.js';
+import { resolvers as userResolvers } from './schema/User/resolvers.js';
+import { resolvers as meInfoResolvers } from './schema/MeInfo/resolvers.js';
 
-export { initedGqlSchema, appGqlContext };
+export { initedGqlSchema as gqlSchema, initedGqlSchema, appGqlContext };
 
-const initedGqlSchema: GraphQLSchema = await (async () => {
-  return makeExecutableSchema({
-    typeDefs: await Promise.all(
-      [
-        `${import.meta.dirname}/schema/common.graphql`,
-        `${import.meta.dirname}/schema/schema.graphql`,
-        `${import.meta.dirname}/schema/PortfolioStats/schema.graphql`,
-        `${import.meta.dirname}/schema/PortfolioStatsChange/schema.graphql`,
-        `${import.meta.dirname}/schema/HoldingStats/schema.graphql`,
-        `${import.meta.dirname}/schema/HoldingStatsChanges/schema.graphql`,
-        `${import.meta.dirname}/schema/Position/schema.graphql`,
-        `${import.meta.dirname}/schema/SymbolPortfolioPortion/schema.graphql`,
-        `${import.meta.dirname}/schema/InstrumentInfo/schema.graphql`,
-        `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
-        `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
-        `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
-        `${import.meta.dirname}/schema/ObservedPositions/schema.graphql`,
-        `${import.meta.dirname}/schema/SetTradesResult/schema.graphql`,
-      ].map(defsFilepath => readFile(defsFilepath, 'utf-8'))
-    ),
-    resolvers: [
-      olderAndProbablyUnusedResolversNeedToSortOut(),
-      portfolioStatsResolvers,
-      portfolioStatsChangesResolvers,
-      holdingStatsResolvers,
-      holdingStatsChangesResolvers,
-      positionResolvers,
-      instrumentInfoResolvers,
-      aggregatePnlResolvers,
-      observedPortfolioStatsResolvers,
-      observedHoldingStatsResolvers,
-      observedPositionsResolvers,
-      setTradesResultResolvers,
-    ],
-  });
-})();
+const initedGqlSchema: GraphQLSchema = await makeExecutableSchema({
+  typeDefs: await Promise.all(
+    [
+      `${import.meta.dirname}/schema/common.graphql`,
+      `${import.meta.dirname}/schema/User/schema.graphql`,
+      `${import.meta.dirname}/schema/MeInfo/schema.graphql`,
+      `${import.meta.dirname}/schema/legacySchemaToSafelyClear.graphql`,
+      `${import.meta.dirname}/schema/PortfolioStats/schema.graphql`,
+      `${import.meta.dirname}/schema/PortfolioStatsChange/schema.graphql`,
+      `${import.meta.dirname}/schema/HoldingStats/schema.graphql`,
+      `${import.meta.dirname}/schema/HoldingStatsChanges/schema.graphql`,
+      `${import.meta.dirname}/schema/Position/schema.graphql`,
+      `${import.meta.dirname}/schema/SymbolPortfolioPortion/schema.graphql`,
+      `${import.meta.dirname}/schema/InstrumentInfo/schema.graphql`,
+      `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
+      `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
+      `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
+      `${import.meta.dirname}/schema/ObservedPositions/schema.graphql`,
+      `${import.meta.dirname}/schema/SetTradesResult/schema.graphql`,
+    ].map(defsFilepath => readFile(defsFilepath, 'utf-8'))
+  ),
+  resolvers: [
+    olderAndProbablyUnusedResolversNeedToSortOut(),
+    userResolvers,
+    meInfoResolvers,
+    portfolioStatsResolvers,
+    portfolioStatsChangesResolvers,
+    holdingStatsResolvers,
+    holdingStatsChangesResolvers,
+    positionResolvers,
+    instrumentInfoResolvers,
+    aggregatePnlResolvers,
+    observedPortfolioStatsResolvers,
+    observedHoldingStatsResolvers,
+    observedPositionsResolvers,
+    setTradesResultResolvers,
+  ],
+});
 
 function olderAndProbablyUnusedResolversNeedToSortOut() {
   return {

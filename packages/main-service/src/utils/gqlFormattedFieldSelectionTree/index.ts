@@ -1,4 +1,4 @@
-import { DeepNonNullable } from 'utility-types';
+import { type DeepNonNullable } from 'utility-types';
 import {
   responsePathAsArray,
   Kind,
@@ -10,13 +10,13 @@ import {
   type GraphQLNamedOutputType,
   type SelectionNode,
 } from 'graphql/index.js';
-import type { Resolver, Resolvers } from '../../generated/graphql-schema.d.js';
+import { type Resolver, type Resolvers } from '../../generated/graphql-schema.d.js';
 
 export { gqlFormattedFieldSelectionTree };
 
-function gqlFormattedFieldSelectionTree<TPossibleFields extends {}>(
+function gqlFormattedFieldSelectionTree<TPossibleFields extends {} | undefined | null>(
   gqlResolveInfo: GraphQLResolveInfo
-): FieldSelectionNode<TPossibleFields> {
+): FieldSelectionNode<DeepNonNullable<TPossibleFields>> {
   const operationBasePath = responsePathAsArray(gqlResolveInfo.path);
 
   let currGqlSelectionsArr = gqlResolveInfo.operation.selectionSet.selections;
@@ -68,32 +68,33 @@ function gqlFormattedFieldSelectionTree<TPossibleFields extends {}>(
     }
   })(gqlBaseSelectionArr, gqlBaseReturnTypeDef, formattedSelectionTreeResult);
 
-  return formattedSelectionTreeResult as FieldSelectionNode<TPossibleFields>;
+  return formattedSelectionTreeResult as FieldSelectionNode<DeepNonNullable<TPossibleFields>>;
 }
 
-type FieldSelectionNode<TPossibleFields, TCurrTypename extends string = ''> = {
-  [K in keyof FlattenArrayType<TPossibleFields>]?: {
-    subFields: FlattenArrayType<NonNullable<FlattenArrayType<TPossibleFields>[K]>> extends {
-      __typename?: string;
-    }
-      ? FieldSelectionNode<
-          NonNullable<FlattenArrayType<TPossibleFields>[K]>,
-          NonNullable<
-            FlattenArrayType<NonNullable<FlattenArrayType<TPossibleFields>[K]>>['__typename']
-          >
-        >
-      : {};
+type FieldSelectionNode<TFieldTree, TCurrTypename extends string = ''> =
+  TFieldTree extends Exclude<infer FieldTreeNonNull, undefined | null>
+    ? {
+        [K in keyof FlattenArrayType<FieldTreeNonNull>]?: {
+          subFields: FlattenArrayType<FlattenArrayType<FieldTreeNonNull>[K]> extends {
+            __typename?: string;
+          }
+            ? FieldSelectionNode<
+                FlattenArrayType<FieldTreeNonNull>[K],
+                NonNullable<FlattenArrayType<FlattenArrayType<FieldTreeNonNull>[K]>['__typename']>
+              >
+            : {};
 
-    args: (AllResolvers & Record<string, never>)[TCurrTypename][K] extends Resolver<
-      any,
-      any,
-      any,
-      infer Args
-    >
-      ? Args
-      : never;
-  };
-};
+          args: (AllResolvers & Record<string, never>)[TCurrTypename][K] extends Resolver<
+            any,
+            any,
+            any,
+            infer Args
+          >
+            ? Args
+            : never;
+        };
+      }
+    : never;
 
 // type FlattenedNonNullable<T> = NonNullable<FlattenArrayType<NonNullable<FlattenArrayType<T>>>>;
 

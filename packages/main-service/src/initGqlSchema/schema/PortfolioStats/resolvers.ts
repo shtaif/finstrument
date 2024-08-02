@@ -15,7 +15,7 @@ const resolvers = {
 
       const [latestPortfolioStatsChange] = await positionsService.retrievePortfolioStatsChanges({
         filters: {
-          ownerIds: [ctx.activeUser.id],
+          ownerIds: [ctx.session.activeUserId!],
         },
         latestPerOwner: true,
         includeCompositions: !!requestedFields.composition,

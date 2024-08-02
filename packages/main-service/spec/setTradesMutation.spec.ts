@@ -16,127 +16,6 @@ import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { testRedisSubscriber } from './utils/testRedisSubscriber.js';
 
 const [mockUserId1, mockUserId2] = [mockUuidFromNumber(1), mockUuidFromNumber(2)];
-// const mockTradeIds = new Array(12).fill(undefined).map((_, i) => mockUuidFromNumber(i));
-
-// const reusableTradeDatas = [
-//   {
-//     id: mockTradeIds[0],
-//     ownerId: mockUserId1,
-//     symbol: 'ADBE',
-//     performedAt: new Date('2024-01-01T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-//   {
-//     id: mockTradeIds[1],
-//     ownerId: mockUserId1,
-//     symbol: 'AAPL',
-//     performedAt: new Date('2024-01-02T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-//   {
-//     id: mockTradeIds[2],
-//     ownerId: mockUserId1,
-//     symbol: 'ADBE',
-//     performedAt: new Date('2024-01-03T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-//   {
-//     id: mockTradeIds[3],
-//     ownerId: mockUserId1,
-//     symbol: 'AAPL',
-//     performedAt: new Date('2024-01-04T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-//   {
-//     id: mockTradeIds[4],
-//     ownerId: mockUserId1,
-//     symbol: 'ADBE',
-//     performedAt: new Date('2024-01-05T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-//   {
-//     id: mockTradeIds[5],
-//     ownerId: mockUserId1,
-//     symbol: 'AAPL',
-//     performedAt: new Date('2024-01-06T11:11:11.000Z'),
-//     quantity: 2,
-//     price: 1.1,
-//   },
-// ];
-
-// const reusablePositionDatas = [
-//   {
-//     id: mockUuidFromNumber(1),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[0],
-//     symbol: 'ADBE',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:00.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:00.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:00.000Z',
-//   },
-//   {
-//     id: mockUuidFromNumber(2),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[1],
-//     symbol: 'AAPL',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:01.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:01.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:01.000Z',
-//   },
-//   {
-//     id: mockUuidFromNumber(3),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[2],
-//     symbol: 'NVDA',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:02.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:02.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:02.000Z',
-//   },
-//   {
-//     id: mockUuidFromNumber(4),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[3],
-//     symbol: 'NVDA',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:03.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:03.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:03.000Z',
-//   },
-//   {
-//     id: mockUuidFromNumber(5),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[4],
-//     symbol: 'NVDA',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:04.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:04.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:04.000Z',
-//   },
-//   {
-//     id: mockUuidFromNumber(6),
-//     ownerId: mockUserId1,
-//     openingTradeId: mockTradeIds[5],
-//     symbol: 'NVDA',
-//     remainingQuantity: 10,
-//     realizedProfitOrLoss: 0,
-//     openedAt: '2024-01-01T00:00:05.000Z',
-//     recordCreatedAt: '2024-01-01T00:00:05.000Z',
-//     recordUpdatedAt: '2024-01-01T00:00:05.000Z',
-//   },
-// ];
 
 const [mockUser1, mockUser2] = [
   { id: mockUserId1, alias: mockUserId1 },
@@ -174,12 +53,10 @@ beforeAll(async () => {
     ]),
   ]);
 
-  mockGqlContext({
-    activeUser: {
-      id: mockUserId1,
-      alias: mockUserId1,
-    },
-  });
+  mockGqlContext(ctx => ({
+    ...ctx,
+     session: { activeUserId: mockUserId1 },
+  }));
 });
 
 beforeEach(async () => {
@@ -203,7 +80,7 @@ afterAll(async () => {
   unmockGqlContext();
 });
 
-describe('Mutation.importTrades', () => {
+describe('Mutation.setTrades', () => {
   it('Importing an empty trade dataset onto an empty portfolio', async () => {
     const emptyTradesCsv = `
       Trades,Header,Asset Category,Symbol,Date/Time,Quantity,T. Price

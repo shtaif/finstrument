@@ -13,7 +13,7 @@ const resolvers = {
 
       const portfolioStatsChange = await positionsService.retrievePortfolioStatsChanges({
         // includeCompositions: !!requestedFields.composition,
-        filters: { ownerIds: [ctx.activeUser.id] },
+        filters: { ownerIds: [ctx.session.activeUserId!] },
         pagination: { offset: 0 },
         orderBy: ['changedAt', 'DESC'],
       });
