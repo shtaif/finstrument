@@ -1,0 +1,7 @@
+type Query {
+  me: MeInfo!
+}
+
+type MeInfo {
+  user: User
+}

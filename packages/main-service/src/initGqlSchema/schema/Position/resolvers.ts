@@ -9,7 +9,7 @@ const resolvers = {
       const positions = await positionsService.retrievePositions({
         filters: {
           and: [
-            { ownerIds: [ctx.activeUser.id] },
+            { ownerIds: [ctx.session.activeUserId!] },
             {
               or: [
                 { ids: args.filters?.ids ?? undefined },

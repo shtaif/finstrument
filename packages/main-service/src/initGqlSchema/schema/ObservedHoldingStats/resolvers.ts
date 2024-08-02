@@ -16,13 +16,13 @@ const resolvers = {
         const specifiers = args.filters?.symbols?.length
           ? args.filters.symbols.map(symbol => ({
               type: 'HOLDING' as const,
-              holdingPortfolioOwnerId: ctx.activeUser.id,
+              holdingPortfolioOwnerId: ctx.session.activeUserId!,
               holdingSymbol: symbol,
             }))
           : [
               {
                 type: 'HOLDING' as const,
-                holdingPortfolioOwnerId: ctx.activeUser.id,
+                holdingPortfolioOwnerId: ctx.session.activeUserId!,
               },
             ];
 

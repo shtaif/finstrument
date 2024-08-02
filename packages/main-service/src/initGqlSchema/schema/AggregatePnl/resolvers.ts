@@ -31,7 +31,7 @@ const resolvers = {
               ...(args.holdings ?? []).map(({ symbol }) => ({
                 type: 'HOLDING' as const,
                 holdingSymbol: symbol,
-                holdingPortfolioOwnerId: ctx.activeUser.id,
+                holdingPortfolioOwnerId: ctx.session.activeUserId!,
               })),
               ...(args.positions ?? []).map(({ positionId }) => ({
                 type: 'POSITION' as const,

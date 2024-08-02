@@ -4,6 +4,7 @@ import { subscribe, GraphQLError } from 'graphql/index.js';
 import { type ExecutionResult } from 'graphql-ws';
 import { useServer as graphqlWsUseServer } from 'graphql-ws/lib/use/ws';
 import { initedGqlSchema, appGqlContext } from '../initGqlSchema/index.js';
+import { getTestUserId } from '../utils/getTestUserId.js';
 
 export { graphqlWsServer };
 
@@ -11,8 +12,10 @@ function graphqlWsServer({ httpServer }: { httpServer: HttpServer }) {
   return graphqlWsUseServer(
     {
       schema: initedGqlSchema,
-      context: (ctxStuff, subscribeMessage, executionArgs) =>
-        appGqlContext({ ctxStuff, subscribeMessage, executionArgs }),
+      context: async _expressCtxFunctionArg => {
+        const activeUserId = await getTestUserId();
+        return appGqlContext({ activeUserId });
+      },
       async subscribe(executionArgs): Promise<ExecutionResult | AsyncIterable<ExecutionResult>> {
         // The underlying `graphql-js` lib catches thrown errors / promise rejections from resolvers and
         // formats them as part of the result (in the "errors" property alongside "data") but it does not

@@ -155,6 +155,11 @@ export type InstrumentMarketData = {
   regularMarketTime: Scalars['DateTime']['output'];
 };
 
+export type MeInfo = {
+  __typename?: 'MeInfo';
+  user?: Maybe<User>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   setTrades: SetTradesResult;
@@ -334,6 +339,7 @@ export type Query = {
   hello: Scalars['String']['output'];
   holdingStats: Array<HoldingStats>;
   holdingStatsChanges: Array<HoldingStatsChange>;
+  me: MeInfo;
   portfolioStats: PortfolioStats;
   portfolioStatsChanges: Array<PortfolioStatsChange>;
   positions: Array<Position>;
@@ -448,6 +454,12 @@ export type SymbolPriceData = {
   symbol: Scalars['ID']['output'];
 };
 
+export type User = {
+  __typename?: 'User';
+  alias: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+};
+
 
 
 export type ResolverTypeWrapper<T> = Promise<T> | T;
@@ -541,6 +553,7 @@ export type ResolversTypes = {
   InstrumentInfo: ResolverTypeWrapper<DeepPartial<InstrumentInfo>>;
   InstrumentMarketData: ResolverTypeWrapper<DeepPartial<InstrumentMarketData>>;
   Int: ResolverTypeWrapper<DeepPartial<Scalars['Int']['output']>>;
+  MeInfo: ResolverTypeWrapper<DeepPartial<MeInfo>>;
   Mutation: ResolverTypeWrapper<{}>;
   ObserveHoldingRevenueInput: ResolverTypeWrapper<DeepPartial<ObserveHoldingRevenueInput>>;
   ObservePricesDataInput: ResolverTypeWrapper<DeepPartial<ObservePricesDataInput>>;
@@ -573,6 +586,7 @@ export type ResolversTypes = {
   SymbolPortfolioPortion: ResolverTypeWrapper<DeepPartial<SymbolPortfolioPortion>>;
   SymbolPosition: ResolverTypeWrapper<DeepPartial<SymbolPosition>>;
   SymbolPriceData: ResolverTypeWrapper<DeepPartial<SymbolPriceData>>;
+  User: ResolverTypeWrapper<DeepPartial<User>>;
 };
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -598,6 +612,7 @@ export type ResolversParentTypes = {
   InstrumentInfo: DeepPartial<InstrumentInfo>;
   InstrumentMarketData: DeepPartial<InstrumentMarketData>;
   Int: DeepPartial<Scalars['Int']['output']>;
+  MeInfo: DeepPartial<MeInfo>;
   Mutation: {};
   ObserveHoldingRevenueInput: DeepPartial<ObserveHoldingRevenueInput>;
   ObservePricesDataInput: DeepPartial<ObservePricesDataInput>;
@@ -626,6 +641,7 @@ export type ResolversParentTypes = {
   SymbolPortfolioPortion: DeepPartial<SymbolPortfolioPortion>;
   SymbolPosition: DeepPartial<SymbolPosition>;
   SymbolPriceData: DeepPartial<SymbolPriceData>;
+  User: DeepPartial<User>;
 };
 
 export type AggregatePnlChangeResultResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['AggregatePnlChangeResult'] = ResolversParentTypes['AggregatePnlChangeResult']> = {
@@ -732,6 +748,11 @@ export type InstrumentMarketDataResolvers<ContextType = AppGqlContextValue, Pare
   marketState?: Resolver<ResolversTypes['HoldingStatsMarketState'], ParentType, ContextType>;
   regularMarketPrice?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   regularMarketTime?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type MeInfoResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['MeInfo'] = ResolversParentTypes['MeInfo']> = {
+  user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -873,6 +894,7 @@ export type QueryResolvers<ContextType = AppGqlContextValue, ParentType extends 
   hello?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   holdingStats?: Resolver<Array<ResolversTypes['HoldingStats']>, ParentType, ContextType, Partial<QueryHoldingStatsArgs>>;
   holdingStatsChanges?: Resolver<Array<ResolversTypes['HoldingStatsChange']>, ParentType, ContextType, Partial<QueryHoldingStatsChangesArgs>>;
+  me?: Resolver<ResolversTypes['MeInfo'], ParentType, ContextType>;
   portfolioStats?: Resolver<ResolversTypes['PortfolioStats'], ParentType, ContextType>;
   portfolioStatsChanges?: Resolver<Array<ResolversTypes['PortfolioStatsChange']>, ParentType, ContextType>;
   positions?: Resolver<Array<ResolversTypes['Position']>, ParentType, ContextType, Partial<QueryPositionsArgs>>;
@@ -932,6 +954,12 @@ export type SymbolPriceDataResolvers<ContextType = AppGqlContextValue, ParentTyp
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
+export type UserResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['User'] = ResolversParentTypes['User']> = {
+  alias?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type Resolvers<ContextType = AppGqlContextValue> = {
   AggregatePnlChangeResult?: AggregatePnlChangeResultResolvers<ContextType>;
   AggregatePnlResultItem?: AggregatePnlResultItemResolvers<ContextType>;
@@ -945,6 +973,7 @@ export type Resolvers<ContextType = AppGqlContextValue> = {
   HoldingStatsChange?: HoldingStatsChangeResolvers<ContextType>;
   InstrumentInfo?: InstrumentInfoResolvers<ContextType>;
   InstrumentMarketData?: InstrumentMarketDataResolvers<ContextType>;
+  MeInfo?: MeInfoResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
   ObservedHoldingStats?: ObservedHoldingStatsResolvers<ContextType>;
   ObservedHoldingStatsUpdate?: ObservedHoldingStatsUpdateResolvers<ContextType>;
@@ -966,5 +995,6 @@ export type Resolvers<ContextType = AppGqlContextValue> = {
   SymbolPortfolioPortion?: SymbolPortfolioPortionResolvers<ContextType>;
   SymbolPosition?: SymbolPositionResolvers<ContextType>;
   SymbolPriceData?: SymbolPriceDataResolvers<ContextType>;
+  User?: UserResolvers<ContextType>;
 };
 

@@ -23,12 +23,10 @@ beforeAll(async () => {
     { symbol: 'ADBE', name: 'Adobe Inc', exchangeMic: 'aaa', currency: 'USD' },
     { symbol: 'AAPL', name: 'Apple Inc', exchangeMic: 'bbb', currency: 'USD' },
   ]);
-  mockGqlContext({
-    activeUser: {
-      id: mockUserId1,
-      alias: mockUserId1,
-    },
-  });
+  mockGqlContext(ctx => ({
+    ...ctx,
+    session: { activeUserId: mockUserId1 },
+  }));
 });
 
 beforeEach(async () => {

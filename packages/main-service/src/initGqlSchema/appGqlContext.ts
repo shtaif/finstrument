@@ -1,4 +1,3 @@
-import { getTestUserId } from '../utils/getTestUserId.js';
 import {
   createHoldingMarketDataLoader,
   type HoldingMarketStats,
@@ -33,14 +32,14 @@ export {
   type UpdatedSymbolPrice,
 };
 
-const appGqlContext = async <TDriverInjectedContext extends {}>(
-  driverInjectedContext: TDriverInjectedContext
-): Promise<{
-  driverInjectedContext: TDriverInjectedContext;
-  activeUser: {
-    id: string;
-    alias: string;
+const appGqlContext = async (injectedInfo?: {
+  activeUserId?: string;
+}): Promise<{
+  session: {
+    activeUserId: string | undefined;
   };
+  /** @deprecated need to use the `session` property instead */
+  activeUser?: { id: string };
   portfolioStatsLoader: ReturnType<typeof createPortfolioStatsLoader>;
   portfolioStatsChangesLoader: ReturnType<typeof createPortfolioStatsChangesLoader>;
   holdingStatsChangesLoader: ReturnType<typeof createHoldingStatsChangesLoader>;
@@ -63,8 +62,9 @@ const appGqlContext = async <TDriverInjectedContext extends {}>(
   // const observedStatsObjectsLoader = createObservedStatsObjectsLoader();
 
   return {
-    driverInjectedContext,
-    activeUser: { id: await getTestUserId(), alias: 'dorshtaif' },
+    session: {
+      activeUserId: injectedInfo?.activeUserId,
+    },
     portfolioStatsLoader,
     portfolioStatsChangesLoader,
     holdingStatsChangesLoader,
@@ -76,46 +76,5 @@ const appGqlContext = async <TDriverInjectedContext extends {}>(
     // observedStatsObjectsLoader,
   };
 };
-
-// const appGqlContext = async <TDriverInjectedContext extends {}>(
-//   expressCtxBaseArg: ExpressContextFunctionArgument
-// ): Promise<{
-//   driverInjectedContext: ExpressContextFunctionArgument;
-//   activeUser: {
-//     id: string;
-//     alias: string;
-//   };
-//   portfolioStatsLoader: ReturnType<typeof createPortfolioStatsLoader>;
-//   portfolioStatsChangesLoader: ReturnType<typeof createPortfolioStatsChangesLoader>;
-//   holdingStatsChangesLoader: ReturnType<typeof createHoldingStatsChangesLoader>;
-//   liveHoldingMarketDataLoader: ReturnType<typeof createLiveHoldingMarketDataLoader>;
-//   holdingMarketDataLoader: ReturnType<typeof createHoldingMarketDataLoader>;
-//   positionMarketDataLoader: ReturnType<typeof createPositionMarketDataLoader>;
-//   // positionLiveMarketDataLoader: ReturnType<typeof createHoldingMarketDataLoader>;
-//   instrumentInfoLoader: ReturnType<typeof createInstrumentInfoLoader>;
-// }> => {
-//   const portfolioStatsLoader = createPortfolioStatsLoader();
-//   const portfolioStatsChangesLoader = createPortfolioStatsChangesLoader();
-//   const holdingStatsChangesLoader = createHoldingStatsChangesLoader();
-//   const liveHoldingMarketDataLoader = createLiveHoldingMarketDataLoader();
-//   const holdingMarketDataLoader = createHoldingMarketDataLoader();
-//   const positionMarketDataLoader = createPositionMarketDataLoader();
-//   const instrumentInfoLoader = createInstrumentInfoLoader();
-
-//   return {
-//     driverInjectedContext: {
-//       req: expressCtxBaseArg.req,
-//       res: expressCtxBaseArg.res,
-//     },
-//     activeUser: { id: await getTestUserId(), alias: 'dorshtaif' },
-//     portfolioStatsLoader,
-//     portfolioStatsChangesLoader,
-//     holdingStatsChangesLoader,
-//     positionMarketDataLoader,
-//     liveHoldingMarketDataLoader,
-//     holdingMarketDataLoader,
-//     instrumentInfoLoader,
-//   };
-// };
 
 type AppGqlContextValue = Awaited<ReturnType<typeof appGqlContext>>;
