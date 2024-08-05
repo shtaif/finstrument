@@ -2,14 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { useLocalStorage, useAsyncFn } from 'react-use';
 import { useVisibilityChange } from '@uidotdev/usehooks';
 import { Upload, UploadFile, Spin, notification, Dropdown, Button } from 'antd';
-import {
-  LoadingOutlined,
-  UserOutlined,
-  UploadOutlined,
-  LogoutOutlined,
-  DisconnectOutlined,
-} from '@ant-design/icons';
-import { signOut } from 'supertokens-auth-react/recipe/session/index';
+import { LoadingOutlined, UploadOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
 import { Iterate } from '../../utils/react-async-iterable/index.ts';
@@ -73,16 +66,6 @@ function UserMainScreen() {
 
   const [{ loading: isUploadingLedger }, uploadLedger] = useAsyncFn(
     async (file: UploadFile<any>) => {
-      const setTradesMutation = graphql(/* GraphQL */ `
-        mutation SetTradesMutation($input: SetTradesInput!) {
-          setTrades(input: $input) {
-            tradesAddedCount
-            tradesModifiedCount
-            tradesRemovedCount
-          }
-        }
-      `);
-
       const fileContents: string = await (file as any).text();
 
       return await gqlClient.mutate({
@@ -99,36 +82,8 @@ function UserMainScreen() {
   );
 
   return (
-    <div className="user-main-screen">
+    <div className="cmp-user-main-screen">
       {notificationPlacement}
-
-      <div className="account-main-menu-container">
-        <Dropdown
-          menu={{
-            items: [
-              {
-                key: 'sign_out',
-                danger: true,
-                onClick: () => signOut(),
-                label: (
-                  <div>
-                    <LogoutOutlined /> Sign Out
-                  </div>
-                ),
-              },
-            ],
-          }}
-        >
-          <Button
-            className="account-main-menu-button"
-            icon={<UserOutlined className="user-icon" />}
-            size="large"
-            type="text"
-          >
-            Account
-          </Button>
-        </Dropdown>
-      </div>
 
       <Upload.Dragger
         className="csv-ledger-upload-area"
@@ -333,6 +288,16 @@ const positionDataSubscription = graphql(/* GraphQL */ `
 
 type PositionDataSubscriptionResult = DocumentType<typeof positionDataSubscription>;
 type PositionItem = PositionDataSubscriptionResult['positions'][number]['data'];
+
+const setTradesMutation = graphql(/* GraphQL */ `
+  mutation SetTradesMutation($input: SetTradesInput!) {
+    setTrades(input: $input) {
+      tradesAddedCount
+      tradesModifiedCount
+      tradesRemovedCount
+    }
+  }
+`);
 
 // const sampleLedgerCsv = `
 // Trades,Header,Platform,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,Units,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code,Term
