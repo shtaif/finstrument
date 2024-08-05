@@ -1,76 +1,58 @@
 import React, { useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { useLocalStorage, useAsyncFn, useKey, useFirstMountState } from 'react-use';
+import { useLocalStorage, useAsyncFn } from 'react-use';
 import { useVisibilityChange } from '@uidotdev/usehooks';
-import { useParams } from 'react-router-dom';
-import { Upload, UploadFile, Switch, Spin, notification } from 'antd';
-import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
+import { Upload, UploadFile, Spin, notification, Dropdown, Button } from 'antd';
+import {
+  LoadingOutlined,
+  UserOutlined,
+  UploadOutlined,
+  LogoutOutlined,
+  DisconnectOutlined,
+} from '@ant-design/icons';
+import { signOut } from 'supertokens-auth-react/recipe/session/index';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
 import { Iterate } from '../../utils/react-async-iterable/index.ts';
 import { pipe } from 'shared-utils';
-import { itLazyDefer, itMap, itShare, itTake, itTap } from 'iterable-operators';
+import { itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
-import { gqlWsClient } from '../../utils/gqlClient/index.ts';
+import { SetTradesInputMode } from '../../generated/gql/graphql.ts';
+import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { PositionsTable } from '../PositionsTable/index.tsx';
 import './style.css';
 
 export { UserMainScreen };
 
 function UserMainScreen() {
-  const isFirstMount = useFirstMountState();
-  const userAlias = useParams<'alias'>().alias!;
   const isBrowserTabVisible = useVisibilityChange();
   const [notificationInstance, notificationPlacement] = notification.useNotification();
-  const [
-    [liveRevenueDataOn, setLiveRevenueDataOn],
-    [lastFetchedHoldingsCount, setLastFetchedHoldingsCount],
-  ] = [
-    useLocalStorage('live-revenue-data-on', false),
-    useLocalStorage<number | undefined>('last-fetched-holdings-count', undefined),
-  ];
 
-  useKey(
-    'Enter',
-    ev => {
-      if (ev.shiftKey) {
-        setLiveRevenueDataOn(!liveRevenueDataOn);
-      }
-    },
-    {},
-    [liveRevenueDataOn, setLiveRevenueDataOn]
+  const [lastFetchedHoldingsCount, setLastFetchedHoldingsCount] = useLocalStorage<
+    number | undefined
+  >('last-fetched-holdings-count', undefined);
+
+  const holdingStatsDataIter = useMemo(
+    () => (!isBrowserTabVisible ? (async function* () {})() : combinedHoldingStatsIter()),
+    [isBrowserTabVisible]
   );
-
-  const holdingStatsDataIter = useMemo(() => {
-    return pipe(combinedHoldingStatsIter(), $ => {
-      if (isFirstMount && !liveRevenueDataOn) {
-        return pipe($, itTake(1));
-      }
-      if (liveRevenueDataOn && isBrowserTabVisible) {
-        return $;
-      }
-      return (async function* () {})();
-    });
-  }, [liveRevenueDataOn, isBrowserTabVisible, isFirstMount]) satisfies ReturnType<
-    typeof combinedHoldingStatsIter
-  >;
 
   useEffect(() => {
     const it = holdingStatsDataIter[Symbol.asyncIterator]();
     (async () => {
       try {
-        for await (const _ of { [Symbol.asyncIterator]: () => it });
+        for await (const _ of {
+          [Symbol.asyncIterator]: () => it,
+        });
       } catch (err: any) {
         notificationInstance.error({
           key: 'server_data_connection_error_notification',
           message: <>Error</>,
           description: <>Couldn't connect to server data stream</>,
         });
-        setLiveRevenueDataOn(false);
       }
     })();
     return () => void it.return!();
-  }, [holdingStatsDataIter, notificationInstance, setLiveRevenueDataOn]);
+  }, [holdingStatsDataIter, notificationInstance]);
 
   useEffect(() => {
     const nextFetchedHoldingCount = pipe(
@@ -91,22 +73,62 @@ function UserMainScreen() {
 
   const [{ loading: isUploadingLedger }, uploadLedger] = useAsyncFn(
     async (file: UploadFile<any>) => {
+      const setTradesMutation = graphql(/* GraphQL */ `
+        mutation SetTradesMutation($input: SetTradesInput!) {
+          setTrades(input: $input) {
+            tradesAddedCount
+            tradesModifiedCount
+            tradesRemovedCount
+          }
+        }
+      `);
+
       const fileContents: string = await (file as any).text();
 
-      return await axios({
-        url: `http://${import.meta.env.VITE_API_HOST || 'localhost:3001'}/api/positions/${userAlias}`,
-        method: 'post',
-        data: {
-          csvData: fileContents,
+      return await gqlClient.mutate({
+        variables: {
+          input: {
+            mode: SetTradesInputMode.Replace,
+            data: { csv: fileContents },
+          },
         },
+        mutation: setTradesMutation,
       });
     },
-    [userAlias]
+    []
   );
 
   return (
     <div className="user-main-screen">
       {notificationPlacement}
+
+      <div className="account-main-menu-container">
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: 'sign_out',
+                danger: true,
+                onClick: () => signOut(),
+                label: (
+                  <div>
+                    <LogoutOutlined /> Sign Out
+                  </div>
+                ),
+              },
+            ],
+          }}
+        >
+          <Button
+            className="account-main-menu-button"
+            icon={<UserOutlined className="user-icon" />}
+            size="large"
+            type="text"
+          >
+            Account
+          </Button>
+        </Dropdown>
+      </div>
 
       <Upload.Dragger
         className="csv-ledger-upload-area"
@@ -129,50 +151,68 @@ function UserMainScreen() {
       </Upload.Dragger>
 
       <Iterate value={holdingStatsDataIter}>
-        {(next, pendingFirstData, isDone, error) =>
-          error ? (
-            <div>Oh no! {(error as any)?.message}</div>
-          ) : next?.errors?.length ? (
-            <>{JSON.stringify(next, undefined, 2)}</>
+        {next =>
+          next.pendingFirst || (next.done && !next.error) ? (
+            <>⚪️ Pending...</>
+          ) : next.error ? (
+            <>
+              <DisconnectOutlined /> Issue connecting
+            </>
           ) : (
-            <PositionsTable
-              loading={pendingFirstData}
-              loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-              positions={next?.holdingStats?.map(
-                ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => {
-                  return {
-                    symbol,
-                    quantity: totalQuantity,
-                    breakEvenPrice: breakEvenPrice ?? undefined,
-                    marketPrice: priceData.regularMarketPrice,
-                    timeOfPrice: priceData.regularMarketTime,
-                    marketState: priceData.marketState,
-                    revenue: {
-                      amount: unrealizedPnl.amount,
-                      percent: unrealizedPnl.percent,
-                    },
-                    rawPositions: [],
-                  };
-                }
-              )}
-            />
+            <>🟢 Connected</>
           )
         }
+      </Iterate>
+
+      <Iterate value={holdingStatsDataIter}>
+        {next =>
+          next.error ? (
+            <div>Oh no! {(next.error as any)?.message}</div>
+          ) : next.value?.errors?.length ? (
+            <div>{JSON.stringify(next, undefined, 2)}</div>
+          ) : null
+        }
+      </Iterate>
+
+      <Iterate value={holdingStatsDataIter}>
+        {next => (
+          <PositionsTable
+            className="positions-table"
+            loading={next.pendingFirst}
+            loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
+            holdings={next.value?.holdingStats?.map(
+              ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => ({
+                symbol,
+                quantity: totalQuantity,
+                breakEvenPrice: breakEvenPrice ?? undefined,
+                marketPrice: priceData.regularMarketPrice,
+                timeOfPrice: priceData.regularMarketTime,
+                marketState: priceData.marketState,
+                unrealizedPnl: {
+                  amount: unrealizedPnl.amount,
+                  percent: unrealizedPnl.percent,
+                },
+                comprisingPositions: {
+                  iter: [
+                    () =>
+                      pipe(
+                        createPositionDataIter({ symbol }),
+                        itMap(({ positions }) => positions)
+                      ),
+                    [symbol],
+                  ],
+                },
+              })
+            )}
+          />
+        )}
       </Iterate>
     </div>
   );
 }
 
-// const myHoldingStatsQuery = graphql(/* GraphQL */ `
-//   query myHoldingStatsQuery {
-//     holdingStats {
-//       symbol
-//     }
-//   }
-// `);
-
 function combinedHoldingStatsIter(): AsyncIterable<{
-  holdingStats: readonly HoldingStatsItem[];
+  holdingStats: HoldingStatsItem[];
   errors: readonly GraphQLError[] | undefined;
 }> {
   return pipe(
@@ -225,8 +265,74 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
 `);
 
 type HoldingStatsDataSubscriptionResult = DocumentType<typeof holdingStatsDataSubscription>;
-
 type HoldingStatsItem = HoldingStatsDataSubscriptionResult['holdingStats'][number]['data'];
+
+function createPositionDataIter({ symbol }: { symbol: string }): AsyncIterable<{
+  positions: PositionItem[];
+  errors: readonly GraphQLError[] | undefined;
+}> {
+  return pipe(
+    itLazyDefer(async () => {
+      const queriedPositions = await gqlClient.query({
+        variables: { symbol },
+        query: positionQuery,
+      });
+
+      const posIds = queriedPositions.data.positions.map(({ id }) => id);
+
+      const allCurPositions = {} as { [symbol: string]: PositionItem };
+
+      return pipe(
+        gqlWsClient.iterate<PositionDataSubscriptionResult>({
+          variables: { ids: posIds },
+          query: gqlPrint(positionDataSubscription),
+        }),
+        itTap(next => {
+          for (const update of next.data?.positions ?? []) {
+            ({
+              ['SET']: () => (allCurPositions[update.data.id] = update.data),
+              ['REMOVE']: () => delete allCurPositions[update.data.id],
+            })[update.type]();
+          }
+        }),
+        itMap(next => ({
+          positions: Object.values(allCurPositions),
+          errors: next.errors,
+        }))
+      );
+    }),
+    itShare()
+  );
+}
+
+const positionQuery = graphql(/* GraphQL */ `
+  query PositionsQuery($symbol: ID!) {
+    positions(filters: { symbols: [$symbol] }) {
+      id
+    }
+  }
+`);
+
+const positionDataSubscription = graphql(/* GraphQL */ `
+  subscription PositionDataSubscription($ids: [ID!]!) {
+    positions(filters: { ids: $ids }) {
+      type
+      data {
+        id
+        openedAt
+        originalQuantity
+        remainingQuantity
+        unrealizedPnl {
+          amount
+          percent
+        }
+      }
+    }
+  }
+`);
+
+type PositionDataSubscriptionResult = DocumentType<typeof positionDataSubscription>;
+type PositionItem = PositionDataSubscriptionResult['positions'][number]['data'];
 
 // const sampleLedgerCsv = `
 // Trades,Header,Platform,DataDiscriminator,Asset Category,Currency,Symbol,Date/Time,Quantity,Units,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code,Term

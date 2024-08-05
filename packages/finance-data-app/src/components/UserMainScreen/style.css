@@ -1,22 +1,37 @@
 .user-main-screen {
   display: flex;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 7rem 2rem 2rem;
   flex-direction: column;
-  place-items: center;
+  width: calc(min(100% - 40px, 900px));
+  margin: auto;
 
-  > *:not(:first-child) {
-    margin-top: 50px;
+  > * {
+    &:first-child {
+      margin-top: 30px;
+    }
+
+    &:not(:first-child) {
+      margin-top: 50px;
+    }
+  }
+
+  .account-main-menu-container {
+    .account-main-menu-button {
+      display: flex;
+      align-items: flex-end;
+      cursor: default;
+
+      .user-icon {
+        font-size: 30px;
+      }
+    }
   }
 
   .csv-ledger-upload-area {
     display: inline-flex;
+    align-self: center;
     width: 100%;
     max-width: 400px;
     height: 130px;
-    margin: auto;
-    place-items: center center;
 
     .loading-spinner {
       font-size: 64px;
@@ -35,5 +50,9 @@
     .text-line {
       font-size: 16px;
     }
+  }
+
+  .positions-table {
+    width: 100%;
   }
 }

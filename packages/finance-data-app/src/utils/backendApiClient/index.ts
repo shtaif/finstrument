@@ -58,7 +58,7 @@ async function getCurrentRevenueData(params: { userAlias: string }): Promise<Rev
   }
 }
 
-const backendApiBaseUrl = `http://${import.meta.env.VITE_API_HOST || 'localhost:3001'}/api`;
+const backendApiBaseUrl = `${import.meta.env.VITE_API_URL}/api`;
 
 type RevenueDataMessage = {
   updatesBySymbol: {

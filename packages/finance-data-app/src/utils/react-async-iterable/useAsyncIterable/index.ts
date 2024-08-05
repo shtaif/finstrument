@@ -3,6 +3,8 @@ import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableVa
 
 export { useAsyncIterable, type UseAsyncIterableReturn };
 
+// TODO: The initial value can be given as a function, which the internal `useState` would invoke as it's defined to do. So the typings should take into account it possibly being a function and if that's the case then to extract its return type instead of using the function type itself
+
 function useAsyncIterable<TValue>(
   asyncIterOrValue: AsyncIterable<TValue>,
   preIterationInitialValue?: undefined
@@ -87,30 +89,54 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
     };
   }, [asyncIterOrValue]);
 
-  if (!isAsyncIterable(asyncIterOrValue)) {
-    return [asyncIterOrValue as ExtractAsyncIterableValue<TValue>, false, false, undefined];
-  }
-  if (isPendingFirstIteration) {
-    return [currValue, true, false, undefined];
-  }
-  if (isDone) {
-    return [currValue, isPendingFirstIteration, true, error];
-  }
-  return [currValue, isPendingFirstIteration, false, undefined];
+  return {
+    value: !isAsyncIterable(asyncIterOrValue)
+      ? (asyncIterOrValue as ExtractAsyncIterableValue<TValue>)
+      : currValue,
+
+    ...(isPendingFirstIteration
+      ? {
+          pendingFirst: true,
+          done: false,
+          error: undefined,
+        }
+      : {
+          pendingFirst: false,
+          ...(!isDone
+            ? {
+                done: false,
+                error: undefined,
+              }
+            : {
+                done: true,
+                error,
+              }),
+        }),
+  };
 }
 
-type UseAsyncIterableReturn<TValue, TInitValue = undefined> =
-  | [
-      lastRecentValue: ExtractAsyncIterableValue<TValue> | TInitValue,
-      isPendingFirstIteration: true,
-      isDone: false,
-      error: undefined,
-    ]
-  | [
-      lastRecentValue: ExtractAsyncIterableValue<TValue> | TInitValue,
-      isPendingFirstIteration: false,
-      ...([isDone: false, error: undefined] | [isDone: true, error: unknown]),
-    ];
+type UseAsyncIterableReturn<TValue, TInitValue = undefined> = {
+  /** The last most recently received value */
+  value: ExtractAsyncIterableValue<TValue> | TInitValue;
+} & (
+  | {
+      pendingFirst: true;
+      done: false;
+      error: undefined;
+    }
+  | ({
+      pendingFirst: false;
+    } & (
+      | {
+          done: false;
+          error: undefined;
+        }
+      | {
+          done: true;
+          error: unknown;
+        }
+    ))
+);
 
 function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIterableValue<T>> {
   return typeof (input as any)?.[Symbol.asyncIterator] === 'function';
