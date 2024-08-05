@@ -23,21 +23,14 @@ export { Iterate, type IterateProps };
 //   value: TValue;
 //   initialValue?: TInitialValue;
 // }): ReactElement;
-function Iterate<TValue, TInitialValue = undefined>(
+function Iterate<
+  TValue,
+  TInitialValue extends ExtractAsyncIterableValue<TValue> | undefined = undefined,
+>(
   props: { initialValue?: TInitialValue } & (
     | {
         children?: (
-          // ...args: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
-          lastRecentValue: UseAsyncIterableReturn<
-            ExtractAsyncIterableValue<TValue>,
-            TInitialValue
-          >[0],
-          isPendingFirstIteration: UseAsyncIterableReturn<
-            ExtractAsyncIterableValue<TValue>,
-            TInitialValue
-          >[1],
-          isDone: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>[2],
-          error: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>[3]
+          nextIteration: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
         ) => ReactNode;
         value: TValue;
       }
@@ -49,7 +42,7 @@ function Iterate<TValue, TInitialValue = undefined>(
 
   const isChildrenGivenAsFunction = typeof children === 'function';
 
-  const [currentValue, isDone, isPendingFirstValue, error] = useAsyncIterable(
+  const useAsyncIterableResult = useAsyncIterable(
     !isChildrenGivenAsFunction ? children : value,
     initialValue
   );
@@ -57,8 +50,8 @@ function Iterate<TValue, TInitialValue = undefined>(
   return (
     <>
       {isChildrenGivenAsFunction
-        ? (children as any)(currentValue, isDone, isPendingFirstValue, error)
-        : currentValue}
+        ? (children as any)(useAsyncIterableResult)
+        : useAsyncIterableResult.value}
     </>
   );
 }
@@ -67,7 +60,7 @@ type IterateProps<TValue, TInitialValue> = {
   value: TValue;
   initialValue?: TInitialValue;
   children?: (
-    ...args: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
+    nextIterationState: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
   ) => ReactNode;
 };
 

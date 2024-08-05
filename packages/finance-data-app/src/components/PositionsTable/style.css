@@ -1,5 +1,9 @@
-.positions-table {
-  width: 880px;
+.cmp-positions-table {
+  .expandable-positions-container {
+    & > .ant-table-cell {
+      background: var(--ant-color-bg-container);
+    }
+  }
 
   .current-price-cell {
     width: 21%;
