@@ -26,7 +26,7 @@ class PositionModel extends Model<PositionModelAttributes, PositionModelCreation
   @Column({
     field: 'id',
     type: DataType.UUID,
-    defaultValue: Sequelize.literal('uuid_generate_v4()'),
+    defaultValue: Sequelize.literal('gen_random_uuid()'),
     allowNull: false,
     primaryKey: true,
   })

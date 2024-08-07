@@ -31,10 +31,6 @@ const sequelize = new Sequelize(env.POSTGRES_DB_CONNECTION_URL, {
 });
 
 async function initDbSchema(): Promise<void> {
-  await sequelize.query(`
-    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-  `);
-
   if (pgSchemaName !== 'public') {
     await sequelize.query(`
       CREATE SCHEMA IF NOT EXISTS "${pgSchemaName}";
