@@ -3,10 +3,11 @@ import { mapValues } from 'lodash-es';
 import { escapeDbCol } from '../../escapeDbCol.js';
 import {
   sequelize,
+  pgSchemaName,
   HoldingStatsChangeModel,
-  type HoldingStatsChangeModelAttributes,
   UserModel,
   PortfolioCompositionChangeModel,
+  type HoldingStatsChangeModelAttributes,
 } from '../../../db/index.js';
 
 export {
@@ -83,13 +84,13 @@ async function retrieveHoldingStatsChanges(params: {
               )
               *
             FROM
-              "${HoldingStatsChangeModel.tableName}"
+              "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"
             ORDER BY
               "${holdingModelFields.ownerId}",
               "${holdingModelFields.symbol}",
               "${holdingModelFields.changedAt}" DESC
           `;
-          const regularHoldingStats = `SELECT * FROM "${HoldingStatsChangeModel.tableName}"`;
+          const regularHoldingStats = `SELECT * FROM "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"`;
           return normParams.latestPerOwnerAndSymbol
             ? latestRespectiveHoldingStats
             : regularHoldingStats;
@@ -117,9 +118,9 @@ async function retrieveHoldingStatsChanges(params: {
         pcc.${portfolioCompositionModel.portion} AS "portfolioPortion"
       FROM
         holding_stats_base AS hs
-        INNER JOIN "${UserModel.tableName}" AS u ON
+        INNER JOIN "${pgSchemaName}"."${UserModel.tableName}" AS u ON
           hs."${holdingModelFields.ownerId}" = u."${userModelFields.id}"
-        LEFT JOIN "${PortfolioCompositionChangeModel.tableName}" AS pcc ON
+        LEFT JOIN "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS pcc ON
           hs."${holdingModelFields.relatedTradeId}" = pcc."${portfolioCompositionModel.relatedHoldingChangeId}" AND
           pcc."${portfolioCompositionModel.symbol}" = hs."${holdingModelFields.symbol}"
       WHERE

@@ -1,4 +1,4 @@
-export { sequelize, initDbSchema } from './sequelize.js';
+export { sequelize, initDbSchema, pgSchemaName } from './sequelize.js';
 
 export {
   UserModel,

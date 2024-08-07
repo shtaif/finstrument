@@ -2,6 +2,7 @@ import { Op, QueryTypes, type Transaction } from 'sequelize';
 import { mapValues } from 'lodash-es';
 import {
   sequelize,
+  pgSchemaName,
   PortfolioStatsChangeModel,
   UserModel,
   PortfolioCompositionChangeModel,
@@ -68,13 +69,13 @@ async function retrievePortfolioStatsChanges(
               DISTINCT ON ("${portfolioModelFields.ownerId}", "${portfolioModelFields.forCurrency}")
               *
             FROM
-              "${PortfolioStatsChangeModel.tableName}"
+              "${pgSchemaName}"."${PortfolioStatsChangeModel.tableName}"
             ORDER BY
               "${portfolioModelFields.ownerId}",
               "${portfolioModelFields.forCurrency}",
               "${portfolioModelFields.changedAt}" DESC
           `;
-          const regularPortfolioStats = `SELECT * FROM "${PortfolioStatsChangeModel.tableName}"`;
+          const regularPortfolioStats = `SELECT * FROM "${pgSchemaName}"."${PortfolioStatsChangeModel.tableName}"`;
           return normParams.latestPerOwner ? latestRespectivePortfolioStats : regularPortfolioStats;
         })()}
       )
@@ -97,14 +98,14 @@ async function retrievePortfolioStatsChanges(
           )
           .join(',\n')}
         -- ,(SELECT * FROM JSONB_AGG(pcc)) AS "___1"
-        -- ,(SELECT JSONB_AGG(_.*) FROM "${PortfolioCompositionChangeModel.tableName}" AS _ GROUP BY _.symbol) AS "___1"
+        -- ,(SELECT JSONB_AGG(_.*) FROM "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS _ GROUP BY _.symbol) AS "___1"
       FROM
         portfolio_stats_base AS psb
-        INNER JOIN "${UserModel.tableName}" AS u ON
+        INNER JOIN "${pgSchemaName}"."${UserModel.tableName}" AS u ON
           psb."${portfolioModelFields.ownerId}" = u."${userModelFields.id}"
         -- -- --
         -- -- --
-        -- INNER JOIN "${PortfolioCompositionChangeModel.tableName}" AS pcc ON
+        -- INNER JOIN "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS pcc ON
         --   psb."${portfolioModelFields.relatedTradeId}" = pcc."${portfolioCompositionModelFields.relatedHoldingChangeId}"
         -- -- --
         -- -- --

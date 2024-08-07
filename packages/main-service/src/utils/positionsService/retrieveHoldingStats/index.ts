@@ -1,11 +1,12 @@
 import { QueryTypes, type Transaction } from 'sequelize';
 import { mapValues } from 'lodash-es';
 import {
+  sequelize,
+  pgSchemaName,
   HoldingStatsChangeModel,
   PortfolioCompositionChangeModel,
   TradeRecordModel,
   UserModel,
-  sequelize,
 } from '../../../db/index.js';
 import { escapeDbCol } from '../../escapeDbCol.js';
 import {
@@ -72,7 +73,7 @@ async function retrieveHoldingStats(params: {
             DISTINCT ON ("${holdingModelFields.ownerId}", "${holdingModelFields.symbol}")
             *
           FROM
-            "${HoldingStatsChangeModel.tableName}"
+            "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"
           ORDER BY
             "${holdingModelFields.ownerId}",
             "${holdingModelFields.symbol}",
@@ -103,14 +104,14 @@ async function retrieveHoldingStats(params: {
 
       FROM
         latest_respective_holding_stats AS hs
-        INNER JOIN "${UserModel.tableName}" AS u ON
+        INNER JOIN "${pgSchemaName}"."${UserModel.tableName}" AS u ON
           hs."${holdingModelFields.ownerId}" = u."${userModelFields.id}"
-        LEFT JOIN "${PortfolioCompositionChangeModel.tableName}" AS pcc ON
+        LEFT JOIN "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS pcc ON
           pcc."${portfolioCompositionModel.relatedHoldingChangeId}" = (
             SELECT
               id
             FROM
-              "${TradeRecordModel.tableName}"
+              "${pgSchemaName}"."${TradeRecordModel.tableName}"
             WHERE
               "${tradeModelFields.ownerId}" = u."${userModelFields.id}"
             ORDER BY
