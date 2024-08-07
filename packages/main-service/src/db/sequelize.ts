@@ -54,6 +54,8 @@ async function initDbSchema(): Promise<void> {
       time. They will not crush queries probably, but gradually degrade their performance in a very
       noticable way. Following is a workaround that tries to remove the duplicate foreign keys, targeting
       them by the automatic numeric suffix they get added to their name.
+
+      Sequelize PR that explains and fixes this only for `sequelize@^7` versions: https://github.com/sequelize/sequelize/pull/14570
     */
     await sequelize.query(`
       DO
