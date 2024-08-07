@@ -1,5 +1,5 @@
 import { QueryTypes, Transaction } from 'sequelize';
-import { sequelize, TradeRecordModel } from '../../../db/index.js';
+import { sequelize, pgSchemaName, TradeRecordModel } from '../../../db/index.js';
 
 export { findDiffTradesFromSaved, type MissingTradeInfo };
 
@@ -58,7 +58,7 @@ async function findDiffTradesFromSaved(params: {
                 performed_at,
                 COUNT(*)::int AS occurrence_count
               FROM
-                "${TradeRecordModel.tableName}"
+                "${pgSchemaName}"."${TradeRecordModel.tableName}"
               WHERE
                 "owner_id" = ${sequelize.escape(ownerId)}
               GROUP BY

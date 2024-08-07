@@ -15,6 +15,7 @@ import {
 import { pipe, asyncPipe, CustomError } from 'shared-utils';
 import {
   sequelize,
+  pgSchemaName,
   TradeRecordModel,
   UserModel,
   HoldingStatsChangeModel,
@@ -76,7 +77,7 @@ async function setPositions(params: {
           PositionModel,
           PositionClosingModel,
         ]
-          .map(m => `"${m.tableName}"`)
+          .map(m => `"${pgSchemaName}"."${m.tableName}"`)
           .join(', ')} IN SHARE ROW EXCLUSIVE MODE;`,
         { transaction: t }
       );
