@@ -1,20 +1,18 @@
-// import { parseResolveInfo } from 'graphql-parse-resolve-info';
-import { pipe } from 'shared-utils';
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import { positionsService } from '../../../utils/positionsService/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async holdingStatsChanges(_, args, ctx, info) {
-      // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
+    holdingStatsChanges: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
       const requestedFields = {} as any;
       const requestedPortfolioPortion = !!requestedFields.portfolioPortion; // TODO: ...
 
       const holdingStatsChanges = await positionsService.retrieveHoldingStatsChanges({
         filters: {
-          ownerIds: [ctx.session.activeUserId!],
+          ownerIds: [ctx.activeSession.activeUserId!],
           symbols: args.filters?.symbols ?? [],
         },
         pagination: { offset: 0 },
@@ -22,12 +20,11 @@ const resolvers = {
       });
 
       return holdingStatsChanges;
-    },
+    }),
   },
 
   HoldingStatsChange: {
-    async relatedPortfolioStatsChange(holdingStats, _args, ctx, info) {
-      // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
+    async relatedPortfolioStatsChange(holdingStats, _args, ctx) {
       const requestedFields = {} as any;
 
       const derivedPortfolioStatsChange = await ctx.portfolioStatsChangesLoader.load({

@@ -1,28 +1,30 @@
 import { compact } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
-import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
+import { type Resolvers, type Subscription } from '../../../generated/graphql-schema.d.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Subscription: {
     holdingStats: {
-      subscribe(_, args, ctx, info) {
+      resolve: undefined,
+      subscribe: authenticatedSessionResolverMiddleware((_, args, ctx, info) => {
         const requestedFields = gqlFormattedFieldSelectionTree<Subscription['holdingStats']>(info);
 
         const specifiers = args.filters?.symbols?.length
           ? args.filters.symbols.map(symbol => ({
               type: 'HOLDING' as const,
-              holdingPortfolioOwnerId: ctx.session.activeUserId!,
+              holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               holdingSymbol: symbol,
             }))
           : [
               {
                 type: 'HOLDING' as const,
-                holdingPortfolioOwnerId: ctx.session.activeUserId!,
+                holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               },
             ];
 
@@ -92,31 +94,7 @@ const resolvers = {
             holdingStats: relevantHoldingUpdates,
           }))
         );
-      },
+      }),
     },
   },
 } satisfies Resolvers;
-
-// const ___ = getLiveMarketData({
-//   specifiers: [],
-//   translateToCurrencies: ['ILS', 'CAD'] as const,
-//   fields: {
-//     holdings: {
-//       priceData: {
-//         currency: true,
-//       },
-//       pnl: {
-//         amount: true,
-//         byTranslateCurrencies: {
-//           amount: true,
-//         },
-//       },
-//     },
-//   },
-// });
-
-// for await (const update of ___) {
-//   update.holdings[0].priceData.currency;
-//   update.holdings[0].pnl.amount;
-//   update.holdings[0].pnl.byTranslateCurrencies[0].amount;
-// }

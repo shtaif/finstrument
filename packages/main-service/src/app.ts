@@ -4,22 +4,92 @@ import express from 'express';
 import expressCors from 'cors';
 import { json as expressJson } from 'body-parser';
 import { createHttpTerminator } from 'http-terminator';
+import supertokens from 'supertokens-node';
+import SupertokensRecipeSession from 'supertokens-node/recipe/session';
+import SupertokensRecipeEmailPassword from 'supertokens-node/recipe/emailpassword';
+import {
+  middleware as supertokensMw,
+  errorHandler as supertokensErrorHandlerMw,
+} from 'supertokens-node/framework/express';
+import { verifySession as supertokensVerifySessionMw } from 'supertokens-node/recipe/session/framework/express';
 import { env } from './utils/env.js';
 import { mainRedisClient, subscriberRedisClient } from './utils/redisClients.js';
 import { UserModel, initDbSchema } from './db/index.js';
 import appApiRoutes from './appApiRoutes/index.js';
+import { initSuperTokens } from './initSuperTokens/index.js';
 import { createGraphqlAppMiddleware } from './graphqlAppMiddleware/index.js';
 import { graphqlWsServer } from './graphqlWsServer/index.js';
 
 export { startApp };
 
 async function startApp(): Promise<() => Promise<void>> {
+  const supertokensAuthEndpointsBasePath = '/auth';
+
+  initSuperTokens({
+    superTokensCoreUrl: env.SUPERTOKENS_CORE_URL,
+    apiDomain: env.APP_PUBLIC_URL,
+    websiteDomain: env.AUTH_FRONTEND_ORIGIN_URL,
+    sessionCookieDomain: env.AUTH_SESSION_COOKIE_DOMAIN,
+    authEndpointsBasePath: supertokensAuthEndpointsBasePath,
+  });
+
+  supertokens.init({
+    framework: 'express',
+    supertokens: {
+      connectionURI: env.SUPERTOKENS_CORE_URL,
+    },
+    appInfo: {
+      appName: 'instrumental',
+      apiDomain: env.APP_PUBLIC_URL,
+      apiBasePath: supertokensAuthEndpointsBasePath,
+      websiteDomain: env.AUTH_FRONTEND_ORIGIN_URL,
+    },
+    recipeList: [
+      SupertokensRecipeSession.init({
+        cookieSameSite: 'lax',
+        cookieDomain: env.AUTH_SESSION_COOKIE_DOMAIN,
+      }),
+      SupertokensRecipeEmailPassword.init({
+        override: {
+          apis: origImpl => ({
+            ...origImpl,
+            signUpPOST: async input => {
+              const result = await origImpl.signUpPOST!(input);
+              if (result.status === 'OK') {
+                await UserModel.create({
+                  id: result.user.id,
+                  createdAt: result.user.timeJoined,
+                  alias: `${result.user.id}_alias`,
+                });
+              }
+              return result;
+            },
+          }),
+        },
+      }),
+    ],
+  });
+
   const httpServer = createServer(
     express()
-      .use(expressCors({}))
+      .use(
+        expressCors({
+          origin: env.AUTH_FRONTEND_ORIGIN_URL,
+          allowedHeaders: ['content-type', ...supertokens.getAllCORSHeaders()],
+          methods: ['GET', 'PATCH', 'PUT', 'POST', 'DELETE'],
+          credentials: true,
+        })
+      )
       .use(expressJson({ limit: '100kb' }))
-      .use('/api', appApiRoutes)
-      .use('/graphql', (await createGraphqlAppMiddleware()).graphqlAppMiddleware)
+      .use(supertokensAuthEndpointsBasePath, supertokensMw())
+      .use('/api', supertokensVerifySessionMw({ sessionRequired: false }), appApiRoutes)
+      .use(
+        '/graphql',
+        supertokensVerifySessionMw({ sessionRequired: false }),
+        (await createGraphqlAppMiddleware()).graphqlAppMiddleware
+      )
+      .use(supertokensErrorHandlerMw())
+    // TODO: Add last global error handler middleware right here?
   );
 
   const gqlWsServer = graphqlWsServer({ httpServer });
@@ -45,7 +115,7 @@ async function startApp(): Promise<() => Promise<void>> {
     }),
   ]);
 
-  const [, ngrokPublicUrl, user] = await Promise.all([
+  const [, ngrokPublicUrl] = await Promise.all([
     (async () => {
       httpServer.listen(env.PORT);
       await once(httpServer, 'listening');
@@ -56,7 +126,6 @@ async function startApp(): Promise<() => Promise<void>> {
           return await ngrok.connect({ addr: env.PORT });
         })()
       : undefined,
-    UserModel.findOrCreate({ where: { alias: 'dorshtaif' } }),
   ]);
 
   console.log(

@@ -1,15 +1,18 @@
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import { positionsService } from '../../../utils/positionsService/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async positions(_, args, ctx) {
+    positions: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
+      const activeUserId = ctx.activeSession.activeUserId;
+
       const positions = await positionsService.retrievePositions({
         filters: {
           and: [
-            { ownerIds: [ctx.session.activeUserId!] },
+            { ownerIds: [activeUserId] },
             {
               or: [
                 { ids: args.filters?.ids ?? undefined },
@@ -23,7 +26,7 @@ const resolvers = {
       });
 
       return positions;
-    },
+    }),
   },
 
   Position: {

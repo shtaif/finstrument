@@ -13,24 +13,28 @@ const resolvers = {
 
   MeInfo: {
     user: async (_parent, _args, ctx, info) => {
-      if (!ctx.session.activeUserId) {
+      const activeUserId = (await ctx.getSession()).activeUserId;
+
+      if (!activeUserId) {
         return null;
       }
 
-      const selectedFields = gqlFormattedFieldSelectionTree<MeInfo['user']>(info);
-
-      const { id: _id, __typename: ___typename, ...restSelectedFields } = selectedFields;
+      const {
+        id: _id,
+        __typename: ___typename,
+        ...restSelectedFields
+      } = gqlFormattedFieldSelectionTree<MeInfo['user']>(info);
 
       return isEmpty(restSelectedFields)
         ? {
-            id: ctx.session.activeUserId,
+            id: activeUserId,
           }
         : pipe(
-            (await UserModel.findByPk(ctx.session.activeUserId, {
+            (await UserModel.findByPk(activeUserId, {
               attributes: ['alias'],
             }))!,
             ({ alias }) => ({
-              id: ctx.session.activeUserId,
+              id: activeUserId,
               alias,
             })
           );

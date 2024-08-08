@@ -5,31 +5,31 @@ const pipe: PipeFunction = (initVal: unknown, ...funcs: ((...args: any[]) => any
 };
 
 interface PipeFunction {
-  <INIT_VAL>(initVal: INIT_VAL): INIT_VAL;
+  <TInitVal>(initVal: TInitVal): TInitVal;
 
-  <INIT_VAL, A>(initVal: INIT_VAL, ...funcs: [(arg: INIT_VAL) => A]): A;
+  <TInitVal, A>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A]): A;
 
-  <INIT_VAL, A, B>(initVal: INIT_VAL, ...funcs: [(arg: INIT_VAL) => A, (arg: A) => B]): B;
+  <TInitVal, A, B>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A, (arg: A) => B]): B;
 
-  <INIT_VAL, A, B, C>(
-    initVal: INIT_VAL,
-    ...funcs: [(arg: INIT_VAL) => A, (arg: A) => B, (arg: B) => C]
+  <TInitVal, A, B, C>(
+    initVal: TInitVal,
+    ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C]
   ): C;
 
-  <INIT_VAL, A, B, C, D>(
-    initVal: INIT_VAL,
-    ...funcs: [(arg: INIT_VAL) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D]
+  <TInitVal, A, B, C, D>(
+    initVal: TInitVal,
+    ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D]
   ): D;
 
-  <INIT_VAL, A, B, C, D, E>(
-    initVal: INIT_VAL,
-    ...funcs: [(arg: INIT_VAL) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D, (arg: D) => E]
+  <TInitVal, A, B, C, D, E>(
+    initVal: TInitVal,
+    ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D, (arg: D) => E]
   ): E;
 
-  <INIT_VAL, A, B, C, D, E, F>(
-    initVal: INIT_VAL,
+  <TInitVal, A, B, C, D, E, F>(
+    initVal: TInitVal,
     ...funcs: [
-      (arg: INIT_VAL) => A,
+      (arg: TInitVal) => A,
       (arg: A) => B,
       (arg: B) => C,
       (arg: C) => D,
@@ -38,10 +38,10 @@ interface PipeFunction {
     ]
   ): F;
 
-  <INIT_VAL, A, B, C, D, E, F, G>(
-    initVal: INIT_VAL,
+  <TInitVal, A, B, C, D, E, F, G>(
+    initVal: TInitVal,
     ...funcs: [
-      (arg: INIT_VAL) => A,
+      (arg: TInitVal) => A,
       (arg: A) => B,
       (arg: B) => C,
       (arg: C) => D,
@@ -51,10 +51,10 @@ interface PipeFunction {
     ]
   ): G;
 
-  <INIT_VAL, A, B, C, D, E, F, G, H>(
-    initVal: INIT_VAL,
+  <TInitVal, A, B, C, D, E, F, G, H>(
+    initVal: TInitVal,
     ...funcs: [
-      (arg: INIT_VAL) => A,
+      (arg: TInitVal) => A,
       (arg: A) => B,
       (arg: B) => C,
       (arg: C) => D,
@@ -65,10 +65,10 @@ interface PipeFunction {
     ]
   ): H;
 
-  <INIT_VAL, A, B, C, D, E, F, G, H, I>(
-    initVal: INIT_VAL,
+  <TInitVal, A, B, C, D, E, F, G, H, I>(
+    initVal: TInitVal,
     ...funcs: [
-      (arg: INIT_VAL) => A,
+      (arg: TInitVal) => A,
       (arg: A) => B,
       (arg: B) => C,
       (arg: C) => D,
@@ -80,10 +80,10 @@ interface PipeFunction {
     ]
   ): I;
 
-  <INIT_VAL, A, B, C, D, E, F, G, H, I, J>(
-    initVal: INIT_VAL,
+  <TInitVal, A, B, C, D, E, F, G, H, I, J>(
+    initVal: TInitVal,
     ...funcs: [
-      (arg: INIT_VAL) => A,
+      (arg: TInitVal) => A,
       (arg: A) => B,
       (arg: B) => C,
       (arg: C) => D,

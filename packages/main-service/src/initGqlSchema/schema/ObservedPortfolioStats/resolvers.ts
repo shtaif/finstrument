@@ -5,20 +5,21 @@ import type { Resolvers, Subscription } from '../../../generated/graphql-schema.
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { type PortfolioObjectSpecifier } from '../../../utils/observeStatsObjectChanges/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Subscription: {
     portfolioStats: {
-      subscribe(_, _args, ctx, info) {
+      subscribe: authenticatedSessionResolverMiddleware(async (_, _args, ctx, info) => {
         const requestedFields =
           gqlFormattedFieldSelectionTree<Subscription['portfolioStats']>(info);
 
         const specifiers = [
           {
             type: 'PORTFOLIO' as const,
-            portfolioOwnerId: ctx.session.activeUserId!,
+            portfolioOwnerId: ctx.activeSession.activeUserId,
             statsCurrency: undefined,
           },
         ] satisfies PortfolioObjectSpecifier[];
@@ -74,7 +75,7 @@ const resolvers = {
             portfolioStats: relevantPStatsUpdates,
           }))
         );
-      },
+      }),
     },
   },
 } satisfies Resolvers;

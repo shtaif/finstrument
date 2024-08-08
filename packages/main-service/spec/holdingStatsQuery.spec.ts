@@ -25,7 +25,7 @@ beforeAll(async () => {
   ]);
   mockGqlContext(ctx => ({
     ...ctx,
-    session: { activeUserId: mockUserId1 },
+    getSession: async () => ({ activeUserId: mockUserId1 }),
   }));
 });
 

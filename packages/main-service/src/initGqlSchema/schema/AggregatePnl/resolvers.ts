@@ -1,28 +1,15 @@
-// import { parseResolveInfo, type ResolveTree } from 'graphql-parse-resolve-info';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
-import {
-  type Resolvers,
-  type AggregatePnlChangeResultTranslatedAggregatesArgs,
-} from '../../../generated/graphql-schema.d.js';
+import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import { getAggregateLiveMarketData } from '../../../utils/getAggregateLiveMarketData/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Subscription: {
     aggregatePnl: {
-      subscribe(_, args, ctx, info) {
-        // const parsedInfo = parseResolveInfo(info) as ResolveTree;
-
-        // const translatedAggregatesFieldArgsGiven = pipe(
-        //   parsedInfo.fieldsByTypeName,
-        //   v => values(v)[0],
-        //   v =>
-        //     find(v, { name: 'translatedAggregates' })?.args as
-        //       | AggregatePnlChangeResultTranslatedAggregatesArgs
-        //       | undefined
-        // );
+      subscribe: authenticatedSessionResolverMiddleware((_, args, ctx) => {
         const translatedAggregatesFieldArgsGiven = {} as any;
 
         return pipe(
@@ -31,7 +18,7 @@ const resolvers = {
               ...(args.holdings ?? []).map(({ symbol }) => ({
                 type: 'HOLDING' as const,
                 holdingSymbol: symbol,
-                holdingPortfolioOwnerId: ctx.session.activeUserId!,
+                holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               })),
               ...(args.positions ?? []).map(({ positionId }) => ({
                 type: 'POSITION' as const,
@@ -57,7 +44,7 @@ const resolvers = {
             },
           }))
         );
-      },
+      }),
     },
   },
 
