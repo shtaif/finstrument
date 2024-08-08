@@ -121,9 +121,9 @@ describe('Mutation.setTrades', () => {
     const [redisEvent, positionsCreated, holdingStatsChangesCreated, portfolioStatsChangesCreated] =
       await Promise.all([
         redisEventPromise,
-        (async () => (await PositionModel.findAll()).map(rec => rec.dataValues))(),
-        (async () => (await HoldingStatsChangeModel.findAll()).map(rec => rec.dataValues))(),
-        (async () => (await PortfolioStatsChangeModel.findAll()).map(rec => rec.dataValues))(),
+        (async () => (await PositionModel.findAll()).map(r => r.dataValues))(),
+        (async () => (await HoldingStatsChangeModel.findAll()).map(r => r.dataValues))(),
+        (async () => (await PortfolioStatsChangeModel.findAll()).map(r => r.dataValues))(),
       ]);
 
     expect(redisEvent).toStrictEqual({
@@ -186,16 +186,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -541,16 +541,16 @@ describe('Mutation.setTrades', () => {
       ] = await Promise.all([
         redisEventPromise,
         TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
       ]);
 
@@ -766,16 +766,16 @@ describe('Mutation.setTrades', () => {
       ] = await Promise.all([
         redisEventPromise,
         TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
         PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-          recs.map(rec => rec.dataValues)
+          recs.map(r => r.dataValues)
         ),
       ]);
 
@@ -900,16 +900,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -1303,16 +1303,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -1709,16 +1709,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -1967,16 +1967,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -2195,16 +2195,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -2519,16 +2519,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -2834,16 +2834,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -3151,16 +3151,16 @@ describe('Mutation.setTrades', () => {
     ] = await Promise.all([
       redisEventPromise,
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
       PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
+        recs.map(r => r.dataValues)
       ),
     ]);
 
@@ -3416,28 +3416,6 @@ describe('Mutation.setTrades', () => {
       },
     });
 
-    const [
-      redisEvent,
-      allFinalTrades,
-      allFinalPositions,
-      allFinalHoldingStatsChanges,
-      allFinalPortfolioStatsChanges,
-    ] = await Promise.all([
-      redisEventPromise,
-      TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
-      ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
-      ),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
-      ),
-      PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
-        recs.map(rec => rec.dataValues)
-      ),
-    ]);
-
     expect(resp.data).toStrictEqual({
       data: {
         setTrades: {
@@ -3447,6 +3425,26 @@ describe('Mutation.setTrades', () => {
         },
       },
     });
+
+    const [
+      redisEvent,
+      allFinalTrades,
+      allFinalPositions,
+      allFinalHoldingStatsChanges,
+      allFinalPortfolioStatsChanges,
+    ] = await Promise.all([
+      redisEventPromise,
+      TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(r =>
+        r.map(r => r.dataValues)
+      ),
+      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(r => r.map(r => r.dataValues)),
+      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>
+        r.map(r => r.dataValues)
+      ),
+      PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>
+        r.map(r => r.dataValues)
+      ),
+    ]);
 
     expect(redisEvent).toStrictEqual({
       ownerId: mockUserId1,
