@@ -1,27 +1,23 @@
-// import { parseResolveInfo } from 'graphql-parse-resolve-info';
-// import { pipe } from 'shared-utils';
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import positionsService from '../../../utils/positionsService/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async portfolioStatsChanges(_, _args, ctx, info) {
-      // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
+    portfolioStatsChanges: authenticatedSessionResolverMiddleware(async (_, _args, ctx) => {
       // const requestedFields = {} as any;
-
-      const activeUserId = (await ctx.getSession()).activeUserId!;
 
       const portfolioStatsChange = await positionsService.retrievePortfolioStatsChanges({
         // includeCompositions: !!requestedFields.composition,
-        filters: { ownerIds: [activeUserId!] },
+        filters: { ownerIds: [ctx.activeSession.activeUserId] },
         pagination: { offset: 0 },
         orderBy: ['changedAt', 'DESC'],
       });
 
       return portfolioStatsChange;
-    },
+    }),
   },
 
   PortfolioStatsChange: {

@@ -13,7 +13,7 @@ const resolvers = {
 
   MeInfo: {
     user: async (_parent, _args, ctx, info) => {
-      const activeUserId = (await ctx.getSession()).activeUserId!;
+      const activeUserId = (await ctx.getSession()).activeUserId;
 
       if (!activeUserId) {
         return null;

@@ -1,21 +1,21 @@
-// import { parseResolveInfo } from 'graphql-parse-resolve-info';
 import { pipe } from 'shared-utils';
 import { itTakeFirst } from 'iterable-operators';
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import positionsService from '../../../utils/positionsService/index.js';
 import { getAggregateLiveMarketData } from '../../../utils/getAggregateLiveMarketData/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async portfolioStats(_, _args, ctx, info) {
+    portfolioStats: authenticatedSessionResolverMiddleware(async (_, _args, ctx) => {
       // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
       const requestedFields = {} as any;
 
       const [latestPortfolioStatsChange] = await positionsService.retrievePortfolioStatsChanges({
         filters: {
-          ownerIds: [(await ctx.getSession()).activeUserId!],
+          ownerIds: [ctx.activeSession.activeUserId],
         },
         latestPerOwner: true,
         includeCompositions: !!requestedFields.composition,
@@ -24,7 +24,7 @@ const resolvers = {
       });
 
       return latestPortfolioStatsChange;
-    },
+    }),
   },
 
   PortfolioStats: {

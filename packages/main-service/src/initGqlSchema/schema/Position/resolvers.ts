@@ -1,12 +1,13 @@
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import { positionsService } from '../../../utils/positionsService/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async positions(_, args, ctx) {
-      const activeUserId = (await ctx.getSession()).activeUserId!;
+    positions: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
+      const activeUserId = ctx.activeSession.activeUserId;
 
       const positions = await positionsService.retrievePositions({
         filters: {
@@ -25,7 +26,7 @@ const resolvers = {
       });
 
       return positions;
-    },
+    }),
   },
 
   Position: {

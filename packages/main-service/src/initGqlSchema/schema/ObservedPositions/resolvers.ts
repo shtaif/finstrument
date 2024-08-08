@@ -1,18 +1,17 @@
 import { compact } from 'lodash-es';
-import { type DeepNonNullable } from 'utility-types';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
-import { type AppGqlContextValue } from '../../appGqlContext.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Subscription: {
     positions: {
-      subscribe(_, args, _ctx, info) {
+      subscribe: authenticatedSessionResolverMiddleware((_, args, _ctx, info) => {
         // TODO: Modify this resolver so it doesn't just target the given position IDs directly, but rather adds also a condition for their owner to be the actual requestor
 
         const requestedFields = gqlFormattedFieldSelectionTree<Subscription['positions']>(info);
@@ -82,7 +81,7 @@ const resolvers = {
             positions: relevantPositionUpdates,
           }))
         );
-      },
+      }),
     },
   },
 } satisfies Resolvers;

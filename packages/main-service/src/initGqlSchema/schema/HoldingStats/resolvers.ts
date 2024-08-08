@@ -1,19 +1,18 @@
-// import { parseResolveInfo } from 'graphql-parse-resolve-info';
 import { type Resolvers } from '../../../generated/graphql-schema.d.js';
 import { positionsService } from '../../../utils/positionsService/index.js';
+import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
 
 export { resolvers };
 
 const resolvers = {
   Query: {
-    async holdingStats(_, args, ctx) {
-      // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
+    holdingStats: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
       // const requestedCurrentPortfolioPortion = !!requestedFields.currentPortfolioPortion;
       // TODO: ⤴️ ...
 
       const holdingStats = await positionsService.retrieveHoldingStats({
         filters: {
-          ownerIds: [(await ctx.getSession()).activeUserId!],
+          ownerIds: [ctx.activeSession.activeUserId!],
           symbols: args.filters?.symbols ?? [],
         },
         pagination: { offset: 0 },
@@ -21,12 +20,11 @@ const resolvers = {
       });
 
       return holdingStats;
-    },
+    }),
   },
 
   HoldingStats: {
     async relatedPortfolioStats(holdingStats, _, ctx) {
-      // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
       const requestedFields = {} as any;
 
       const portfolioStats = await ctx.portfolioStatsLoader.load({
@@ -55,15 +53,15 @@ const resolvers = {
       };
     },
 
-    async unrealizedPnl(holdingStats, _, ctx) {
+    unrealizedPnl: authenticatedSessionResolverMiddleware(async (holdingStats, _, ctx) => {
       const currMarketData = await ctx.holdingMarketDataLoader.load({
-        ownerId: (await ctx.getSession()).activeUserId!,
+        ownerId: ctx.activeSession.activeUserId!,
         symbol: holdingStats.symbol!,
       });
       return {
         amount: currMarketData.pnl.amount,
         percent: currMarketData.pnl.percent,
       };
-    },
+    }),
   },
 } satisfies Resolvers;
