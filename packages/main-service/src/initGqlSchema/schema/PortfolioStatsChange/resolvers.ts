@@ -11,9 +11,11 @@ const resolvers = {
       // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
       // const requestedFields = {} as any;
 
+      const activeUserId = (await ctx.getSession()).activeUserId!;
+
       const portfolioStatsChange = await positionsService.retrievePortfolioStatsChanges({
         // includeCompositions: !!requestedFields.composition,
-        filters: { ownerIds: [ctx.session.activeUserId!] },
+        filters: { ownerIds: [activeUserId!] },
         pagination: { offset: 0 },
         orderBy: ['changedAt', 'DESC'],
       });

@@ -14,7 +14,7 @@ const resolvers = {
 
       const holdingStatsChanges = await positionsService.retrieveHoldingStatsChanges({
         filters: {
-          ownerIds: [ctx.session.activeUserId!],
+          ownerIds: [(await ctx.getSession()).activeUserId!],
           symbols: args.filters?.symbols ?? [],
         },
         pagination: { offset: 0 },

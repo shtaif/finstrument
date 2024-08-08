@@ -11,14 +11,16 @@ export { resolvers };
 const resolvers = {
   Subscription: {
     portfolioStats: {
-      subscribe(_, _args, ctx, info) {
+      subscribe: async (_, _args, ctx, info) => {
+        const activeUserId = (await ctx.getSession()).activeUserId!;
+
         const requestedFields =
           gqlFormattedFieldSelectionTree<Subscription['portfolioStats']>(info);
 
         const specifiers = [
           {
             type: 'PORTFOLIO' as const,
-            portfolioOwnerId: ctx.session.activeUserId!,
+            portfolioOwnerId: activeUserId,
             statsCurrency: undefined,
           },
         ] satisfies PortfolioObjectSpecifier[];

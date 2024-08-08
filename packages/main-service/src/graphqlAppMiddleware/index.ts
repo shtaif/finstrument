@@ -3,7 +3,6 @@ import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
 import { initedGqlSchema } from '../initGqlSchema/index.js';
 import { appGqlContext, type AppGqlContextValue } from '../initGqlSchema/appGqlContext.js';
-import { getTestUserId } from '../utils/getTestUserId.js';
 
 export { createGraphqlAppMiddleware };
 
@@ -22,9 +21,11 @@ async function createGraphqlAppMiddleware(): Promise<{
 
   return {
     graphqlAppMiddleware: expressMiddleware(apolloServer, {
-      context: async _expressCtxFunctionArg => {
-        const activeUserId = await getTestUserId();
-        return appGqlContext({ activeUserId });
+      context: async expressCtxFunctionArg => {
+        return await appGqlContext({
+          req: expressCtxFunctionArg.req,
+          res: expressCtxFunctionArg.res,
+        });
       },
     }),
   };

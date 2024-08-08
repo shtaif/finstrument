@@ -1,3 +1,6 @@
+import type http from 'node:http';
+import { once } from 'lodash-es';
+import Session from 'supertokens-node/recipe/session';
 import {
   createHoldingMarketDataLoader,
   type HoldingMarketStats,
@@ -32,14 +35,11 @@ export {
   type UpdatedSymbolPrice,
 };
 
-const appGqlContext = async (injectedInfo?: {
-  activeUserId?: string;
+const appGqlContext = async (injectedInfo: {
+  req: http.IncomingMessage;
+  res?: http.OutgoingMessage;
 }): Promise<{
-  session: {
-    activeUserId: string | undefined;
-  };
-  /** @deprecated need to use the `session` property instead */
-  activeUser?: { id: string };
+  getSession: () => Promise<{ activeUserId: string | undefined }>;
   portfolioStatsLoader: ReturnType<typeof createPortfolioStatsLoader>;
   portfolioStatsChangesLoader: ReturnType<typeof createPortfolioStatsChangesLoader>;
   holdingStatsChangesLoader: ReturnType<typeof createHoldingStatsChangesLoader>;
@@ -51,6 +51,15 @@ const appGqlContext = async (injectedInfo?: {
   instrumentCurrentMarketDataLoader: ReturnType<typeof createInstrumentCurrentMarketDataLoader>;
   // observedStatsObjectsLoader: ReturnType<typeof createObservedStatsObjectsLoader>;
 }> => {
+  const getSession = once(async () => {
+    const { req, res } = injectedInfo;
+    const supertokensSession = await Session.getSession(req, res ?? {}, { sessionRequired: false });
+    const userId = supertokensSession?.getUserId();
+    return {
+      activeUserId: userId,
+    };
+  });
+
   const portfolioStatsLoader = createPortfolioStatsLoader();
   const portfolioStatsChangesLoader = createPortfolioStatsChangesLoader();
   const holdingStatsChangesLoader = createHoldingStatsChangesLoader();
@@ -62,9 +71,7 @@ const appGqlContext = async (injectedInfo?: {
   // const observedStatsObjectsLoader = createObservedStatsObjectsLoader();
 
   return {
-    session: {
-      activeUserId: injectedInfo?.activeUserId,
-    },
+    getSession,
     portfolioStatsLoader,
     portfolioStatsChangesLoader,
     holdingStatsChangesLoader,

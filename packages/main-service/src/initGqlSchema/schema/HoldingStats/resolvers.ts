@@ -13,7 +13,7 @@ const resolvers = {
 
       const holdingStats = await positionsService.retrieveHoldingStats({
         filters: {
-          ownerIds: [ctx.session.activeUserId!],
+          ownerIds: [(await ctx.getSession()).activeUserId!],
           symbols: args.filters?.symbols ?? [],
         },
         pagination: { offset: 0 },
@@ -57,7 +57,7 @@ const resolvers = {
 
     async unrealizedPnl(holdingStats, _, ctx) {
       const currMarketData = await ctx.holdingMarketDataLoader.load({
-        ownerId: ctx.session.activeUserId!,
+        ownerId: (await ctx.getSession()).activeUserId!,
         symbol: holdingStats.symbol!,
       });
       return {

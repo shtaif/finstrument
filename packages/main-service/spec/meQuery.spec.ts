@@ -30,7 +30,7 @@ afterAll(async () => {
 describe('Query.me ', () => {
   mockGqlContext(ctx => ({
     ...ctx,
-    session: { activeUserId: undefined },
+    getSession: async () => ({ activeUserId: undefined }),
   }));
 
   it('For a non-authenticated caller returns a `null` `user` field ', async () => {
@@ -59,7 +59,7 @@ describe('Query.me ', () => {
   it('For an authenticated caller returns a full user object', async () => {
     mockGqlContext(ctx => ({
       ...ctx,
-      session: { activeUserId: mockUser1.id },
+      getSession: async () => ({ activeUserId: mockUserId1 }),
     }));
 
     const resp = await axiosGqlClient({

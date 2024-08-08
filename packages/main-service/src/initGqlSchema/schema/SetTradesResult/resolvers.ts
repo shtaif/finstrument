@@ -8,7 +8,7 @@ const resolvers = {
   Mutation: {
     async setTrades(_, args, ctx) {
       const user = (await UserModel.findOne({
-        where: { id: ctx.session.activeUserId! },
+        where: { id: (await ctx.getSession()).activeUserId! },
         attributes: ['alias'],
       }))!;
 

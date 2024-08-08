@@ -6,10 +6,12 @@ export { resolvers };
 const resolvers = {
   Query: {
     async positions(_, args, ctx) {
+      const activeUserId = (await ctx.getSession()).activeUserId!;
+
       const positions = await positionsService.retrievePositions({
         filters: {
           and: [
-            { ownerIds: [ctx.session.activeUserId!] },
+            { ownerIds: [activeUserId] },
             {
               or: [
                 { ids: args.filters?.ids ?? undefined },
