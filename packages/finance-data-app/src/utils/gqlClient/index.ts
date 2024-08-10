@@ -32,4 +32,5 @@ const splitLink = split(
 const gqlClient = new ApolloClient({
   link: splitLink,
   cache: new InMemoryCache(),
+  credentials: 'include',
 });

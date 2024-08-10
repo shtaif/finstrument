@@ -1,0 +1,13 @@
+.cmp-account-main-menu {
+  display: inline-block;
+
+  .account-main-menu-button {
+    display: flex;
+    align-items: flex-end;
+    cursor: default;
+
+    .user-icon {
+      font-size: 30px;
+    }
+  }
+}
