@@ -1,10 +1,14 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider as AntdConfigProvider, theme as antdTheme } from 'antd';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { SuperTokensWrapper } from 'supertokens-auth-react';
+import { SessionAuth } from 'supertokens-auth-react/recipe/session';
 import { ApolloProvider } from '@apollo/client';
 import { pipe } from 'shared-utils';
 import { UserMainScreen } from './components/UserMainScreen';
 import { gqlClient } from './utils/gqlClient';
+import { initSuperTokens } from './utils/initSuperTokens';
+import './index.css';
 
 export { App };
 
@@ -12,6 +16,7 @@ function App() {
   return (children =>
     pipe(
       children,
+      children => <SuperTokensWrapper children={children} />,
       children => <ApolloProvider children={children} client={gqlClient} />,
       children => (
         <AntdConfigProvider
@@ -22,8 +27,41 @@ function App() {
     ))(
     <BrowserRouter>
       <Routes>
-        <Route path="/:alias" element={<UserMainScreen />} />
+        <Route
+          path="/"
+          element={
+            <SessionAuth requireAuth>
+              <UserMainScreen />
+            </SessionAuth>
+          }
+        />
+
+        <Route
+          path={authRoutesBasePath}
+          element={
+            <>
+              <SignInAndUpPage />
+            </>
+          }
+        />
+
+        <Route
+          path={`${authRoutesBasePath}/reset-password?`}
+          element={
+            <>
+              <ResetPasswordPage />
+            </>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
 }
+
+const authRoutesBasePath = '/auth';
+
+const { SignInAndUpPage, ResetPasswordPage } = initSuperTokens({
+  authRoutesBasePath,
+});

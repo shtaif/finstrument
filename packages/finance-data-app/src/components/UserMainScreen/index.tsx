@@ -12,6 +12,7 @@ import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { SetTradesInputMode } from '../../generated/gql/graphql.ts';
 import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { PositionsTable } from '../PositionsTable/index.tsx';
+import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
 import './style.css';
 
 export { UserMainScreen };
@@ -84,6 +85,10 @@ function UserMainScreen() {
   return (
     <div className="cmp-user-main-screen">
       {notificationPlacement}
+
+      <div>
+        <AccountMainMenu />
+      </div>
 
       <Upload.Dragger
         className="csv-ledger-upload-area"
