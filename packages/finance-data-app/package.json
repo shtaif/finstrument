@@ -28,7 +28,8 @@
     "react-router-dom": "^6.15.0",
     "react-timeago": "^7.1.0",
     "react-use": "^17.4.0",
-    "shared-utils": "workspace:^"
+    "shared-utils": "workspace:^",
+    "supertokens-auth-react": "^0.45.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",
