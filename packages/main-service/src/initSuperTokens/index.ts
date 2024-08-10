@@ -26,7 +26,7 @@ function initSuperTokens(params: {
     },
     recipeList: [
       SupertokensRecipeSession.init({
-        cookieSameSite: 'lax',
+        cookieSameSite: 'none',
         cookieDomain: params.sessionCookieDomain,
       }),
       SupertokensRecipeEmailPassword.init({
