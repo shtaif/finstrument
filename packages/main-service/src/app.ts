@@ -33,43 +33,6 @@ async function startApp(): Promise<() => Promise<void>> {
     authEndpointsBasePath: supertokensAuthEndpointsBasePath,
   });
 
-  supertokens.init({
-    framework: 'express',
-    supertokens: {
-      connectionURI: env.SUPERTOKENS_CORE_URL,
-    },
-    appInfo: {
-      appName: 'instrumental',
-      apiDomain: env.APP_PUBLIC_URL,
-      apiBasePath: supertokensAuthEndpointsBasePath,
-      websiteDomain: env.AUTH_FRONTEND_ORIGIN_URL,
-    },
-    recipeList: [
-      SupertokensRecipeSession.init({
-        cookieSameSite: 'lax',
-        cookieDomain: env.AUTH_SESSION_COOKIE_DOMAIN,
-      }),
-      SupertokensRecipeEmailPassword.init({
-        override: {
-          apis: origImpl => ({
-            ...origImpl,
-            signUpPOST: async input => {
-              const result = await origImpl.signUpPOST!(input);
-              if (result.status === 'OK') {
-                await UserModel.create({
-                  id: result.user.id,
-                  createdAt: result.user.timeJoined,
-                  alias: `${result.user.id}_alias`,
-                });
-              }
-              return result;
-            },
-          }),
-        },
-      }),
-    ],
-  });
-
   const httpServer = createServer(
     express()
       .use(

@@ -22,6 +22,7 @@ function initSuperTokens(params: {
       apiDomain: params.apiDomain,
       apiBasePath: params.authEndpointsBasePath,
       websiteDomain: params.websiteDomain,
+      websiteBasePath: '/auth',
     },
     recipeList: [
       SupertokensRecipeSession.init({
