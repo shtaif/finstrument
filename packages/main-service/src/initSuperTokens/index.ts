@@ -26,8 +26,16 @@ function initSuperTokens(params: {
     },
     recipeList: [
       SupertokensRecipeSession.init({
-        cookieSameSite: 'none',
         cookieDomain: params.sessionCookieDomain,
+        ...(new URL(params.apiDomain).protocol === 'https:'
+          ? {
+              cookieSameSite: 'none',
+              cookieSecure: true,
+            }
+          : {
+              cookieSameSite: 'lax',
+              cookieSecure: false,
+            }),
       }),
       SupertokensRecipeEmailPassword.init({
         override: {
