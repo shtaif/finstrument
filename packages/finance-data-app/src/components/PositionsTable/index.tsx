@@ -129,7 +129,7 @@ function PositionsTable(props: {
                   '-'
                 ) : (
                   <LivePriceDisplay price={pos.unrealizedPnl.percent}>
-                    {revPercent => <>{commonDecimalNumCurrencyFormat(revPercent, 'USD')}%</>}
+                    {revPercent => <>{commonDecimalNumFormat(revPercent)}%</>}
                   </LivePriceDisplay>
                 ),
             },
