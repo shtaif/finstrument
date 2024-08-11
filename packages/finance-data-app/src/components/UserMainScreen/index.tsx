@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo } from 'react';
 import { useLocalStorage, useAsyncFn } from 'react-use';
 import { useVisibilityChange } from '@uidotdev/usehooks';
-import { Upload, UploadFile, Spin, notification, Dropdown, Button } from 'antd';
+import { Upload, UploadFile, Spin, notification } from 'antd';
 import { LoadingOutlined, UploadOutlined, DisconnectOutlined } from '@ant-design/icons';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { Iterate } from '../../utils/react-async-iterable/index.ts';
+import { Iterate } from 'react-async-iterable';
 import { pipe } from 'shared-utils';
 import { itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';

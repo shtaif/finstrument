@@ -1,6 +1,6 @@
 import { ReactElement, ReactNode } from 'react';
-import { useAsyncIterable, type UseAsyncIterableReturn } from '../useAsyncIterable';
-import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue';
+import { useAsyncIterable, type UseAsyncIterableNext } from '../useAsyncIterable/index.js';
+import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue.js';
 
 export { Iterate, type IterateProps };
 
@@ -8,7 +8,7 @@ export { Iterate, type IterateProps };
 
 // function Iterate<TValue, TInitialValue>(props: {
 //   children: (
-//     ...args: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
+//     ...args: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
 //   ) => ReactNode;
 //   value: TValue;
 //   initialValue?: TInitialValue;
@@ -30,7 +30,7 @@ function Iterate<
   props: { initialValue?: TInitialValue } & (
     | {
         children?: (
-          nextIteration: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
+          nextIteration: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
         ) => ReactNode;
         value: TValue;
       }
@@ -60,7 +60,7 @@ type IterateProps<TValue, TInitialValue> = {
   value: TValue;
   initialValue?: TInitialValue;
   children?: (
-    nextIterationState: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
+    nextIterationState: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
   ) => ReactNode;
 };
 
@@ -69,7 +69,7 @@ type IterateProps<TValue, TInitialValue> = {
 // } & (
 //   | {
 //       children: (
-//         ...args: UseAsyncIterableReturn<ExtractAsyncIterableValue<TValue>, TInitialValue>
+//         ...args: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
 //       ) => ReactNode;
 //       value: TValue;
 //     }

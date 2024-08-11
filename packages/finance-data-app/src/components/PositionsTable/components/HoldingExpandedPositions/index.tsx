@@ -2,7 +2,7 @@ import React, { useMemo, type ReactElement } from 'react';
 import { range } from 'lodash-es';
 import { Skeleton } from 'antd';
 import { ExtractAsyncIterableValue } from 'iterable-operators';
-import { Iterate } from '../../../../utils/react-async-iterable';
+import { Iterate } from 'react-async-iterable';
 
 export { HoldingExpandedPositions, type HoldingExpandedPositionsProps, type ExpandedPosition };
 

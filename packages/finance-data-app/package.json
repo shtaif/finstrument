@@ -28,6 +28,7 @@
     "react-router-dom": "^6.15.0",
     "react-timeago": "^7.1.0",
     "react-use": "^17.4.0",
+    "react-async-iterable": "workspace:^",
     "shared-utils": "workspace:^",
     "supertokens-auth-react": "^0.45.0"
   },
