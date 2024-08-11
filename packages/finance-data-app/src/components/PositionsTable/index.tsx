@@ -2,7 +2,7 @@ import React, { memo, type ReactElement } from 'react';
 import { range } from 'lodash-es';
 import { Table, Tag, Skeleton } from 'antd';
 import { type MaybeAsyncIterable } from 'iterable-operators';
-import { Iterate } from '../../utils/react-async-iterable';
+import { Iterate } from 'react-async-iterable';
 import { LivePriceDisplay } from '../LivePriceDisplay';
 import { SymbolPriceUpdatedAt } from './components/SymbolPriceUpdatedAt';
 import { MarketStateIndicatorIcon } from './components/MarketStateIndicatorIcon';

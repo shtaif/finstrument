@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
-import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue';
+import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue.js';
 
-export { useAsyncIterable, type UseAsyncIterableReturn };
+export { useAsyncIterable, type UseAsyncIterableNext };
 
 // TODO: The initial value can be given as a function, which the internal `useState` would invoke as it's defined to do. So the typings should take into account it possibly being a function and if that's the case then to extract its return type instead of using the function type itself
 
 function useAsyncIterable<TValue>(
   asyncIterOrValue: AsyncIterable<TValue>,
   preIterationInitialValue?: undefined
-): UseAsyncIterableReturn<TValue, undefined>;
+): UseAsyncIterableNext<TValue, undefined>;
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
-): UseAsyncIterableReturn<TValue, TInitValue>;
+): UseAsyncIterableNext<TValue, TInitValue>;
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
-): UseAsyncIterableReturn<TValue, TInitValue> {
+): UseAsyncIterableNext<TValue, TInitValue> {
   const [currValue, setCurrValue] = useState<ExtractAsyncIterableValue<TValue> | TInitValue>(
     preIterationInitialValue
   ); // Whenever we're pending first iteration, it's always possible we still have an actual value set here from something we consumed previously - therefore the type is either `TValue` or `TInitValue`
@@ -115,7 +115,7 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   };
 }
 
-type UseAsyncIterableReturn<TValue, TInitValue = undefined> = {
+type UseAsyncIterableNext<TValue, TInitValue = undefined> = {
   /** The last most recently received value */
   value: ExtractAsyncIterableValue<TValue> | TInitValue;
 } & (
@@ -155,7 +155,7 @@ function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIt
 //   input;
 // }
 
-// const value: UseAsyncIterableReturn<'a', null> = ['a', false, true, 'asdfasdfas'];
+// const value: UseAsyncIterableNext<'a', null> = ['a', false, true, 'asdfasdfas'];
 
 // type ___1 = ExtractAsyncIterableValue<AsyncIterable<'a' | 'b'>>;
 // type ___2 = ExtractAsyncIterableValue<Promise<'a' | 'b'>>;
