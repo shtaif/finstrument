@@ -4,35 +4,6 @@ import { z } from 'zod';
 export { parseCsvLedgerFormat, LedgerDataRecord };
 
 function parseCsvLedgerFormat({ input }: { input: string }): LedgerDataRecord[] {
-  // z.discriminatedUnion
-
-  // const result = z
-  //   .union([
-  //     z
-  //       .object({
-  //         Header: z.literal('Data'),
-  //         'Asset Category': z.literal('Stocks'),
-  //       })
-  //       .pipe(
-  //         z.object({
-  //           Header: z.literal('Data'),
-  //           'Asset Category': z.literal('Stocks'),
-  //           'Date/Time': z.coerce.date(),
-  //         })
-  //       ),
-  //     z.object({
-  //       Header: z.string(),
-  //       'Asset Category': z.string(),
-  //     }),
-  //   ])
-  //   .parse({
-  //     Header: 'Data',
-  //     'Asset Category': 'Stocks',
-  //     'Date/Time': new Date().toISOString(),
-  //   });
-
-  // console.log('RESULT', result);
-
   const parsedRows: Record<string, string>[] = csvParse(input, {
     columns: true,
     skipEmptyLines: true,
@@ -44,20 +15,19 @@ function parseCsvLedgerFormat({ input }: { input: string }): LedgerDataRecord[] 
 
 const ibkrStocksTradeRecordSchema = z
   .object({
-    Header: z.literal('Data'),
-    'Asset Category': z.literal('Stocks'),
-    Symbol: z.string().trim(),
-    'Date/Time': z.coerce.date(),
-    Quantity: z
+    ['Header']: z.literal('Data'),
+    ['Asset Category']: z.literal('Stocks'),
+    ['Symbol']: z.string().trim(),
+    ['Date/Time']: z.date({ coerce: true }),
+    ['Quantity']: z
       .string()
-      .trim()
-      .transform(val => val.replace(/,/g, ''))
-      .pipe(z.coerce.number().int()), // TODO: Make this not accept zeros as values
-    'T. Price': z
+      .transform(val => val.replace(/,/g, '').trim())
+      .pipe(z.number({ coerce: true }).int()), // TODO: Make this not accept zeros as values
+    ['T. Price']: z
       .string()
-      .trim()
-      .transform(val => val.replace(/,/g, ''))
-      .pipe(z.coerce.number()), // TODO: Make this not accept zeros as values
+      .transform(val => val.replace(/,/g, '').trim())
+      .pipe(z.number({ coerce: true }))
+      .transform(Math.abs), // TODO: Make this not accept zeros as values
   })
   .transform(item => ({
     header: item.Header,
@@ -74,8 +44,8 @@ const ibkrTradeDataRecordSchema = z
       ibkrStocksTradeRecordSchema,
       z
         .object({
-          Header: z.string(),
-          'Asset Category': z.string(),
+          ['Header']: z.string(),
+          ['Asset Category']: z.string(),
         })
         .transform(item => ({
           header: item.Header,
@@ -86,8 +56,3 @@ const ibkrTradeDataRecordSchema = z
   .transform(arr => arr);
 
 type LedgerDataRecord = z.infer<typeof ibkrStocksTradeRecordSchema>;
-
-// const headerAndAssetCategorySchema = z.object({
-//   Header: z.literal('Data'),
-//   'Asset Category': z.literal('Stocks'),
-// });
