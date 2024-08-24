@@ -1,43 +1,13 @@
 .cmp-user-main-screen {
   display: flex;
   flex-direction: column;
-  width: calc(min(100% - 40px, 900px));
+  width: calc(min(900px, 100% - 40px));
   margin: auto;
+  gap: 50px 0;
+  padding: 30px 0;
 
-  > * {
-    &:first-child {
-      margin-top: 30px;
-    }
-
-    &:not(:first-child) {
-      margin-top: 50px;
-    }
-  }
-
-  .csv-ledger-upload-area {
-    display: inline-flex;
+  .upload-trades {
     align-self: center;
-    width: 100%;
-    max-width: 400px;
-    height: 130px;
-
-    .loading-spinner {
-      font-size: 64px;
-    }
-
-    .upload-icon-container {
-      display: inline-flex;
-      margin-bottom: 16px;
-
-      .upload-icon {
-        font-size: 48px;
-        color: #1668dc;
-      }
-    }
-
-    .text-line {
-      font-size: 16px;
-    }
   }
 
   .positions-table {

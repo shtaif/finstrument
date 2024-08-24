@@ -1,0 +1,5 @@
+.cmp-holding-data-error-panel {
+  .alert-item {
+    white-space-collapse: preserve-breaks;
+  }
+}
