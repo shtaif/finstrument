@@ -5,8 +5,6 @@ import expressCors from 'cors';
 import { json as expressJson } from 'body-parser';
 import { createHttpTerminator } from 'http-terminator';
 import supertokens from 'supertokens-node';
-import SupertokensRecipeSession from 'supertokens-node/recipe/session';
-import SupertokensRecipeEmailPassword from 'supertokens-node/recipe/emailpassword';
 import {
   middleware as supertokensMw,
   errorHandler as supertokensErrorHandlerMw,
@@ -14,7 +12,7 @@ import {
 import { verifySession as supertokensVerifySessionMw } from 'supertokens-node/recipe/session/framework/express';
 import { env } from './utils/env.js';
 import { mainRedisClient, subscriberRedisClient } from './utils/redisClients.js';
-import { UserModel, initDbSchema } from './db/index.js';
+import { initDbSchema } from './db/index.js';
 import appApiRoutes from './appApiRoutes/index.js';
 import { initSuperTokens } from './initSuperTokens/index.js';
 import { createGraphqlAppMiddleware } from './graphqlAppMiddleware/index.js';
@@ -23,6 +21,8 @@ import { graphqlWsServer } from './graphqlWsServer/index.js';
 export { startApp };
 
 async function startApp(): Promise<() => Promise<void>> {
+  // TODO: Completely rename whole monorepo as well as recurring terms from "finstrument" into "instrumental"
+
   const supertokensAuthEndpointsBasePath = '/auth';
 
   initSuperTokens({
