@@ -29,9 +29,7 @@ function Iterate<
 >(
   props: { initialValue?: TInitialValue } & (
     | {
-        children?: (
-          nextIteration: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
-        ) => ReactNode;
+        children?: (nextIteration: UseAsyncIterableNext<TValue, TInitialValue>) => ReactNode;
         value: TValue;
       }
     | { children: TValue; value?: undefined }
@@ -59,26 +57,5 @@ function Iterate<
 type IterateProps<TValue, TInitialValue> = {
   value: TValue;
   initialValue?: TInitialValue;
-  children?: (
-    nextIterationState: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
-  ) => ReactNode;
+  children?: (nextIterationState: UseAsyncIterableNext<TValue, TInitialValue>) => ReactNode;
 };
-
-// type IterateProps2<TValue, TInitialValue = undefined> = {
-//   initialValue?: TInitialValue;
-// } & (
-//   | {
-//       children: (
-//         ...args: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
-//       ) => ReactNode;
-//       value: TValue;
-//     }
-//   | {
-//       children: TValue;
-//       value?: undefined;
-//     }
-//   | {
-//       children?: undefined;
-//       value: TValue;
-//     }
-// );

@@ -14,6 +14,7 @@ export { asyncIterTakeUntil, asyncIterTakeUntil as itTakeUntil } from './itTakeU
 export { itAppend, itAppend as asyncIterAppend } from './itAppend.js';
 export { itLazyDefer, itLazyDefer as asyncIterLazyDefer } from './itLazyDefer.js';
 export { itFinally, itFinally as asyncIterFinally } from './itFinally.js';
+export { itCatch } from './itCatch.js';
 export { itCollect, itCollect as asyncIterCollect } from './itCollect.js';
 export { hangingIterable } from './hangingIterable.js';
 export { myIterableCleanupPatcher } from './myIterableCleanupPatcher.js';
