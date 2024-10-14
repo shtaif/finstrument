@@ -168,55 +168,57 @@ async function setEntireStatsFromTradeData(params: {
           )
       );
 
-      const portfolioCurrencyStatsData = sortedHoldingStatsData.map(({ trade, holdingStats }) => {
-        portfolioTotalInvested +=
-          -(lastestCurrHoldingStats[trade.symbol]?.totalPresentInvestedAmount ?? 0) +
-          holdingStats.totalPresentInvestedAmount;
+      const portfolioCurrencyStatsData = sortedHoldingStatsData
+        .filter(h => allApearingSymbolsInfos[h.trade.symbol].currency === distinctCurrency)
+        .map(({ trade, holdingStats }) => {
+          portfolioTotalInvested +=
+            -(lastestCurrHoldingStats[trade.symbol]?.totalPresentInvestedAmount ?? 0) +
+            holdingStats.totalPresentInvestedAmount;
 
-        if (trade.quantity < 0) {
-          portfolioTotalRealizedAmount +=
-            -(lastestCurrHoldingStats[trade.symbol]?.totalRealizedAmount ?? 0) +
-            holdingStats.totalRealizedAmount;
+          if (trade.quantity < 0) {
+            portfolioTotalRealizedAmount +=
+              -(lastestCurrHoldingStats[trade.symbol]?.totalRealizedAmount ?? 0) +
+              holdingStats.totalRealizedAmount;
 
-          const theseStatsRealizedPnlAmount =
-            -(lastestCurrHoldingStats[trade.symbol]?.totalRealizedProfitOrLossAmount ?? 0) +
-            holdingStats.totalRealizedProfitOrLossAmount;
+            const theseStatsRealizedPnlAmount =
+              -(lastestCurrHoldingStats[trade.symbol]?.totalRealizedProfitOrLossAmount ?? 0) +
+              holdingStats.totalRealizedProfitOrLossAmount;
 
-          portfolioTotalRealizedProfitOrLossAmount += theseStatsRealizedPnlAmount;
+            portfolioTotalRealizedProfitOrLossAmount += theseStatsRealizedPnlAmount;
 
-          portfolioTotalRealizedProfitOrLossRate =
-            portfolioTotalRealizedAmount /
-              holdingStats.helperStats.totalOriginalInvestedAmountRealized -
-            1;
-        }
+            portfolioTotalRealizedProfitOrLossRate =
+              portfolioTotalRealizedAmount /
+                holdingStats.helperStats.totalOriginalInvestedAmountRealized -
+              1;
+          }
 
-        lastestCurrHoldingStats[trade.symbol] = holdingStats;
+          lastestCurrHoldingStats[trade.symbol] = holdingStats;
 
-        const portfolioComposition = pipe(
-          Object.entries(lastestCurrHoldingStats),
-          v =>
-            v.map(([symbol, stats]) => ({
-              symbol,
-              portion:
-                portfolioTotalInvested === 0
-                  ? 0
-                  : (stats?.totalPresentInvestedAmount ?? 0) / portfolioTotalInvested,
-            })),
-          v => v.filter(({ portion }) => portion > 0)
-        );
+          const portfolioComposition = pipe(
+            Object.entries(lastestCurrHoldingStats),
+            v =>
+              v.map(([symbol, stats]) => ({
+                symbol,
+                portion:
+                  portfolioTotalInvested === 0
+                    ? 0
+                    : (stats?.totalPresentInvestedAmount ?? 0) / portfolioTotalInvested,
+              })),
+            v => v.filter(({ portion }) => portion > 0)
+          );
 
-        return {
-          trade,
-          portfolioStats: {
-            forCurrency: distinctCurrency,
-            totalPresentInvestedAmount: portfolioTotalInvested,
-            totalRealizedAmount: portfolioTotalRealizedAmount,
-            totalRealizedProfitOrLossAmount: portfolioTotalRealizedProfitOrLossAmount,
-            totalRealizedProfitOrLossRate: portfolioTotalRealizedProfitOrLossRate,
-          },
-          portfolioComposition,
-        };
-      });
+          return {
+            trade,
+            portfolioStats: {
+              forCurrency: distinctCurrency,
+              totalPresentInvestedAmount: portfolioTotalInvested,
+              totalRealizedAmount: portfolioTotalRealizedAmount,
+              totalRealizedProfitOrLossAmount: portfolioTotalRealizedProfitOrLossAmount,
+              totalRealizedProfitOrLossRate: portfolioTotalRealizedProfitOrLossRate,
+            },
+            portfolioComposition,
+          };
+        });
 
       return portfolioCurrencyStatsData;
     })
