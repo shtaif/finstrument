@@ -583,8 +583,8 @@ describe('Mutation.setTrades', () => {
   );
 
   it(
-    "Importing a trade dataset missing previously existing trades via `mode: 'MERGE'` will preserve " +
-      'them once processed',
+    "Importing a trade dataset missing some existing trades via `mode: 'MERGE'` will preserve " +
+      'the existing originals once processed',
     async () => {
       const initialTrades = (
         await TradeRecordModel.bulkCreate([
@@ -791,6 +791,238 @@ describe('Mutation.setTrades', () => {
       expect(allFinalPortfolioStatsChanges).toStrictEqual(initialPortfolioStats);
     }
   );
+
+  it('Importing a trade dataset that adds new trades that occurred before currently stored trades', async () => {
+    const initialTrades = (
+      await TradeRecordModel.bulkCreate([
+        {
+          id: mockUuidFromNumber(0),
+          ownerId: mockUserId1,
+          symbol: 'NVDA',
+          performedAt: new Date('2024-01-03, 00:00:00'),
+          quantity: 2,
+          price: 1.3,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialPositions = (
+      await PositionModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          openingTradeId: initialTrades[0].id,
+          symbol: 'NVDA',
+          openedAt: new Date('2024-01-03, 00:00:00'),
+          realizedProfitOrLoss: 0,
+          remainingQuantity: 2,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialHoldingStats = (
+      await HoldingStatsChangeModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          relatedTradeId: initialTrades[0].id,
+          symbol: 'NVDA',
+          changedAt: new Date('2024-01-03, 00:00:00'),
+          totalPositionCount: 1,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 2.6,
+          totalRealizedAmount: 0,
+          totalRealizedProfitOrLossAmount: 0,
+          totalRealizedProfitOrLossRate: 0,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialPortfolioStats = (
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          relatedTradeId: initialTrades[0].id,
+          forCurrency: 'USD',
+          changedAt: new Date('2024-01-03, 00:00:00'),
+          totalPresentInvestedAmount: 2.6,
+          totalRealizedAmount: 0,
+          totalRealizedProfitOrLossAmount: 0,
+          totalRealizedProfitOrLossRate: 0,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const tradesCsv = `
+        Trades,Header,Asset Category,Symbol,Date/Time,Quantity,T. Price
+        Trades,Data,Stocks,VUAG,"2024-01-01, 00:00:00",2,1.1
+        Trades,Data,Stocks,VUAG,"2024-01-02, 00:00:00",2,1.2
+        Trades,Data,Stocks,NVDA,"2024-01-03, 00:00:00",2,1.3
+      `.trim();
+
+    const redisEventPromise = pipe(
+      userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
+        targetOwnerIds: [mockUserId1, mockUserId2],
+      }),
+      itTakeFirst()
+    );
+
+    const resp = await axiosGqlClient({
+      data: {
+        variables: { tradesCsv },
+        query: /* GraphQL */ `
+          mutation ($tradesCsv: String!) {
+            setTrades(input: { mode: REPLACE, data: { csv: $tradesCsv } }) {
+              tradesAddedCount
+              tradesModifiedCount
+              tradesRemovedCount
+            }
+          }
+        `,
+      },
+    });
+
+    expect(resp.data).toStrictEqual({
+      data: {
+        setTrades: {
+          tradesAddedCount: 2,
+          tradesModifiedCount: 0,
+          tradesRemovedCount: 0,
+        },
+      },
+    });
+
+    const [
+      redisEvent,
+      allFinalTrades,
+      allFinalPositions,
+      allFinalHoldingStatsChanges,
+      allFinalPortfolioStatsChanges,
+    ] = await Promise.all([
+      redisEventPromise,
+      TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+    ]);
+
+    console.log('allFinalHoldingStatsChanges', allFinalHoldingStatsChanges);
+
+    expect(redisEvent).toStrictEqual({
+      ownerId: mockUserId1,
+      portfolioStats: { remove: [], set: [{ forCurrency: 'GBP' }] },
+      holdingStats: { remove: [], set: ['VUAG'] },
+      positions: { remove: [], set: [allFinalPositions[0].id, allFinalPositions[1].id] },
+    });
+
+    expect(allFinalTrades).toStrictEqual([
+      {
+        id: allFinalTrades[0].id,
+        ownerId: mockUserId1,
+        symbol: 'VUAG',
+        performedAt: new Date('2024-01-01, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        quantity: 2,
+        price: 1.1,
+      },
+      {
+        id: allFinalTrades[1].id,
+        ownerId: mockUserId1,
+        symbol: 'VUAG',
+        performedAt: new Date('2024-01-02, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        quantity: 2,
+        price: 1.2,
+      },
+      initialTrades[0],
+    ]);
+
+    expect(allFinalPositions).toStrictEqual([
+      {
+        id: expect.any(String),
+        ownerId: mockUserId1,
+        openingTradeId: allFinalTrades[0].id,
+        symbol: 'VUAG',
+        openedAt: new Date('2024-01-01, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        realizedProfitOrLoss: 0,
+        remainingQuantity: 2,
+      },
+      {
+        id: expect.any(String),
+        ownerId: mockUserId1,
+        openingTradeId: allFinalTrades[1].id,
+        symbol: 'VUAG',
+        openedAt: new Date('2024-01-02, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        realizedProfitOrLoss: 0,
+        remainingQuantity: 2,
+      },
+      initialPositions[0],
+    ]);
+
+    expect(allFinalHoldingStatsChanges).toStrictEqual([
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[0].id,
+        symbol: 'VUAG',
+        changedAt: new Date('2024-01-01, 00:00:00'),
+        totalPositionCount: 1,
+        totalQuantity: 2,
+        totalPresentInvestedAmount: 2.2,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[1].id,
+        symbol: 'VUAG',
+        changedAt: new Date('2024-01-02, 00:00:00'),
+        totalPositionCount: 2,
+        totalQuantity: 4,
+        totalPresentInvestedAmount: 4.6,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      initialHoldingStats[0],
+    ]);
+
+    expect(allFinalPortfolioStatsChanges).toStrictEqual([
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[0].id,
+        forCurrency: 'GBP',
+        changedAt: new Date('2024-01-01, 00:00:00'),
+        totalPresentInvestedAmount: 2.2,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[1].id,
+        forCurrency: 'GBP',
+        changedAt: new Date('2024-01-02, 00:00:00'),
+        totalPresentInvestedAmount: 4.6,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      initialPortfolioStats[0],
+    ]);
+  });
 
   it('Importing a trade dataset that adds lots for previously non-existing holdings in the portfolio', async () => {
     const initialTrades = (
