@@ -19,6 +19,7 @@
   "dependencies": {
     "@apollo/server": "^4.10.2",
     "@graphql-tools/schema": "^10.0.3",
+    "@graphql-tools/utils": "^10.5.5",
     "@ngrok/ngrok": "^0.5.2",
     "@reactivex/ix-esnext-esm": "^5.0.0",
     "axios": "^1.6.8",

@@ -1,10 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { GraphQLSchema } from 'graphql/index.js';
 import { entries } from 'lodash-es';
-import { pipe } from 'shared-utils';
+import { pipe, asyncPipe, CustomError } from 'shared-utils';
 import { itMap } from 'iterable-operators';
 import { z } from 'zod';
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { mapSchema, MapperKind } from '@graphql-tools/utils';
+import { defaultFieldResolver } from 'graphql';
 import type { Resolvers } from '../generated/graphql-schema.d.ts';
 import observePricesData from '../utils/observePricesData/index.js';
 import { appGqlContext } from './appGqlContext.js';
@@ -22,46 +24,72 @@ import { resolvers as setTradesResultResolvers } from './schema/SetTradesResult/
 import { resolvers as userResolvers } from './schema/User/resolvers.js';
 import { resolvers as meInfoResolvers } from './schema/MeInfo/resolvers.js';
 
-export { initedGqlSchema as gqlSchema, initedGqlSchema, appGqlContext };
+export { mappedGqlSchema as gqlSchema, mappedGqlSchema as initedGqlSchema, appGqlContext };
 
-const initedGqlSchema: GraphQLSchema = await makeExecutableSchema({
-  typeDefs: await Promise.all(
-    [
-      `${import.meta.dirname}/schema/common.graphql`,
-      `${import.meta.dirname}/schema/User/schema.graphql`,
-      `${import.meta.dirname}/schema/MeInfo/schema.graphql`,
-      `${import.meta.dirname}/schema/legacySchemaToSafelyClear.graphql`,
-      `${import.meta.dirname}/schema/PortfolioStats/schema.graphql`,
-      `${import.meta.dirname}/schema/PortfolioStatsChange/schema.graphql`,
-      `${import.meta.dirname}/schema/HoldingStats/schema.graphql`,
-      `${import.meta.dirname}/schema/HoldingStatsChanges/schema.graphql`,
-      `${import.meta.dirname}/schema/Position/schema.graphql`,
-      `${import.meta.dirname}/schema/SymbolPortfolioPortion/schema.graphql`,
-      `${import.meta.dirname}/schema/InstrumentInfo/schema.graphql`,
-      `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
-      `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
-      `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
-      `${import.meta.dirname}/schema/ObservedPositions/schema.graphql`,
-      `${import.meta.dirname}/schema/SetTradesResult/schema.graphql`,
-    ].map(defsFilepath => readFile(defsFilepath, 'utf-8'))
-  ),
-  resolvers: [
-    olderAndProbablyUnusedResolversNeedToSortOut(),
-    userResolvers,
-    meInfoResolvers,
-    portfolioStatsResolvers,
-    portfolioStatsChangesResolvers,
-    holdingStatsResolvers,
-    holdingStatsChangesResolvers,
-    positionResolvers,
-    instrumentInfoResolvers,
-    aggregatePnlResolvers,
-    observedPortfolioStatsResolvers,
-    observedHoldingStatsResolvers,
-    observedPositionsResolvers,
-    setTradesResultResolvers,
-  ],
-});
+const typeDefs = await Promise.all(
+  [
+    `${import.meta.dirname}/schema/common.graphql`,
+    `${import.meta.dirname}/schema/User/schema.graphql`,
+    `${import.meta.dirname}/schema/MeInfo/schema.graphql`,
+    `${import.meta.dirname}/schema/legacySchemaToSafelyClear.graphql`,
+    `${import.meta.dirname}/schema/PortfolioStats/schema.graphql`,
+    `${import.meta.dirname}/schema/PortfolioStatsChange/schema.graphql`,
+    `${import.meta.dirname}/schema/HoldingStats/schema.graphql`,
+    `${import.meta.dirname}/schema/HoldingStatsChanges/schema.graphql`,
+    `${import.meta.dirname}/schema/Position/schema.graphql`,
+    `${import.meta.dirname}/schema/SymbolPortfolioPortion/schema.graphql`,
+    `${import.meta.dirname}/schema/InstrumentInfo/schema.graphql`,
+    `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
+    `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
+    `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
+    `${import.meta.dirname}/schema/ObservedPositions/schema.graphql`,
+    `${import.meta.dirname}/schema/SetTradesResult/schema.graphql`,
+  ].map(defsFilepath => readFile(defsFilepath, 'utf-8'))
+);
+
+const resolvers = [
+  olderAndProbablyUnusedResolversNeedToSortOut(),
+  userResolvers,
+  meInfoResolvers,
+  portfolioStatsResolvers,
+  portfolioStatsChangesResolvers,
+  holdingStatsResolvers,
+  holdingStatsChangesResolvers,
+  positionResolvers,
+  instrumentInfoResolvers,
+  aggregatePnlResolvers,
+  observedPortfolioStatsResolvers,
+  observedHoldingStatsResolvers,
+  observedPositionsResolvers,
+  setTradesResultResolvers,
+];
+
+const mappedGqlSchema: GraphQLSchema = await asyncPipe(
+  await makeExecutableSchema({
+    typeDefs,
+    resolvers,
+  }),
+  gqlSchema =>
+    mapSchema(gqlSchema, {
+      [MapperKind.OBJECT_FIELD]: fieldConfig => {
+        const origResolve = fieldConfig.resolve ?? defaultFieldResolver;
+        return {
+          ...fieldConfig,
+          async resolve(parent, args, ctx, info) {
+            try {
+              return await origResolve(parent, args, ctx, info);
+            } catch (err: any) {
+              if (err instanceof CustomError) {
+                throw err;
+              }
+              console.error('Error during GraphQL field resolution:', err);
+              throw new Error('Internal server error occurred');
+            }
+          },
+        };
+      },
+    })
+);
 
 function olderAndProbablyUnusedResolversNeedToSortOut() {
   return {

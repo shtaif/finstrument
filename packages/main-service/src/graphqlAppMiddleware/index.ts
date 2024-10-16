@@ -15,6 +15,7 @@ async function createGraphqlAppMiddleware(): Promise<{
     introspection: true,
     status400ForVariableCoercionErrors: true,
     nodeEnv: 'development', // This is given to force the GraphQL Explorer UI to be available ALSO in production for the meantime
+    includeStacktraceInErrorResponses: false,
   });
 
   await apolloServer.start();
