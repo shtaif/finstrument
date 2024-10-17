@@ -5,28 +5,28 @@ const pipe: PipeFunction = (initVal: unknown, ...funcs: ((...args: any[]) => any
 };
 
 interface PipeFunction {
-  <TInitVal>(initVal: TInitVal): TInitVal;
+  <const TInitVal>(initVal: TInitVal): TInitVal;
 
-  <TInitVal, A>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A]): A;
+  <const TInitVal, A>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A]): A;
 
-  <TInitVal, A, B>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A, (arg: A) => B]): B;
+  <const TInitVal, A, B>(initVal: TInitVal, ...funcs: [(arg: TInitVal) => A, (arg: A) => B]): B;
 
-  <TInitVal, A, B, C>(
+  <const TInitVal, A, B, C>(
     initVal: TInitVal,
     ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C]
   ): C;
 
-  <TInitVal, A, B, C, D>(
+  <const TInitVal, A, B, C, D>(
     initVal: TInitVal,
     ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D]
   ): D;
 
-  <TInitVal, A, B, C, D, E>(
+  <const TInitVal, A, B, C, D, E>(
     initVal: TInitVal,
     ...funcs: [(arg: TInitVal) => A, (arg: A) => B, (arg: B) => C, (arg: C) => D, (arg: D) => E]
   ): E;
 
-  <TInitVal, A, B, C, D, E, F>(
+  <const TInitVal, A, B, C, D, E, F>(
     initVal: TInitVal,
     ...funcs: [
       (arg: TInitVal) => A,
@@ -38,7 +38,7 @@ interface PipeFunction {
     ]
   ): F;
 
-  <TInitVal, A, B, C, D, E, F, G>(
+  <const TInitVal, A, B, C, D, E, F, G>(
     initVal: TInitVal,
     ...funcs: [
       (arg: TInitVal) => A,
@@ -51,7 +51,7 @@ interface PipeFunction {
     ]
   ): G;
 
-  <TInitVal, A, B, C, D, E, F, G, H>(
+  <const TInitVal, A, B, C, D, E, F, G, H>(
     initVal: TInitVal,
     ...funcs: [
       (arg: TInitVal) => A,
@@ -65,7 +65,7 @@ interface PipeFunction {
     ]
   ): H;
 
-  <TInitVal, A, B, C, D, E, F, G, H, I>(
+  <const TInitVal, A, B, C, D, E, F, G, H, I>(
     initVal: TInitVal,
     ...funcs: [
       (arg: TInitVal) => A,
@@ -80,7 +80,7 @@ interface PipeFunction {
     ]
   ): I;
 
-  <TInitVal, A, B, C, D, E, F, G, H, I, J>(
+  <const TInitVal, A, B, C, D, E, F, G, H, I, J>(
     initVal: TInitVal,
     ...funcs: [
       (arg: TInitVal) => A,
