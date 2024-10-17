@@ -22,7 +22,7 @@ const ibkrStocksTradeRecordSchema = z
     ['Quantity']: z
       .string()
       .transform(val => val.replace(/,/g, '').trim())
-      .pipe(z.number({ coerce: true }).int()), // TODO: Make this not accept zeros as values
+      .pipe(z.number({ coerce: true })), // TODO: Make this not accept zeros as values
     ['T. Price']: z
       .string()
       .transform(val => val.replace(/,/g, '').trim())

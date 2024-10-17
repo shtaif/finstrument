@@ -55,7 +55,7 @@ class PositionModel extends Model<PositionModelAttributes, PositionModelCreation
 
   @Column({
     field: 'remaining_quantity',
-    type: DataType.INTEGER,
+    type: DataType.FLOAT,
     allowNull: false,
   })
   remainingQuantity!: number;

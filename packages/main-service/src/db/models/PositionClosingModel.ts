@@ -38,7 +38,7 @@ class PositionClosingModel extends Model<
 
   @Column({
     field: 'closed_quantity',
-    type: DataType.INTEGER,
+    type: DataType.FLOAT,
     allowNull: false,
   })
   closedQuantity!: number;

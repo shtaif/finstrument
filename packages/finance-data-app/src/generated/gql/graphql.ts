@@ -90,7 +90,7 @@ export type HoldingStats = {
   symbol: Scalars['ID']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
@@ -108,7 +108,7 @@ export type HoldingStatsChange = {
   symbol: Scalars['String']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
@@ -188,7 +188,7 @@ export type ObservedHoldingStats = {
   symbol: Scalars['ID']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];

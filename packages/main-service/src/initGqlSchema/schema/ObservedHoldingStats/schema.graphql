@@ -22,7 +22,7 @@ type ObservedHoldingStats {
   symbol: ID!
   lastChangedAt: DateTime!
   totalPositionCount: Int!
-  totalQuantity: Int!
+  totalQuantity: Float!
   totalPresentInvestedAmount: Float!
   totalRealizedAmount: Float!
   totalRealizedProfitOrLossAmount: Float!
