@@ -1,3 +1,4 @@
+import React from 'react';
 import { useLayoutEffect, useRef, ReactNode, type FC } from 'react';
 import { usePrevious } from '@uidotdev/usehooks';
 import './style.css';
@@ -25,7 +26,7 @@ const LivePriceDisplay: FC<{
         [
           { color: '#0eb35b', transform: 'scale(1.1)' },
           { color: '#0eb35b', transform: 'scale(1)' },
-          { color: '' },
+          { color: 'inherit' },
         ],
         { duration: 500 }
       ),
@@ -33,7 +34,7 @@ const LivePriceDisplay: FC<{
         [
           { color: '#e62333', transform: 'scale(1.1)' },
           { color: '#e62333', transform: 'scale(1)' },
-          { color: '' },
+          { color: 'inherit' },
         ],
         { duration: 500 }
       ),
