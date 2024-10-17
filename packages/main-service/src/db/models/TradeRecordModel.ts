@@ -46,7 +46,7 @@ class TradeRecordModel extends Model<
 
   @Column({
     field: 'quantity',
-    type: DataType.INTEGER,
+    type: DataType.FLOAT,
     allowNull: false,
   })
   quantity!: number;

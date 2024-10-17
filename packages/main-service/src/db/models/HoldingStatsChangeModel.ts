@@ -52,7 +52,7 @@ class HoldingStatsChangeModel extends Model<
 
   @Column({
     field: 'total_quantity',
-    type: DataType.INTEGER,
+    type: DataType.FLOAT,
     defaultValue: 0,
     allowNull: false,
   })

@@ -92,7 +92,7 @@ export type HoldingStats = {
   symbol: Scalars['ID']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
@@ -110,7 +110,7 @@ export type HoldingStatsChange = {
   symbol: Scalars['String']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
@@ -189,7 +189,7 @@ export type ObservedHoldingStats = {
   symbol: Scalars['ID']['output'];
   totalPositionCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
-  totalQuantity: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossAmount: Scalars['Float']['output'];
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
@@ -707,7 +707,7 @@ export type HoldingStatsResolvers<ContextType = AppGqlContextValue, ParentType e
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   totalPositionCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalPresentInvestedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  totalQuantity?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -725,7 +725,7 @@ export type HoldingStatsChangeResolvers<ContextType = AppGqlContextValue, Parent
   symbol?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   totalPositionCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalPresentInvestedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  totalQuantity?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -770,7 +770,7 @@ export type ObservedHoldingStatsResolvers<ContextType = AppGqlContextValue, Pare
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   totalPositionCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalPresentInvestedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
-  totalQuantity?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   totalRealizedProfitOrLossRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
