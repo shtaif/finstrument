@@ -79,10 +79,11 @@ function UserMainScreen() {
             <Iterate value={holdingStatsIter}>
               {next => (
                 <>
-                  <HoldingDataErrorPanel
-                    className=""
-                    errors={next.error ? [next.error] : next.value?.errors}
-                  />
+                  {(next.error || next.value?.errors) && (
+                    <HoldingDataErrorPanel
+                      errors={next.error ? [next.error] : next.value?.errors}
+                    />
+                  )}
 
                   <PositionsTable
                     className="positions-table"
@@ -91,6 +92,7 @@ function UserMainScreen() {
                     holdings={next.value?.holdingStats?.map(
                       ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => ({
                         symbol,
+                        currency: priceData.currency ?? undefined,
                         quantity: totalQuantity,
                         breakEvenPrice: breakEvenPrice ?? undefined,
                         marketPrice: priceData.regularMarketPrice,
