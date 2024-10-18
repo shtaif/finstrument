@@ -40,17 +40,7 @@ async function getSymbolsCurrentPrices(params: {
 
 async function getYahooFinanceQuotesAutoRecoveredFromCookieErrors(
   params: { symbols?: string[]; signal?: AbortSignal } = {}
-): Promise<
-  Pick<
-    QuoteDataFromYahooFinanceLib,
-    | 'symbol'
-    | 'regularMarketPrice'
-    | 'currency'
-    | 'quoteSourceName'
-    | 'marketState'
-    | 'regularMarketTime'
-  >[]
-> {
+): Promise<QuoteDataFromYahooFinanceLibPickedProps[]> {
   const { symbols, signal } = params;
 
   if (!symbols?.length) {
@@ -59,44 +49,57 @@ async function getYahooFinanceQuotesAutoRecoveredFromCookieErrors(
 
   let invalidCookieErrorRetriesDid = 0;
 
-  while (true) {
-    try {
-      const quotes = await yahooFinance.quote(
-        symbols,
-        {
-          fields: [
-            'symbol',
-            'regularMarketPrice',
-            'currency',
-            'quoteSourceName',
-            'marketState',
-            'regularMarketTime',
-          ],
-        },
-        { fetchOptions: { signal } }
-      );
+  const quotes: QuoteDataFromYahooFinanceLibPickedProps[] = await (async () => {
+    while (true) {
+      try {
+        return await yahooFinance.quote(
+          symbols,
+          { fields: yahooFinanceQuotePickedFields },
+          { fetchOptions: { signal } }
+        );
+      } catch (err: any) {
+        // console.error(err);
 
-      invalidCookieErrorRetriesDid = 0;
+        if (err.message === 'Invalid Cookie' && invalidCookieErrorRetriesDid < 2) {
+          invalidCookieErrorRetriesDid++;
+          await setTimeout(1000, { signal });
+          continue;
+        }
 
-      return quotes.map(quote => ({
-        symbol: quote.symbol,
-        regularMarketPrice: quote.regularMarketPrice,
-        currency: quote.currency,
-        quoteSourceName: quote.quoteSourceName,
-        marketState: quote.marketState,
-        regularMarketTime: quote.regularMarketTime,
-      }));
-    } catch (err: any) {
-      // console.error(err);
-      if (err.message === 'Invalid Cookie' && invalidCookieErrorRetriesDid < 2) {
-        invalidCookieErrorRetriesDid++;
-        await setTimeout(1000, { signal });
-      } else {
+        if (err.name === 'FailedYahooValidationError') {
+          return err.result.map((quote: QuoteDataFromYahooFinanceLibPickedProps) => ({
+            ...quote,
+            regularMarketTime: !quote.regularMarketTime
+              ? undefined
+              : new Date(quote.regularMarketTime * 1000),
+          }));
+        }
+
         throw err;
       }
     }
-  }
+  })();
+
+  invalidCookieErrorRetriesDid = 0;
+
+  return quotes.map(quote => ({
+    symbol: quote.symbol,
+    regularMarketPrice: quote.regularMarketPrice,
+    currency: quote.currency,
+    quoteSourceName: quote.quoteSourceName,
+    marketState: quote.marketState,
+    regularMarketTime: quote.regularMarketTime,
+  }));
 }
+
+const yahooFinanceQuotePickedFields = [
+  'symbol' as const,
+  'regularMarketPrice' as const,
+  'currency' as const,
+  'quoteSourceName' as const,
+  'marketState' as const,
+  'regularMarketTime' as const,
+];
 
 type SymbolPrices<TSymbols extends string = string> = {
   [K in TSymbols]: SymbolPriceData;
@@ -109,6 +112,11 @@ type SymbolPriceData = null | {
   regularMarketTime: Date | undefined;
   regularMarketPrice: number | undefined;
 };
+
+type QuoteDataFromYahooFinanceLibPickedProps = Pick<
+  QuoteDataFromYahooFinanceLib,
+  (typeof yahooFinanceQuotePickedFields)[number]
+>;
 
 type QuoteDataFromYahooFinanceLib = Awaited<ReturnType<typeof yahooFinance.quote>>[number];
 

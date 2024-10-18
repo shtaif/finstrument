@@ -1,5 +1,7 @@
-import { pickBy, isEmpty } from 'lodash-es';
+import { pickBy, isEmpty, partition, pick, compact } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
+import { of } from '@reactivex/ix-esnext-esm/asynciterable/of.js';
+import yahooFinance from 'yahoo-finance2';
 import {
   itPairwise,
   itStartWith,
@@ -7,23 +9,141 @@ import {
   itTap,
   itLazyDefer,
   myIterableCleanupPatcher,
+  itSwitchMap,
+  itCatch,
+  itThrottle,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
-import { pipe } from 'shared-utils';
-import yahooMarketPricesIterable, {
+import { objectFromEntriesTyped, parseSymbol, pipe } from 'shared-utils';
+import { env } from '../../env.js';
+import {
+  getSymbolsCurrentPrices,
   type SymbolPrices,
   type SymbolPriceData,
-} from './yahooMarketPricesIterable.js';
+} from './getSymbolsCurrentPrices.js';
 
-export { createSymbolPricesPoller as default, type SymbolPrices, type SymbolPriceData };
+export { yahooMarketPricesIterable, type SymbolPrices, type SymbolPriceData };
 
-function createSymbolPricesPoller(params: {
+yahooFinance.setGlobalConfig({
+  validation: { logErrors: false },
+});
+
+function yahooMarketPricesIterable(params: {
   symbols: MaybeAsyncIterable<string[]>;
 }): AsyncIterable<SymbolPrices> {
   const { symbols } = params;
 
+  const symbolsIter = Symbol.asyncIterator in symbols ? symbols : of(symbols);
+
   return pipe(
-    yahooMarketPricesIterable({ symbols }),
+    symbolsIter,
+    itMap(requestedSymbols => requestedSymbols.map(parseSymbol)),
+    symbolsIter =>
+      itLazyDefer(() => {
+        let abortCtrl = new AbortController();
+        let prevPriceData: SymbolPrices = {};
+
+        return pipe(
+          symbolsIter,
+          itSwitchMap(parsedSymbols =>
+            pipe(
+              (async function* () {
+                if (parsedSymbols.length === 0) {
+                  abortCtrl.abort();
+                  abortCtrl = new AbortController();
+                  return;
+                }
+                while (true) yield;
+              })(),
+              itMap(async () => {
+                const [currencyOverriddenSymbols, restSymbols] = partition(
+                  parsedSymbols,
+                  s => !!s.currencyOverride
+                );
+
+                const [
+                  currencyOverriddenSymbolsExistingInPrev,
+                  currencyOverriddenSymbolsMissingFromPrev,
+                ] = partition(
+                  currencyOverriddenSymbols,
+                  s => !!prevPriceData[s.baseInstrumentSymbol]
+                );
+
+                const currencyOverriddenSymbolsPriceData = {
+                  ...pick(
+                    prevPriceData,
+                    currencyOverriddenSymbolsExistingInPrev.map(s => s.baseInstrumentSymbol)
+                  ),
+                  ...(await getSymbolsCurrentPrices({
+                    signal: abortCtrl.signal,
+                    symbols: currencyOverriddenSymbolsMissingFromPrev.map(
+                      s => s.baseInstrumentSymbol
+                    ),
+                  })),
+                };
+
+                return (prevPriceData = await getSymbolsCurrentPrices({
+                  signal: abortCtrl.signal,
+                  symbols: [
+                    ...restSymbols.map(s => s.baseInstrumentSymbol),
+                    ...currencyOverriddenSymbols
+                      .filter(s => !!currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol])
+                      .map(
+                        s =>
+                          `${currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol]!.currency}${s.currencyOverride}=X`
+                      ),
+                  ],
+                }));
+              }),
+              itCatch(err => {
+                if (abortCtrl.signal.aborted) {
+                  return (async function* () {})();
+                }
+                throw err;
+              }),
+              itMap(priceDatas =>
+                pipe(
+                  parsedSymbols.map(s => {
+                    if (!priceDatas[s.baseInstrumentSymbol]) {
+                      return;
+                    }
+
+                    if (!s.currencyOverride) {
+                      return [s.normalizedFullSymbol, priceDatas[s.baseInstrumentSymbol]] as const;
+                    }
+
+                    const instPriceData = priceDatas[s.baseInstrumentSymbol]!;
+                    const overrideCurrencyPriceData =
+                      priceDatas[`${instPriceData.currency}${s.currencyOverride}=X`];
+
+                    const overriddenPriceData = {
+                      quoteSourceName: instPriceData.quoteSourceName,
+                      marketState: instPriceData.marketState,
+                      currency: s.currencyOverride,
+                      regularMarketTime:
+                        (overrideCurrencyPriceData?.regularMarketTime ?? 0) >
+                        (instPriceData?.regularMarketTime ?? 0)
+                          ? overrideCurrencyPriceData?.regularMarketTime
+                          : instPriceData?.regularMarketTime,
+                      regularMarketPrice:
+                        !!instPriceData.regularMarketPrice &&
+                        !!overrideCurrencyPriceData!.regularMarketPrice
+                          ? instPriceData.regularMarketPrice *
+                            overrideCurrencyPriceData!.regularMarketPrice
+                          : undefined,
+                    };
+
+                    return [s.normalizedFullSymbol, overriddenPriceData] as const;
+                  }),
+                  $ => compact($),
+                  $ => objectFromEntriesTyped($)
+                )
+              )
+            )
+          )
+        );
+      }),
+    itThrottle(env.SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS),
     itStartWith({} as SymbolPrices),
     itPairwise(),
     itMap(([prevPrices, nowsPrices]) => {
@@ -39,7 +159,7 @@ function createSymbolPricesPoller(params: {
       // TODO: Possibly, right now, the `prevPrices` prices from which the `changedFromLast` are calculated from are stateful and persisting so might be not up to date when there are some time gaps during consumption of this
       return {
         prices: {
-          current: nowsPrices!,
+          current: nowsPrices,
           changedFromLast: changedOrInitialPrices,
         },
       };

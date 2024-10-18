@@ -305,8 +305,8 @@ importers:
         specifier: ^8.18.0
         version: 8.18.0
       yahoo-finance2:
-        specifier: ^2.11.3
-        version: 2.11.3
+        specifier: ^2.13.2
+        version: 2.13.2
       znv:
         specifier: ^0.4.0
         version: 0.4.0(zod@3.22.4)
@@ -2025,6 +2025,9 @@ packages:
     resolution: {integrity: sha512-/BypzV0H1y1HzgYpxqRaXGBRqfodgoBBCcsrujT6QRcakDQdfU+Lq9PENPh5jB4I44YWq+0C2eHsHya+nZY1sA==}
     cpu: [x64]
     os: [win32]
+
+  '@sinclair/typebox@0.32.35':
+    resolution: {integrity: sha512-Ul3YyOTU++to8cgNkttakC0dWvpERr6RYoHO2W47DLbFvrwBDJUY31B1sImH6JZSYc4Kt4PyHtoPNu+vL2r2dA==}
 
   '@swc/core-darwin-arm64@1.4.14':
     resolution: {integrity: sha512-8iPfLhYNspBl836YYsfv6ErXwDUqJ7IMieddV3Ey/t/97JAEAdNDUdtTKDtbyP0j/Ebyqyn+fKcqwSq7rAof0g==}
@@ -5499,6 +5502,11 @@ packages:
     engines: {node: '>=16.0.0'}
     hasBin: true
 
+  yahoo-finance2@2.13.2:
+    resolution: {integrity: sha512-eY8Vs2DsLfLpHy62W3WiSn8Rn28B5qB1ruAOyP5/ZrKZP/xXpJiED7EdqYEy+UbxefK4cosAaW973H/hbXs6TA==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
   yahoo-finance2@2.9.1:
     resolution: {integrity: sha512-s+i5arE6+zUwHRJnze4EsU5aCTmsMFKFeBc9sMzSceDOjH+BSeEZG9twMYtWlSCjKbWLCmUEUCxtH1fvcq+f6Q==}
     engines: {node: '>=16.0.0'}
@@ -7684,6 +7692,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.14.3':
     optional: true
+
+  '@sinclair/typebox@0.32.35': {}
 
   '@swc/core-darwin-arm64@1.4.14':
     optional: true
@@ -12042,6 +12052,16 @@ snapshots:
       '@types/tough-cookie': 4.0.5
       ajv: 8.10.0
       ajv-formats: 2.1.1(ajv@8.10.0)
+      node-fetch: 2.7.0
+      tough-cookie: 4.1.3
+      tough-cookie-file-store: 2.0.3
+    transitivePeerDependencies:
+      - encoding
+
+  yahoo-finance2@2.13.2:
+    dependencies:
+      '@sinclair/typebox': 0.32.35
+      '@types/tough-cookie': 4.0.5
       node-fetch: 2.7.0
       tough-cookie: 4.1.3
       tough-cookie-file-store: 2.0.3

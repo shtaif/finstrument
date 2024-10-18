@@ -4,3 +4,4 @@ export { CustomError } from './utils/CustomError.js';
 export { typedObjectKeys } from './utils/typedObjectKeys.js';
 export { objectFromEntriesTyped } from './utils/objectFromEntriesTyped.js';
 export { promiseWithResolvers, type PromiseWithResolvers } from './utils/promiseWithResolvers.js';
+export { parseSymbol, type ParsedSymbol } from './utils/parseSymbol.js';
