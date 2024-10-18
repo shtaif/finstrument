@@ -56,27 +56,27 @@ function yahooMarketPricesIterable(params: {
                 while (true) yield;
               })(),
               itMap(async () => {
-                const [currencyOverridenSymbols, restSymbols] = partition(
+                const [currencyOverriddenSymbols, restSymbols] = partition(
                   parsedSymbols,
                   s => !!s.currencyOverride
                 );
 
                 const [
-                  currencyOverridenSymbolsExistingInPrev,
-                  currencyOverridenSymbolsMissingFromPrev,
+                  currencyOverriddenSymbolsExistingInPrev,
+                  currencyOverriddenSymbolsMissingFromPrev,
                 ] = partition(
-                  currencyOverridenSymbols,
+                  currencyOverriddenSymbols,
                   s => !!prevPriceData[s.baseInstrumentSymbol]
                 );
 
-                const currencyOverridenSymbolsPriceData = {
+                const currencyOverriddenSymbolsPriceData = {
                   ...pick(
                     prevPriceData,
-                    currencyOverridenSymbolsExistingInPrev.map(s => s.baseInstrumentSymbol)
+                    currencyOverriddenSymbolsExistingInPrev.map(s => s.baseInstrumentSymbol)
                   ),
                   ...(await getSymbolsCurrentPrices({
                     signal: abortCtrl.signal,
-                    symbols: currencyOverridenSymbolsMissingFromPrev.map(
+                    symbols: currencyOverriddenSymbolsMissingFromPrev.map(
                       s => s.baseInstrumentSymbol
                     ),
                   })),
@@ -86,11 +86,11 @@ function yahooMarketPricesIterable(params: {
                   signal: abortCtrl.signal,
                   symbols: [
                     ...restSymbols.map(s => s.baseInstrumentSymbol),
-                    ...currencyOverridenSymbols
-                      .filter(s => !!currencyOverridenSymbolsPriceData[s.baseInstrumentSymbol])
+                    ...currencyOverriddenSymbols
+                      .filter(s => !!currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol])
                       .map(
                         s =>
-                          `${currencyOverridenSymbolsPriceData[s.baseInstrumentSymbol]!.currency}${s.currencyOverride}=X`
+                          `${currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol]!.currency}${s.currencyOverride}=X`
                       ),
                   ],
                 }));
@@ -116,7 +116,7 @@ function yahooMarketPricesIterable(params: {
                     const overrideCurrencyPriceData =
                       priceDatas[`${instPriceData.currency}${s.currencyOverride}=X`];
 
-                    const overridenPriceData = {
+                    const overriddenPriceData = {
                       quoteSourceName: instPriceData.quoteSourceName,
                       marketState: instPriceData.marketState,
                       currency: s.currencyOverride,
@@ -133,7 +133,7 @@ function yahooMarketPricesIterable(params: {
                           : undefined,
                     };
 
-                    return [s.normalizedFullSymbol, overridenPriceData] as const;
+                    return [s.normalizedFullSymbol, overriddenPriceData] as const;
                   }),
                   $ => compact($),
                   $ => objectFromEntriesTyped($)
