@@ -3,10 +3,11 @@ import { uniq, flatten, pick } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { iterifiedUnwrapped } from 'iterified';
 import { asyncIterMap, itTakeFirst, myIterableCleanupPatcher } from 'iterable-operators';
-import createSymbolPricesPoller, {
+import {
+  yahooMarketPricesIterable,
   type SymbolPrices,
   type SymbolPriceData,
-} from './createSymbolPricesPoller/index.js';
+} from './yahooMarketPricesIterable/index.js';
 
 export { observeMarketData, marketDataPrimeFasterInit, type SymbolPrices, type SymbolPriceData };
 
@@ -23,29 +24,31 @@ function observeMarketData(params: { symbols: string[] }): AsyncIterable<SymbolP
 
   return pipe(
     baseSymbolPricesPoller,
-    myIterableCleanupPatcher(pricesIterable => ({
-      [Symbol.asyncIterator]: () => {
-        const pricesIterator = pricesIterable[Symbol.asyncIterator]();
-        const gen = (async function* () {
-          try {
-            setImmediate().then(() =>
-              observedSymbolsChangeNotifications.next({ add: symbolsNormalized })
-            );
-            yield* { [Symbol.asyncIterator]: () => pricesIterator };
-          } finally {
-            console.log('FINALLY CALLED');
-          }
-        })();
-        return Object.assign(gen, {
-          async return() {
-            observedSymbolsChangeNotifications.next({ remove: symbolsNormalized });
-            await pricesIterator.return!();
-            return { done: true as const, value: undefined };
-          },
-        });
-      },
-    })),
-    asyncIterMap(prices => pick(prices!, symbolsNormalized))
+    myIterableCleanupPatcher(
+      (pricesIterable): AsyncIterable<SymbolPrices> => ({
+        [Symbol.asyncIterator]: () => {
+          const pricesIterator = pricesIterable[Symbol.asyncIterator]();
+          const gen = (async function* () {
+            try {
+              setImmediate().then(() =>
+                observedSymbolsChangeNotifications.next({ add: symbolsNormalized })
+              );
+              yield* { [Symbol.asyncIterator]: () => pricesIterator };
+            } finally {
+              console.log('FINALLY CALLED');
+            }
+          })();
+          return Object.assign(gen, {
+            async return() {
+              observedSymbolsChangeNotifications.next({ remove: symbolsNormalized });
+              await pricesIterator.return!();
+              return { done: true as const, value: undefined };
+            },
+          });
+        },
+      })
+    ),
+    asyncIterMap(prices => pick(prices, symbolsNormalized))
   );
 }
 
@@ -69,11 +72,11 @@ const baseSymbolPricesPoller = pipe(
     }
   }),
   asyncIterMap(currSymbolSet => pipe([...currSymbolSet], flatten, uniq)),
-  observedSymbolsIter => createSymbolPricesPoller({ symbols: observedSymbolsIter })
+  observedSymbolsIter => yahooMarketPricesIterable({ symbols: observedSymbolsIter })
 );
 
 async function marketDataPrimeFasterInit(): Promise<void> {
-  await pipe(createSymbolPricesPoller({ symbols: ['SPX'] }), itTakeFirst());
+  await pipe(yahooMarketPricesIterable({ symbols: ['SPX'] }), itTakeFirst());
 }
 
 // (async () => {
