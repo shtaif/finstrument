@@ -9,9 +9,9 @@ import {
 } from '../marketDataService/index.js';
 import { type StatsObjectChanges2 } from '../observeStatsObjectChanges/index.js';
 
-export { getSymbolMarketDataIter, type UpdatedSymbolPriceMap, type UpdatedSymbolPrice };
+export { getMarketDataByStatsObjectsIter, type UpdatedSymbolPriceMap, type UpdatedSymbolPrice };
 
-function getSymbolMarketDataIter(params: {
+function getMarketDataByStatsObjectsIter(params: {
   statsObjects: AsyncIterable<StatsObjectChanges2['current']>;
   translateToCurrencies?: string[];
   ignoreClosedObjectStats?: boolean;
@@ -31,22 +31,20 @@ function getSymbolMarketDataIter(params: {
     })),
     !paramsNorm.ignoreClosedObjectStats
       ? identity
-      : itMap(({ portfolioStatsChanges, holdingStatsChanges, positionChanges }) => {
-          const nonEmptyPortfolioStatsChanges = portfolioStatsChanges.filter(
-            ({ totalPresentInvestedAmount }) => totalPresentInvestedAmount > 0
-          );
-          const nonEmptyHoldingStatsChanges = holdingStatsChanges.filter(
-            ({ totalPositionCount }) => totalPositionCount > 0
-          );
-          const nonClosedPositions = positionChanges.filter(
-            ({ remainingQuantity }) => remainingQuantity > 0
-          );
-          return {
-            portfolioStatsChanges: nonEmptyPortfolioStatsChanges,
-            holdingStatsChanges: nonEmptyHoldingStatsChanges,
-            positionChanges: nonClosedPositions,
-          };
-        }),
+      : itMap(({ portfolioStatsChanges, holdingStatsChanges, positionChanges }) =>
+          pipe(
+            [
+              portfolioStatsChanges.filter(p => p.totalPresentInvestedAmount > 0),
+              holdingStatsChanges.filter(h => h.totalPositionCount > 0),
+              positionChanges.filter(p => p.remainingQuantity > 0),
+            ],
+            ([nonEmptyPortfolioStatsChanges, nonEmptyHoldingStatsChanges, nonClosedPositions]) => ({
+              portfolioStatsChanges: nonEmptyPortfolioStatsChanges,
+              holdingStatsChanges: nonEmptyHoldingStatsChanges,
+              positionChanges: nonClosedPositions,
+            })
+          )
+        ),
     itMap(({ portfolioStatsChanges, holdingStatsChanges, positionChanges }) => {
       const targetSymbols = [
         ...portfolioStatsChanges.flatMap(p => p.resolvedHoldings.map(h => h.symbol)),

@@ -1,7 +1,7 @@
-import { map, keyBy, mapValues, compact } from 'lodash-es';
+import { map, keyBy, compact } from 'lodash-es';
 import { Op } from 'sequelize';
 import yahooFinance from 'yahoo-finance2';
-import { asyncPipe } from 'shared-utils';
+import { asyncPipe, objectFromEntriesTyped, parseSymbol, pipe } from 'shared-utils';
 import { InstrumentInfoModel } from '../../db/index.js';
 import { getIso10383MarketIdentifiersData } from './getIso10383MarketIdentifiersData/index.js';
 import { countryCodeToFlagEmoji } from './countryCodeToFlagEmoji.js';
@@ -15,31 +15,37 @@ async function getInstrumentInfos(params: { symbols: readonly string[] }): Promi
     symbols: params.symbols.map(symbol => symbol.trim().toUpperCase()),
   };
 
-  // await InstrumentInfoModel.destroy({ where: { symbol: { [Op.in]: normParams.symbols } } });
+  const givenSymbolsParsed = normParams.symbols.map(s => parseSymbol(s));
 
   const preexistingInstInfos = await asyncPipe(
     InstrumentInfoModel.findAll({
       where: {
-        symbol: { [Op.in]: normParams.symbols },
+        symbol: { [Op.in]: givenSymbolsParsed.map(s => s.baseInstrumentSymbol) },
       },
     }),
-    infos => map(infos, ({ dataValues }) => dataValues),
-    infos => keyBy(infos, ({ symbol }) => symbol)
+    $ => map($, ({ dataValues }) => dataValues),
+    $ => keyBy($, ({ symbol }) => symbol)
   );
 
-  const missingInstInfos = normParams.symbols.filter(reqSymbol => !preexistingInstInfos[reqSymbol]);
+  const symbolsMissingInstInfos = givenSymbolsParsed.filter(
+    s => !preexistingInstInfos[s.baseInstrumentSymbol]
+  );
 
-  const newlyCreatedMissingInstInfos = !missingInstInfos.length
+  const newlyCreatedMissingInstInfos = !symbolsMissingInstInfos.length
     ? {}
     : await (async () => {
         const micData = await getIso10383MarketIdentifiersData();
 
-        const yahooInfos = await yahooFinance.quote(missingInstInfos, {
-          // fields: ['symbol', 'currency', 'exchange', 'fullExchangeName', 'market'],
-          return: 'array',
-        });
+        const yahooInfos = await asyncPipe(
+          symbolsMissingInstInfos.map(s => s.baseInstrumentSymbol),
+          symbols =>
+            yahooFinance.quote(symbols, {
+              return: 'array',
+              // fields: ['symbol', 'currency', 'exchange', 'fullExchangeName', 'market'],
+            })
+        );
 
-        // TODO: Employ some locking mechanism to prevent case of multiple simultaneous attempts to get fill missing symbol X being unaware they're in a race among themselves, which I temporarily avoid with `InstrumentInfoModel.findOrCreate()` as a compromise...
+        // TODO: Should employ some locking mechanism to prevent case of multiple simultaneous attempts to fill in some missing symbol X all being unaware they're in a race among themselves, which I've avoided with `InstrumentInfoModel.findOrCreate()` as a compromise for the time being...
         return await asyncPipe(
           Promise.all(
             yahooInfos.map(async yahooInfo => {
@@ -70,26 +76,38 @@ async function getInstrumentInfos(params: { symbols: readonly string[] }): Promi
         );
       })();
 
-  const resultInstInfos = { ...preexistingInstInfos, ...newlyCreatedMissingInstInfos };
+  return pipe(
+    givenSymbolsParsed.map(s => {
+      const instrument =
+        preexistingInstInfos[s.baseInstrumentSymbol] ??
+        newlyCreatedMissingInstInfos[s.baseInstrumentSymbol];
 
-  return mapValues(resultInstInfos, info => ({
-    symbol: info.symbol,
-    name: info.name,
-    currency: info.currency,
-    exchangeMic: info.exchangeMic,
-    exchangeAcronym: info.exchangeAcronym,
-    exchangeFullName: info.exchangeFullName,
-    exchangeCountryCode: info.exchangeCountryCode,
-    exchangeCountryFlagEmoji: countryCodeToFlagEmoji(info.exchangeCountryCode) ?? null,
-    createdAt: info.createdAt,
-    updatedAt: info.updatedAt,
-  }));
+      return {
+        symbol: s.normalizedFullSymbol,
+        baseInstrumentSymbol: instrument.symbol,
+        name: instrument.name,
+        currency: s.currencyOverride ?? instrument.currency ?? null,
+        baseInstrumentCurrency: instrument.currency,
+        exchangeMic: instrument.exchangeMic,
+        exchangeAcronym: instrument.exchangeAcronym,
+        exchangeFullName: instrument.exchangeFullName,
+        exchangeCountryCode: instrument.exchangeCountryCode,
+        exchangeCountryFlagEmoji: countryCodeToFlagEmoji(instrument.exchangeCountryCode) ?? null,
+        createdAt: instrument.createdAt,
+        updatedAt: instrument.updatedAt,
+      };
+    }),
+    $ => $.map(info => [info.symbol, info] as const),
+    $ => objectFromEntriesTyped($)
+  );
 }
 
 type InstrumentInfo = {
   symbol: string;
+  baseInstrumentSymbol: string;
   name: string | null;
   currency: string | null;
+  baseInstrumentCurrency: string | null;
   exchangeMic: string | null;
   exchangeAcronym: string | null;
   exchangeFullName: string | null;

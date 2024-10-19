@@ -50,6 +50,12 @@ beforeAll(async () => {
         exchangeMic: 'ddd',
         currency: 'GBP',
       },
+      {
+        symbol: 'BTC-USD',
+        name: 'Bitcoin USD',
+        exchangeMic: 'eee',
+        currency: 'USD',
+      },
     ]),
   ]);
 
@@ -912,8 +918,6 @@ describe('Mutation.setTrades', () => {
       ),
     ]);
 
-    console.log('allFinalHoldingStatsChanges', allFinalHoldingStatsChanges);
-
     expect(redisEvent).toStrictEqual({
       ownerId: mockUserId1,
       portfolioStats: { remove: [], set: [{ forCurrency: 'GBP' }] },
@@ -1016,6 +1020,245 @@ describe('Mutation.setTrades', () => {
         forCurrency: 'GBP',
         changedAt: new Date('2024-01-02, 00:00:00'),
         totalPresentInvestedAmount: 4.6,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      initialPortfolioStats[0],
+    ]);
+  });
+
+  it('Importing a trade dataset that has trades with currency-modified symbols', async () => {
+    const initialTrades = (
+      await TradeRecordModel.bulkCreate([
+        {
+          id: mockUuidFromNumber(0),
+          ownerId: mockUserId1,
+          symbol: 'NVDA',
+          performedAt: new Date('2024-01-03, 00:00:00'),
+          quantity: 2,
+          price: 1.3,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialPositions = (
+      await PositionModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          openingTradeId: initialTrades[0].id,
+          symbol: 'NVDA',
+          openedAt: new Date('2024-01-03, 00:00:00'),
+          realizedProfitOrLoss: 0,
+          remainingQuantity: 2,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialHoldingStats = (
+      await HoldingStatsChangeModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          relatedTradeId: initialTrades[0].id,
+          symbol: 'NVDA',
+          changedAt: new Date('2024-01-03, 00:00:00'),
+          totalPositionCount: 1,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 2.6,
+          totalRealizedAmount: 0,
+          totalRealizedProfitOrLossAmount: 0,
+          totalRealizedProfitOrLossRate: 0,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const initialPortfolioStats = (
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          ownerId: mockUserId1,
+          relatedTradeId: initialTrades[0].id,
+          forCurrency: 'USD',
+          changedAt: new Date('2024-01-03, 00:00:00'),
+          totalPresentInvestedAmount: 2.6,
+          totalRealizedAmount: 0,
+          totalRealizedProfitOrLossAmount: 0,
+          totalRealizedProfitOrLossRate: 0,
+        },
+      ])
+    ).map(record => record.dataValues);
+
+    const tradesCsv = `
+        Trades,Header,Asset Category,Symbol,Date/Time,Quantity,T. Price
+        Trades,Data,Stocks,ADBE:GBP,"2024-01-01, 00:00:00",2,1.1
+        Trades,Data,Stocks,AAPL:EUR,"2024-01-02, 00:00:00",2,1.2
+        Trades,Data,Stocks,NVDA,"2024-01-03, 00:00:00",2,1.3
+      `.trim();
+
+    const redisEventPromise = pipe(
+      userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
+        targetOwnerIds: [mockUserId1, mockUserId2],
+      }),
+      itTakeFirst()
+    );
+
+    const resp = await axiosGqlClient({
+      data: {
+        variables: { tradesCsv },
+        query: /* GraphQL */ `
+          mutation ($tradesCsv: String!) {
+            setTrades(input: { mode: REPLACE, data: { csv: $tradesCsv } }) {
+              tradesAddedCount
+              tradesModifiedCount
+              tradesRemovedCount
+            }
+          }
+        `,
+      },
+    });
+
+    expect(resp.data).toStrictEqual({
+      data: {
+        setTrades: {
+          tradesAddedCount: 2,
+          tradesModifiedCount: 0,
+          tradesRemovedCount: 0,
+        },
+      },
+    });
+
+    const [
+      redisEvent,
+      allFinalTrades,
+      allFinalPositions,
+      allFinalHoldingStatsChanges,
+      allFinalPortfolioStatsChanges,
+    ] = await Promise.all([
+      redisEventPromise,
+      TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+      PortfolioStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        recs.map(r => r.dataValues)
+      ),
+    ]);
+
+    expect(redisEvent).toStrictEqual({
+      ownerId: mockUserId1,
+      portfolioStats: {
+        set: [{ forCurrency: 'GBP' }, { forCurrency: 'EUR' }],
+        remove: [],
+      },
+      holdingStats: {
+        set: ['AAPL:EUR', 'ADBE:GBP'],
+        remove: [],
+      },
+      positions: {
+        set: [allFinalPositions[0].id, allFinalPositions[1].id],
+        remove: [],
+      },
+    });
+
+    expect(allFinalTrades).toStrictEqual([
+      {
+        id: allFinalTrades[0].id,
+        ownerId: mockUserId1,
+        symbol: 'ADBE:GBP',
+        performedAt: new Date('2024-01-01, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        quantity: 2,
+        price: 1.1,
+      },
+      {
+        id: allFinalTrades[1].id,
+        ownerId: mockUserId1,
+        symbol: 'AAPL:EUR',
+        performedAt: new Date('2024-01-02, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        quantity: 2,
+        price: 1.2,
+      },
+      initialTrades[0],
+    ]);
+
+    expect(allFinalPositions).toStrictEqual([
+      {
+        id: expect.any(String),
+        ownerId: mockUserId1,
+        openingTradeId: allFinalTrades[0].id,
+        symbol: 'ADBE:GBP',
+        openedAt: new Date('2024-01-01, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        realizedProfitOrLoss: 0,
+        remainingQuantity: 2,
+      },
+      {
+        id: expect.any(String),
+        ownerId: mockUserId1,
+        openingTradeId: allFinalTrades[1].id,
+        symbol: 'AAPL:EUR',
+        openedAt: new Date('2024-01-02, 00:00:00'),
+        recordCreatedAt: expect.any(Date),
+        recordUpdatedAt: expect.any(Date),
+        realizedProfitOrLoss: 0,
+        remainingQuantity: 2,
+      },
+      initialPositions[0],
+    ]);
+
+    expect(allFinalHoldingStatsChanges).toStrictEqual([
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[0].id,
+        symbol: 'ADBE:GBP',
+        changedAt: new Date('2024-01-01, 00:00:00'),
+        totalPositionCount: 1,
+        totalQuantity: 2,
+        totalPresentInvestedAmount: 2.2,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[1].id,
+        symbol: 'AAPL:EUR',
+        changedAt: new Date('2024-01-02, 00:00:00'),
+        totalPositionCount: 1,
+        totalQuantity: 2,
+        totalPresentInvestedAmount: 2.4,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      initialHoldingStats[0],
+    ]);
+
+    expect(allFinalPortfolioStatsChanges).toStrictEqual([
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[0].id,
+        forCurrency: 'GBP',
+        changedAt: new Date('2024-01-01, 00:00:00'),
+        totalPresentInvestedAmount: 2.2,
+        totalRealizedAmount: 0,
+        totalRealizedProfitOrLossAmount: 0,
+        totalRealizedProfitOrLossRate: 0,
+      },
+      {
+        ownerId: mockUserId1,
+        relatedTradeId: allFinalTrades[1].id,
+        forCurrency: 'EUR',
+        changedAt: new Date('2024-01-02, 00:00:00'),
+        totalPresentInvestedAmount: 2.4,
         totalRealizedAmount: 0,
         totalRealizedProfitOrLossAmount: 0,
         totalRealizedProfitOrLossRate: 0,
