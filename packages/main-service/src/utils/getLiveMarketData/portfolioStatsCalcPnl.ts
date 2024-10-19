@@ -1,4 +1,4 @@
-import { type UpdatedSymbolPrice } from './getSymbolMarketDataIter.js';
+import { type UpdatedSymbolPrice } from './getMarketDataByStatsObjectsIter.js';
 
 export { portfolioStatsCalcPnl };
 

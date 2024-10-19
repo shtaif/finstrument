@@ -3,7 +3,6 @@ import { Model, DataType, Table, Column, BelongsTo, HasOne } from 'sequelize-typ
 import { UserModel } from './UserModel.js';
 import { TradeRecordModel } from './TradeRecordModel.js';
 import { PortfolioStatsChangeModel } from './PortfolioStatsChangeModel.js';
-import { InstrumentInfoModel } from './InstrumentInfoModel.js';
 
 export {
   HoldingStatsChangeModel,
@@ -103,12 +102,6 @@ class HoldingStatsChangeModel extends Model<
     onDelete: 'CASCADE',
   } satisfies BelongsToOptions)
   owner!: Self<UserModel>;
-
-  @BelongsTo(() => InstrumentInfoModel, {
-    foreignKey: 'symbol',
-    targetKey: 'symbol',
-  } satisfies BelongsToOptions)
-  instrumentInfo!: Self<InstrumentInfoModel>;
 
   @BelongsTo(() => TradeRecordModel, {
     foreignKey: 'relatedTradeId',

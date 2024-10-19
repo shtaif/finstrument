@@ -19,10 +19,10 @@ import { type HoldingStats, type Position } from '../positionsService/index.js';
 import { normalizeFloatImprecisions } from '../normalizeFloatImprecisions.js';
 import { objectCreateNullProto } from '../objectCreateNullProto.js';
 import {
-  getSymbolMarketDataIter,
+  getMarketDataByStatsObjectsIter,
   type UpdatedSymbolPriceMap,
   type UpdatedSymbolPrice,
-} from './getSymbolMarketDataIter.js';
+} from './getMarketDataByStatsObjectsIter.js';
 import { portfolioStatsCalcPnl } from './portfolioStatsCalcPnl.js';
 import { calcPnlInTranslateCurrencies } from './calcPnlInTranslateCurrencies.js';
 import { calcHoldingRevenue } from './calcHoldingRevenue.js';
@@ -160,7 +160,7 @@ function getLiveMarketData(params: {
     !requestedSomeHoldingStatsMarketDataFields &&
     !requestedSomePositionsMarketDataFields
       ? (async function* () {})()
-      : getSymbolMarketDataIter({
+      : getMarketDataByStatsObjectsIter({
           translateToCurrencies: paramsNorm.translateToCurrencies,
           ignoreClosedObjectStats: !requestedSomePriceDataFields,
           statsObjects: pipe(
@@ -508,7 +508,7 @@ function getLiveMarketData(params: {
             }),
           itFilter(
             ({ portfolios, holdings, positions }, i) =>
-              i === 0 || !!portfolios.length || !!holdings.length || !!positions.length
+              i === 0 || portfolios.length + holdings.length + positions.length > 0
           )
         );
       }),
