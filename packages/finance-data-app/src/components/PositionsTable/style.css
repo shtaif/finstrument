@@ -19,9 +19,5 @@
 
   .symbol-cell {
     width: 9%;
-
-    .symbol-name-tag {
-      font-size: 16px;
-    }
   }
 }
