@@ -20,10 +20,10 @@ const resolvers = {
                 holdingSymbol: symbol,
                 holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               })),
-              ...(args.positions ?? []).map(({ positionId }) => ({
-                type: 'POSITION' as const,
-                positionId,
-                // TODO: Add a possible `positionOwnerId` property to be sent along the `positionId` so it could be scoped to a particular user so that their visibility is then enforced by ownership
+              ...(args.lots ?? []).map(({ lotId }) => ({
+                type: 'LOT' as const,
+                lotId,
+                // TODO: Add a possible `lotOwnerId` property to be sent along the `lotId` so it could be scoped to a particular user so that their visibility is then enforced by ownership
               })),
             ],
             translateToCurrencies: translatedAggregatesFieldArgsGiven?.currencies,

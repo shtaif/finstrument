@@ -10,19 +10,19 @@ import {
 } from 'sequelize-typescript';
 import { UserModel } from './UserModel.js';
 import { TradeRecordModel } from './TradeRecordModel.js';
-import { PositionClosingModel } from './PositionClosingModel.js';
+import { LotClosingModel } from './LotClosingModel.js';
 
-export { PositionModel, type PositionModelAttributes, type PositionModelCreationAttributes };
+export { LotModel, type LotModelAttributes, type LotModelCreationAttributes };
 
 // TODO: create composite indices for (owner_id + performed_at), (owner_id + symbol), (owner_id + action_type)
 @Table({
-  tableName: 'positions',
+  tableName: 'lots',
   timestamps: true,
   createdAt: 'recordCreatedAt',
   updatedAt: 'recordUpdatedAt',
   defaultScope: {},
 })
-class PositionModel extends Model<PositionModelAttributes, PositionModelCreationAttributes> {
+class LotModel extends Model<LotModelAttributes, LotModelCreationAttributes> {
   @Column({
     field: 'id',
     type: DataType.UUID,
@@ -102,23 +102,23 @@ class PositionModel extends Model<PositionModelAttributes, PositionModelCreation
   } satisfies BelongsToOptions)
   openingTrade!: Self<TradeRecordModel>;
 
-  @HasMany(() => PositionClosingModel, {
+  @HasMany(() => LotClosingModel, {
     sourceKey: 'id',
-    foreignKey: 'positionId',
+    foreignKey: 'lotId',
     onDelete: 'CASCADE',
   } satisfies HasManyOptions)
-  positionClosings!: Self<PositionClosingModel>[];
+  lotClosings!: Self<LotClosingModel>[];
 }
 
-type PositionModelAttributes = InferAttributes<PositionModel>;
+type LotModelAttributes = InferAttributes<LotModel>;
 
-type PositionModelCreationAttributes = {
-  id?: PositionModel['id'];
-  ownerId: PositionModel['ownerId'];
-  openingTradeId: PositionModel['openingTradeId'];
-  symbol: PositionModel['symbol'];
-  remainingQuantity: PositionModel['remainingQuantity'];
-  realizedProfitOrLoss: PositionModel['realizedProfitOrLoss'];
+type LotModelCreationAttributes = {
+  id?: LotModel['id'];
+  ownerId: LotModel['ownerId'];
+  openingTradeId: LotModel['openingTradeId'];
+  symbol: LotModel['symbol'];
+  remainingQuantity: LotModel['remainingQuantity'];
+  realizedProfitOrLoss: LotModel['realizedProfitOrLoss'];
   openedAt: Date | string | number;
   recordCreatedAt?: Date | string | number;
   recordUpdatedAt?: Date | string | number;

@@ -138,7 +138,7 @@ it('Handles empty holdings as intended...', async () => {
       symbol,
       relatedTradeId: id,
       changedAt: performedAt,
-      totalPositionCount: 0,
+      totalLotCount: 0,
       totalQuantity: 0,
       totalPresentInvestedAmount: 0,
       totalRealizedAmount: 100,
@@ -155,7 +155,7 @@ it('Handles empty holdings as intended...', async () => {
           symbol
           lastRelatedTradeId
           lastChangedAt
-          totalPositionCount
+          totalLotCount
           totalQuantity
           totalPresentInvestedAmount
           totalRealizedAmount
@@ -179,7 +179,7 @@ it('Handles empty holdings as intended...', async () => {
           symbol: 'AAPL',
           lastRelatedTradeId: mockTradeIds[1],
           lastChangedAt: '2024-01-02T11:11:11.000Z',
-          totalPositionCount: 0,
+          totalLotCount: 0,
           totalQuantity: 0,
           totalPresentInvestedAmount: 0,
           totalRealizedAmount: 100,
@@ -193,7 +193,7 @@ it('Handles empty holdings as intended...', async () => {
           symbol: 'ADBE',
           lastRelatedTradeId: mockTradeIds[0],
           lastChangedAt: '2024-01-01T11:11:11.000Z',
-          totalPositionCount: 0,
+          totalLotCount: 0,
           totalQuantity: 0,
           totalPresentInvestedAmount: 0,
           totalRealizedAmount: 100,
@@ -265,7 +265,7 @@ it('Testing the testing capabilities 2', async () => {
       symbol,
       relatedTradeId: id,
       changedAt: performedAt,
-      totalPositionCount: 1,
+      totalLotCount: 1,
       totalQuantity: 1,
       totalPresentInvestedAmount: 1.1,
       totalRealizedAmount: 1.1,
@@ -283,7 +283,7 @@ it('Testing the testing capabilities 2', async () => {
           symbol
           lastRelatedTradeId
           lastChangedAt
-          totalPositionCount
+          totalLotCount
           totalQuantity
           totalPresentInvestedAmount
           totalRealizedAmount
@@ -315,7 +315,7 @@ it('Testing the testing capabilities 2', async () => {
           symbol: 'AAPL',
           lastRelatedTradeId: mockTradeIds[5],
           lastChangedAt: '2024-01-03T22:22:22.000Z',
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 1,
           totalPresentInvestedAmount: 1.1,
           totalRealizedAmount: 1.1,
@@ -334,7 +334,7 @@ it('Testing the testing capabilities 2', async () => {
           symbol: 'ADBE',
           lastRelatedTradeId: mockTradeIds[2],
           lastChangedAt: '2024-01-03T11:11:11.000Z',
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 1,
           totalPresentInvestedAmount: 1.1,
           totalRealizedAmount: 1.1,

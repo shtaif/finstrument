@@ -4,7 +4,7 @@ import {
   positionsService,
   type PortfolioStatsChange,
   type HoldingStats,
-  type Position,
+  type Lot,
 } from '../positionsService/index.js';
 import { getInstrumentInfos, type InstrumentInfo } from '../getInstrumentInfos/index.js';
 
@@ -13,30 +13,27 @@ export { gatherStatsObjects, type StatsObjects, type StatsObjectsArray };
 async function gatherStatsObjects(params: {
   portfolioStats: { portfolioOwnerId: string; statsCurrency?: string | null | undefined }[];
   holdingStats: { holdingPortfolioOwnerId: string; holdingSymbol?: string }[];
-  positions: { positionId: string }[];
+  lots: { lotId: string }[];
   discardOverlapping?: boolean;
 }): Promise<StatsObjectsArray> {
-  const [portfolioStats, holdingStats, positions] = await Promise.all([
+  const [portfolioStats, holdingStats, lots] = await Promise.all([
     gatherPortfolioStats(params.portfolioStats),
     gatherHoldingStats(params.holdingStats),
-    gatherPositions(params.positions),
+    gatherLots(params.lots),
   ]);
 
   const symbolInfos = await getInstrumentInfos({
-    symbols: [
-      ...holdingStats.map(({ symbol }) => symbol),
-      ...positions.map(({ symbol }) => symbol),
-    ],
+    symbols: [...holdingStats.map(({ symbol }) => symbol), ...lots.map(({ symbol }) => symbol)],
   });
 
-  const [holdingStatsWithSymInfos, positionsWithSymInfos] = [
+  const [holdingStatsWithSymInfos, lotsWithSymInfos] = [
     holdingStats.map(h => ({ ...h, symbolInfo: symbolInfos[h.symbol] })),
-    positions.map(p => ({ ...p, symbolInfo: symbolInfos[p.symbol] })),
+    lots.map(p => ({ ...p, symbolInfo: symbolInfos[p.symbol] })),
   ];
 
   const result = (() => {
     if (!params.discardOverlapping) {
-      return [portfolioStats, holdingStatsWithSymInfos, positionsWithSymInfos] as const;
+      return [portfolioStats, holdingStatsWithSymInfos, lotsWithSymInfos] as const;
     }
 
     const holdingsNonOverlapping = holdingStatsWithSymInfos.filter(
@@ -45,15 +42,15 @@ async function gatherStatsObjects(params: {
           ps => ps.ownerId === h.ownerId && ps.forCurrency === h.symbolInfo.currency
         )
     );
-    const positionsNonOverlapping = positionsWithSymInfos.filter(
-      pos =>
-        !holdingsNonOverlapping.some(h => h.ownerId === pos.ownerId && h.symbol === pos.symbol) &&
+    const lotsNonOverlapping = lotsWithSymInfos.filter(
+      lot =>
+        !holdingsNonOverlapping.some(h => h.ownerId === lot.ownerId && h.symbol === lot.symbol) &&
         !portfolioStats.some(
-          p => p.ownerId === pos.ownerId && p.forCurrency === pos.symbolInfo.currency
+          p => p.ownerId === lot.ownerId && p.forCurrency === lot.symbolInfo.currency
         )
     );
 
-    return [portfolioStats, holdingsNonOverlapping, positionsNonOverlapping] as const;
+    return [portfolioStats, holdingsNonOverlapping, lotsNonOverlapping] as const;
   })();
 
   const portfolioResolvedHoldingsMap = await asyncPipe(
@@ -123,44 +120,44 @@ async function gatherHoldingStats(
       });
 }
 
-async function gatherPositions(
-  positionSpecifiers: {
-    positionId: string;
+async function gatherLots(
+  lotSpecifiers: {
+    lotId: string;
   }[]
-): Promise<Position[]> {
-  const positions = !positionSpecifiers.length
+): Promise<Lot[]> {
+  const lots = !lotSpecifiers.length
     ? []
-    : await positionsService.retrievePositions({
+    : await positionsService.retrieveLots({
         filters: {
-          ids: positionSpecifiers.map(({ positionId }) => positionId),
+          ids: lotSpecifiers.map(({ lotId }) => lotId),
         },
       });
 
-  if (positions.length < positionSpecifiers.length) {
-    const positionIdsGiven = positionSpecifiers.map(({ positionId }) => positionId);
-    const unmatchedPositionsIds = differenceWith(
-      positionIdsGiven,
-      positions,
-      (askedPosId, pos) => askedPosId === pos.id
+  if (lots.length < lotSpecifiers.length) {
+    const lotIdsGiven = lotSpecifiers.map(({ lotId }) => lotId);
+    const unmatchedLotsIds = differenceWith(
+      lotIdsGiven,
+      lots,
+      (askedLotId, lot) => askedLotId === lot.id
     );
     throw new CustomError({
-      type: 'INVALID_POSITION_IDS',
+      type: 'INVALID_LOT_IDS',
       message:
-        `Some of the requested positions could not be found (${unmatchedPositionsIds.length} in total):\n${unmatchedPositionsIds.map(id => `ID "${id}"`).join(',\n')}` as const,
+        `Some of the requested lots could not be found (${unmatchedLotsIds.length} in total):\n${unmatchedLotsIds.map(id => `ID "${id}"`).join(',\n')}` as const,
       details: {
-        positionIdsGiven,
-        unmatchedPositionsIds,
+        lotIdsGiven,
+        unmatchedLotsIds,
       },
     } as const);
   }
 
-  return positions;
+  return lots;
 }
 
 type StatsObjectsArray = readonly [
   portfolioStats: StatsObjects['portfolioStatsChanges'][string][],
   holdingStats: StatsObjects['holdingStatsChanges'][string][],
-  positions: StatsObjects['positionChanges'][string][],
+  lots: StatsObjects['lotChanges'][string][],
 ];
 
 type StatsObjects = {
@@ -174,7 +171,7 @@ type StatsObjects = {
   holdingStatsChanges: {
     [ownerAndSymbol: string]: HoldingStats & { symbolInfo: InstrumentInfo };
   };
-  positionChanges: {
-    [posId: string]: Position & { symbolInfo: InstrumentInfo };
+  lotChanges: {
+    [lotId: string]: Lot & { symbolInfo: InstrumentInfo };
   };
 };

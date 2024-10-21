@@ -33,7 +33,7 @@ export type AggregatePnlHoldingSpecifier = {
 };
 
 export type AggregatePnlPositionSpecifier = {
-  positionId: Scalars['ID']['input'];
+  lotId: Scalars['ID']['input'];
 };
 
 export type AggregatePnlResultItem = {
@@ -88,7 +88,7 @@ export type HoldingStats = {
   ownerId: Scalars['ID']['output'];
   relatedPortfolioStats: PortfolioStats;
   symbol: Scalars['ID']['output'];
-  totalPositionCount: Scalars['Int']['output'];
+  totalLotCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
   totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
@@ -106,7 +106,7 @@ export type HoldingStatsChange = {
   relatedPortfolioStatsChange: PortfolioStatsChange;
   relatedTradeId: Scalars['ID']['output'];
   symbol: Scalars['String']['output'];
-  totalPositionCount: Scalars['Int']['output'];
+  totalLotCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
   totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];
@@ -186,7 +186,7 @@ export type ObservedHoldingStats = {
   ownerId: Scalars['ID']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
-  totalPositionCount: Scalars['Int']['output'];
+  totalLotCount: Scalars['Int']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
   totalQuantity: Scalars['Float']['output'];
   totalRealizedAmount: Scalars['Float']['output'];

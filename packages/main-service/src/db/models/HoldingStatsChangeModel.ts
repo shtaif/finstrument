@@ -42,12 +42,12 @@ class HoldingStatsChangeModel extends Model<
   symbol!: string;
 
   @Column({
-    field: 'total_position_count',
+    field: 'total_lot_count',
     type: DataType.INTEGER,
     defaultValue: 0,
     allowNull: false,
   })
-  totalPositionCount!: number;
+  totalLotCount!: number;
 
   @Column({
     field: 'total_quantity',
@@ -124,7 +124,7 @@ type HoldingStatsChangeModelCreationAttributes = {
   ownerId: HoldingStatsChangeModel['ownerId'];
   symbol: HoldingStatsChangeModel['symbol'];
   relatedTradeId: HoldingStatsChangeModel['relatedTradeId'];
-  totalPositionCount?: HoldingStatsChangeModel['totalPositionCount'];
+  totalLotCount?: HoldingStatsChangeModel['totalLotCount'];
   totalQuantity?: HoldingStatsChangeModel['totalQuantity'];
   totalPresentInvestedAmount?: HoldingStatsChangeModel['totalPresentInvestedAmount'];
   totalRealizedAmount?: HoldingStatsChangeModel['totalRealizedAmount'];

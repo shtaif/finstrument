@@ -1,10 +1,5 @@
 import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
-import {
-  InstrumentInfoModel,
-  PositionModel,
-  TradeRecordModel,
-  UserModel,
-} from '../src/db/index.js';
+import { InstrumentInfoModel, LotModel, TradeRecordModel, UserModel } from '../src/db/index.js';
 import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { axiosGqlClient } from './utils/axiosGqlClient.js';
 import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
@@ -64,7 +59,7 @@ const reusableTradeDatas = [
   },
 ];
 
-const reusablePositionDatas = [
+const reusableLotDatas = [
   {
     id: mockUuidFromNumber(1),
     ownerId: mockUserId1,
@@ -153,16 +148,13 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([
-    PositionModel.destroy({ where: {} }),
-    TradeRecordModel.destroy({ where: {} }),
-  ]);
+  await Promise.all([LotModel.destroy({ where: {} }), TradeRecordModel.destroy({ where: {} })]);
   mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
   await Promise.all([
-    PositionModel.destroy({ where: {} }),
+    LotModel.destroy({ where: {} }),
     TradeRecordModel.destroy({ where: {} }),
     InstrumentInfoModel.destroy({ where: {} }),
     UserModel.destroy({ where: {} }),
@@ -171,8 +163,8 @@ afterAll(async () => {
   unmockGqlContext();
 });
 
-describe('Query.positions ', () => {
-  it('Retrieves all basic position fields correctly', async () => {
+describe('Query.lots', () => {
+  it('Retrieves all basic lot fields correctly', async () => {
     await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -200,7 +192,7 @@ describe('Query.positions ', () => {
       },
     ]);
 
-    const positions = await PositionModel.bulkCreate([
+    const lots = await LotModel.bulkCreate([
       {
         id: mockUuidFromNumber(1),
         ownerId: mockUserId1,
@@ -229,7 +221,7 @@ describe('Query.positions ', () => {
       data: {
         query: /* GraphQL */ `
           {
-            positions {
+            lots {
               id
               ownerId
               openingTradeId
@@ -247,9 +239,9 @@ describe('Query.positions ', () => {
 
     expect(resp.data).toStrictEqual({
       data: {
-        positions: [
+        lots: [
           {
-            id: positions[1].id,
+            id: lots[1].id,
             openingTradeId: mockTradeIds[1],
             ownerId: mockUserId1,
             symbol: 'AAPL',
@@ -260,7 +252,7 @@ describe('Query.positions ', () => {
             realizedProfitOrLoss: 20,
           },
           {
-            id: positions[0].id,
+            id: lots[0].id,
             openingTradeId: mockTradeIds[0],
             ownerId: mockUserId1,
             symbol: 'ADBE',
@@ -275,12 +267,12 @@ describe('Query.positions ', () => {
     });
   });
 
-  it('When user has no positions, gracefully retrieves an empty array', async () => {
+  it('When user has no lots, gracefully retrieves an empty array', async () => {
     const resp = await axiosGqlClient({
       data: {
         query: /* GraphQL */ `
           {
-            positions {
+            lots {
               id
             }
           }
@@ -288,26 +280,26 @@ describe('Query.positions ', () => {
       },
     });
 
-    expect(resp.data).toStrictEqual({ data: { positions: [] } });
+    expect(resp.data).toStrictEqual({ data: { lots: [] } });
   });
 
-  it('Retrieves only positions owned by the requesting user', async () => {
+  it('Retrieves only lots owned by the requesting user', async () => {
     await TradeRecordModel.bulkCreate([
       { ...reusableTradeDatas[0], symbol: 'ADBE', ownerId: mockUserId1 },
       { ...reusableTradeDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
       { ...reusableTradeDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
     ]);
-    const positions = await PositionModel.bulkCreate([
-      { ...reusablePositionDatas[0], symbol: 'ADBE', ownerId: mockUserId1 },
-      { ...reusablePositionDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
-      { ...reusablePositionDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
+    const lots = await LotModel.bulkCreate([
+      { ...reusableLotDatas[0], symbol: 'ADBE', ownerId: mockUserId1 },
+      { ...reusableLotDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
+      { ...reusableLotDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
     ]);
 
     const resp = await axiosGqlClient({
       data: {
         query: /* GraphQL */ `
           {
-            positions {
+            lots {
               id
               ownerId
               symbol
@@ -319,35 +311,35 @@ describe('Query.positions ', () => {
 
     expect(resp.data).toStrictEqual({
       data: {
-        positions: [
-          { id: positions[2].id, ownerId: mockUserId1, symbol: 'NVDA' },
-          { id: positions[0].id, ownerId: mockUserId1, symbol: 'ADBE' },
+        lots: [
+          { id: lots[2].id, ownerId: mockUserId1, symbol: 'NVDA' },
+          { id: lots[0].id, ownerId: mockUserId1, symbol: 'ADBE' },
         ],
       },
     });
   });
 
   describe('With the `filters.ids` arg', () => {
-    it('Specifying IDs of existing positions retrieves only those matching', async () => {
+    it('Specifying IDs of existing lots retrieves only those matching', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
         { ...reusableTradeDatas[2], symbol: 'NVDA' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'AAPL' },
-        { ...reusablePositionDatas[2], symbol: 'NVDA' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'AAPL' },
+        { ...reusableLotDatas[2], symbol: 'NVDA' },
       ]);
 
       const resp = await axiosGqlClient({
         data: {
           query: /* GraphQL */ `{
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[1].id}"
-                  "${positions[2].id}"
+                  "${lots[1].id}"
+                  "${lots[2].id}"
                 ]
               }
             ) {
@@ -360,31 +352,29 @@ describe('Query.positions ', () => {
 
       expect(resp.data).toStrictEqual({
         data: {
-          positions: [
-            { id: positions[2].id, symbol: 'NVDA' },
-            { id: positions[1].id, symbol: 'AAPL' },
+          lots: [
+            { id: lots[2].id, symbol: 'NVDA' },
+            { id: lots[1].id, symbol: 'AAPL' },
           ],
         },
       });
     });
 
     it(
-      'Specifying IDs of which some have no match will only retrieve positions that ' +
+      'Specifying IDs of which some have no match will only retrieve lots that ' +
         'do exist and match',
       async () => {
         await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
-        const positions = await PositionModel.bulkCreate([
-          { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        ]);
+        const lots = await LotModel.bulkCreate([{ ...reusableLotDatas[0], symbol: 'ADBE' }]);
 
         const resp = await axiosGqlClient({
           data: {
             variables: {
-              ids: [positions[0].id, mockUuidFromNumber(1), mockUuidFromNumber(2)],
+              ids: [lots[0].id, mockUuidFromNumber(1), mockUuidFromNumber(2)],
             },
             query: `
               query ($ids: [ID!]!) {
-                positions (
+                lots (
                   filters: { ids: $ids }
                 ) {
                   id
@@ -396,7 +386,7 @@ describe('Query.positions ', () => {
 
         expect(resp.data).toStrictEqual({
           data: {
-            positions: [{ id: positions[0].id, symbol: 'ADBE' }],
+            lots: [{ id: lots[0].id, symbol: 'ADBE' }],
           },
         });
       }
@@ -411,20 +401,20 @@ describe('Query.positions ', () => {
           { ...reusableTradeDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
           { ...reusableTradeDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
         ]);
-        const positions = await PositionModel.bulkCreate([
-          { ...reusablePositionDatas[0], symbol: 'ADBE', ownerId: mockUserId1 },
-          { ...reusablePositionDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
-          { ...reusablePositionDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
+        const lots = await LotModel.bulkCreate([
+          { ...reusableLotDatas[0], symbol: 'ADBE', ownerId: mockUserId1 },
+          { ...reusableLotDatas[1], symbol: 'AAPL', ownerId: mockUserId2 },
+          { ...reusableLotDatas[2], symbol: 'NVDA', ownerId: mockUserId1 },
         ]);
 
         const resp = await axiosGqlClient({
           data: {
             variables: {
-              ids: [positions[0].id, positions[1].id, positions[2].id],
+              ids: [lots[0].id, lots[1].id, lots[2].id],
             },
             query: `
               query ($ids: [ID!]!) {
-                positions (
+                lots (
                   filters: { ids: $ids }
                 ) {
                   id
@@ -436,9 +426,9 @@ describe('Query.positions ', () => {
 
         expect(resp.data).toStrictEqual({
           data: {
-            positions: [
-              { id: positions[2].id, symbol: 'NVDA' },
-              { id: positions[0].id, symbol: 'ADBE' },
+            lots: [
+              { id: lots[2].id, symbol: 'NVDA' },
+              { id: lots[0].id, symbol: 'ADBE' },
             ],
           },
         });
@@ -447,7 +437,7 @@ describe('Query.positions ', () => {
   });
 
   describe('With the `filters.symbols` arg', () => {
-    it('Specifying symbols will retrieve any owned positions matching those symbols', async () => {
+    it('Specifying symbols will retrieve any owned lots matching those symbols', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'ADBE' },
@@ -456,20 +446,20 @@ describe('Query.positions ', () => {
         { ...reusableTradeDatas[4], symbol: 'NVDA' },
         { ...reusableTradeDatas[5], symbol: 'NVDA' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'ADBE' },
-        { ...reusablePositionDatas[2], symbol: 'AAPL' },
-        { ...reusablePositionDatas[3], symbol: 'AAPL' },
-        { ...reusablePositionDatas[4], symbol: 'NVDA' },
-        { ...reusablePositionDatas[5], symbol: 'NVDA' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'ADBE' },
+        { ...reusableLotDatas[2], symbol: 'AAPL' },
+        { ...reusableLotDatas[3], symbol: 'AAPL' },
+        { ...reusableLotDatas[4], symbol: 'NVDA' },
+        { ...reusableLotDatas[5], symbol: 'NVDA' },
       ]);
 
       const resp = await axiosGqlClient({
         data: {
           query: /* GraphQL */ `
             {
-              positions(filters: { symbols: ["AAPL", "NVDA", "NON_EXISTENT_SYMBOL"] }) {
+              lots(filters: { symbols: ["AAPL", "NVDA", "NON_EXISTENT_SYMBOL"] }) {
                 id
                 symbol
               }
@@ -480,11 +470,11 @@ describe('Query.positions ', () => {
 
       expect(resp.data).toStrictEqual({
         data: {
-          positions: [
-            { id: positions[5].id, symbol: 'NVDA' },
-            { id: positions[4].id, symbol: 'NVDA' },
-            { id: positions[3].id, symbol: 'AAPL' },
-            { id: positions[2].id, symbol: 'AAPL' },
+          lots: [
+            { id: lots[5].id, symbol: 'NVDA' },
+            { id: lots[4].id, symbol: 'NVDA' },
+            { id: lots[3].id, symbol: 'AAPL' },
+            { id: lots[2].id, symbol: 'AAPL' },
           ],
         },
       });
@@ -492,14 +482,14 @@ describe('Query.positions ', () => {
   });
 
   describe('With `unrealizedPnl` field', () => {
-    it('Retrieves positions with unrealized P&L correctly calculated', async () => {
+    it('Retrieves lots with unrealized P&L correctly calculated', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'AAPL' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
       mockMarketDataControl.onConnectionSend([
@@ -513,7 +503,7 @@ describe('Query.positions ', () => {
         data: {
           query: /* GraphQL */ `
             {
-              positions {
+              lots {
                 id
                 symbol
                 unrealizedPnl {
@@ -533,14 +523,14 @@ describe('Query.positions ', () => {
 
       expect(resp.data).toStrictEqual({
         data: {
-          positions: [
+          lots: [
             {
-              id: positions[1].id,
+              id: lots[1].id,
               symbol: 'AAPL',
               unrealizedPnl: { amount: 109, percent: 990.909090909091 },
             },
             {
-              id: positions[0].id,
+              id: lots[0].id,
               symbol: 'ADBE',
               unrealizedPnl: { amount: 99, percent: 900 },
             },
@@ -551,14 +541,14 @@ describe('Query.positions ', () => {
   });
 
   describe('With `priceData` field', () => {
-    it('Retrieves positions with correct `priceData` details', async () => {
+    it('Retrieves lots with correct `priceData` details', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'AAPL' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
       mockMarketDataControl.onConnectionSend([
@@ -582,7 +572,7 @@ describe('Query.positions ', () => {
         data: {
           query: /* GraphQL */ `
             {
-              positions {
+              lots {
                 id
                 symbol
                 priceData {
@@ -599,9 +589,9 @@ describe('Query.positions ', () => {
 
       expect(resp.data).toStrictEqual({
         data: {
-          positions: [
+          lots: [
             {
-              id: positions[1].id,
+              id: lots[1].id,
               symbol: 'AAPL',
               priceData: {
                 currency: 'USD',
@@ -611,7 +601,7 @@ describe('Query.positions ', () => {
               },
             },
             {
-              id: positions[0].id,
+              id: lots[0].id,
               symbol: 'ADBE',
               priceData: {
                 currency: 'USD',
@@ -632,16 +622,16 @@ describe('Query.positions ', () => {
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'AAPL' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
       const resp = await axiosGqlClient({
         data: {
           query: /* GraphQL */ `
             {
-              positions {
+              lots {
                 id
                 symbol
                 instrument {
@@ -657,9 +647,9 @@ describe('Query.positions ', () => {
 
       expect(resp.data).toStrictEqual({
         data: {
-          positions: [
+          lots: [
             {
-              id: positions[1].id,
+              id: lots[1].id,
               symbol: 'AAPL',
               instrument: {
                 symbol: 'AAPL',
@@ -668,7 +658,7 @@ describe('Query.positions ', () => {
               },
             },
             {
-              id: positions[0].id,
+              id: lots[0].id,
               symbol: 'ADBE',
               instrument: {
                 symbol: 'ADBE',

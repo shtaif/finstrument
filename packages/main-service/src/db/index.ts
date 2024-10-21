@@ -19,16 +19,16 @@ export {
 } from './models/TradeRecordModel.js';
 
 export {
-  PositionModel,
-  type PositionModelAttributes,
-  type PositionModelCreationAttributes,
-} from './models/PositionModel.js';
+  LotModel,
+  type LotModelAttributes,
+  type LotModelCreationAttributes,
+} from './models/LotModel.js';
 
 export {
-  PositionClosingModel,
-  type PositionClosingModelAttributes,
-  type PositionClosingModelCreationAttributes,
-} from './models/PositionClosingModel.js';
+  LotClosingModel,
+  type LotClosingModelAttributes,
+  type LotClosingModelCreationAttributes,
+} from './models/LotClosingModel.js';
 
 export {
   HoldingStatsChangeModel,

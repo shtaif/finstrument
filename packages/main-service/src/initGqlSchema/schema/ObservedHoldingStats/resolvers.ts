@@ -46,7 +46,7 @@ const resolvers = {
                   symbol: !!fields?.symbol,
                   ownerId: !!fields?.ownerId,
                   lastRelatedTradeId: !!fields?.lastRelatedTradeId,
-                  totalPositionCount: !!fields?.totalPositionCount,
+                  totalLotCount: !!fields?.totalLotCount,
                   totalQuantity: !!fields?.totalQuantity,
                   totalPresentInvestedAmount: !!fields?.totalPresentInvestedAmount,
                   totalRealizedAmount: !!fields?.totalRealizedAmount,

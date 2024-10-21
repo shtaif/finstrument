@@ -119,7 +119,7 @@ const appApiRoutes: RequestHandler = express()
 
       .get('/positions/:userAlias', async (req, res, next) => {
         try {
-          const positionsData = await positionsService.retrievePositions({
+          const positionsData = await positionsService.retrieveLots({
             filters: {
               ownerAliases: [req.params.userAlias],
             },

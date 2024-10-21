@@ -22,18 +22,13 @@ async function retrieveHoldingStats(params: {
     ownerIds?: string[];
     ownerAliases?: string[];
     symbols?: string[];
-    totalPositionCount?:
-      | number
-      | { gt: number }
-      | { gte: number }
-      | { lt: number }
-      | { lte: number };
+    totalLotCount?: number | { gt: number } | { gte: number } | { lt: number } | { lte: number };
   }>;
   orderBy?: [
     (
       | 'lastChangedAt'
       | 'symbol'
-      | 'totalPositionCount'
+      | 'totalLotCount'
       | 'totalQuantity'
       | 'totalPresentInvestedAmount'
       | 'totalRealizedAmount'
@@ -86,7 +81,7 @@ async function retrieveHoldingStats(params: {
             ['relatedTradeId', 'lastRelatedTradeId'],
             ['ownerId'],
             ['symbol'],
-            ['totalPositionCount'],
+            ['totalLotCount'],
             ['totalQuantity'],
             ['totalPresentInvestedAmount'],
             ['totalRealizedAmount'],
@@ -127,8 +122,8 @@ async function retrieveHoldingStats(params: {
           !val.length ? '' : `u."${userModelFields.alias}" IN (${sequelizeEscapeArray(val)})`,
         symbols: val =>
           !val.length ? '' : `hs."${holdingModelFields.symbol}" IN (${sequelizeEscapeArray(val)})`,
-        totalPositionCount: val => {
-          const colExp = `hs."${holdingModelFields.totalPositionCount}"`;
+        totalLotCount: val => {
+          const colExp = `hs."${holdingModelFields.totalLotCount}"`;
           if (typeof val === 'number') {
             return `${colExp} = ${sequelize.escape(val)}`;
           }
@@ -170,7 +165,7 @@ type HoldingStats = {
   lastRelatedTradeId: string;
   ownerId: string;
   symbol: string;
-  totalPositionCount: number;
+  totalLotCount: number;
   totalQuantity: number;
   totalPresentInvestedAmount: number;
   totalRealizedAmount: number;
@@ -224,7 +219,7 @@ type HoldingStats = {
 //       relatedTradeId,
 //       ownerId,
 //       symbol,
-//       totalPositionCount,
+//       totalLotCount,
 //       totalQuantity,
 //       totalPresentInvestedAmount,
 //       totalRealizedAmount,
@@ -235,7 +230,7 @@ type HoldingStats = {
 //       relatedTradeId,
 //       ownerId,
 //       symbol,
-//       totalPositionCount,
+//       totalLotCount,
 //       totalQuantity,
 //       totalPresentInvestedAmount,
 //       totalRealizedAmount,
@@ -250,7 +245,7 @@ type HoldingStats = {
 //   ownerId: string;
 //   relatedTradeId: string;
 //   symbol: string;
-//   totalPositionCount: number;
+//   totalLotCount: number;
 //   totalQuantity: number;
 //   totalPresentInvestedAmount: number;
 //   totalRealizedAmount: number;

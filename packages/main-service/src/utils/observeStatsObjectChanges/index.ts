@@ -8,7 +8,7 @@ import { watchStatsObjectChangesPerSpecifiers } from './watchStatsObjectChangesP
 export {
   observeStatsObjectChanges,
   type StatsObjectSpecifier,
-  type PositionObjectSpecifier,
+  type LotObjectSpecifier,
   type HoldingObjectSpecifier,
   type PortfolioObjectSpecifier,
   type StatsObjects,
@@ -29,8 +29,8 @@ function observeStatsObjectChanges(params: {
   }
 
   const specifiersByType = {
-    position: paramsNorm.specifiers.filter((s): s is PositionObjectSpecifier => {
-      return s.type === 'POSITION';
+    lot: paramsNorm.specifiers.filter((s): s is LotObjectSpecifier => {
+      return s.type === 'LOT';
     }),
     holding: paramsNorm.specifiers.filter((s): s is HoldingObjectSpecifier => {
       return s.type === 'HOLDING';
@@ -42,50 +42,48 @@ function observeStatsObjectChanges(params: {
 
   return pipe(
     itLazyDefer(async () => {
-      const [allCurrPortfolioStats, allCurrHoldingStats, allCurrPositions] = [
+      const [allCurrPortfolioStats, allCurrHoldingStats, allCurrLots] = [
         Object.create(null),
         Object.create(null),
         Object.create(null),
       ] as [
         { [ownerIdAndCurrency: string]: StatsObjects['portfolioStatsChanges'][string] },
         { [ownerIdAndSymbol: string]: StatsObjects['holdingStatsChanges'][string] },
-        { [positionId: string]: StatsObjects['positionChanges'][string] },
+        { [lotId: string]: StatsObjects['lotChanges'][string] },
       ];
 
-      const [requestedPortfolioStats, requestedHoldings, requestedPositions] =
-        await gatherStatsObjects({
-          portfolioStats: specifiersByType.portfolio,
-          holdingStats: specifiersByType.holding,
-          positions: specifiersByType.position,
-          discardOverlapping: paramsNorm.discardOverlapping,
-        });
+      const [requestedPortfolioStats, requestedHoldings, requestedLots] = await gatherStatsObjects({
+        portfolioStats: specifiersByType.portfolio,
+        holdingStats: specifiersByType.holding,
+        lots: specifiersByType.lot,
+        discardOverlapping: paramsNorm.discardOverlapping,
+      });
 
       return pipe(
         itMerge(
           of({
             portfolioStats: { set: requestedPortfolioStats, remove: [] },
             holdingStats: { set: requestedHoldings, remove: [] },
-            positions: { set: requestedPositions, remove: [] },
+            lots: { set: requestedLots, remove: [] },
           }) satisfies AsyncIterable<StatsObjectChangesInner>,
 
           pipe(
             watchStatsObjectChangesPerSpecifiers({
               portfolio: specifiersByType.portfolio,
               holding: specifiersByType.holding,
-              position: requestedPositions.map(p => ({
-                positionOwnerId: p.ownerId,
-                positionId: p.id,
+              lot: requestedLots.map(p => ({
+                lotOwnerId: p.ownerId,
+                lotId: p.id,
               })),
             }),
             itMap(async statsObjectSpecs => {
-              const [portfolioStatsToSet, holdingStatsToSet, positionsToSet] =
-                await gatherStatsObjects({
-                  portfolioStats: statsObjectSpecs.portfolioStats.set,
-                  holdingStats: statsObjectSpecs.holdingStats.set,
-                  positions: statsObjectSpecs.positions.set,
-                });
+              const [portfolioStatsToSet, holdingStatsToSet, lotsToSet] = await gatherStatsObjects({
+                portfolioStats: statsObjectSpecs.portfolioStats.set,
+                holdingStats: statsObjectSpecs.holdingStats.set,
+                lots: statsObjectSpecs.lots.set,
+              });
 
-              const [portfolioStatsToRemove, holdingStatsToRemove, positionsToRemove] = [
+              const [portfolioStatsToRemove, holdingStatsToRemove, lotsToRemove] = [
                 statsObjectSpecs.portfolioStats.remove.map(
                   ({ portfolioOwnerId, statsCurrency }) =>
                     allCurrPortfolioStats[`${portfolioOwnerId}_${statsCurrency ?? ''}`]
@@ -94,15 +92,13 @@ function observeStatsObjectChanges(params: {
                   ({ holdingPortfolioOwnerId, holdingSymbol }) =>
                     allCurrHoldingStats[`${holdingPortfolioOwnerId}_${holdingSymbol}`]
                 ),
-                statsObjectSpecs.positions.remove.map(
-                  ({ positionId }) => allCurrPositions[positionId]
-                ),
+                statsObjectSpecs.lots.remove.map(({ lotId }) => allCurrLots[lotId]),
               ];
 
               return {
                 portfolioStats: { set: portfolioStatsToSet, remove: portfolioStatsToRemove },
                 holdingStats: { set: holdingStatsToSet, remove: holdingStatsToRemove },
-                positions: { set: positionsToSet, remove: positionsToRemove },
+                lots: { set: lotsToSet, remove: lotsToRemove },
               };
             })
           )
@@ -114,8 +110,8 @@ function observeStatsObjectChanges(params: {
           for (const { ownerId, symbol } of changes.holdingStats.remove) {
             delete allCurrHoldingStats[`${ownerId}_${symbol}`];
           }
-          for (const { id } of changes.positions.remove) {
-            delete allCurrPositions[id];
+          for (const { id } of changes.lots.remove) {
+            delete allCurrLots[id];
           }
 
           assign(
@@ -127,20 +123,20 @@ function observeStatsObjectChanges(params: {
             keyBy(changes.holdingStats.set, h => `${h.ownerId}_${h.symbol}`)
           );
           assign(
-            allCurrPositions,
-            keyBy(changes.positions.set, p => `${p.id}`)
+            allCurrLots,
+            keyBy(changes.lots.set, p => `${p.id}`)
           );
 
           return {
             current: {
               portfolioStats: allCurrPortfolioStats,
               holdingStats: allCurrHoldingStats,
-              positions: allCurrPositions,
+              lots: allCurrLots,
             },
             changes: {
               portfolioStats: changes.portfolioStats,
               holdingStats: changes.holdingStats,
-              positions: changes.positions,
+              lots: changes.lots,
             },
           };
         })
@@ -151,11 +147,11 @@ function observeStatsObjectChanges(params: {
 }
 
 type StatsObjectSpecifier =
-  | { type: 'POSITION'; positionId: string }
+  | { type: 'LOT'; lotId: string }
   | { type: 'HOLDING'; holdingPortfolioOwnerId: string; holdingSymbol?: string | undefined }
   | { type: 'PORTFOLIO'; portfolioOwnerId: string; statsCurrency: string | null | undefined };
 
-type PositionObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'POSITION' }>;
+type LotObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'LOT' }>;
 type HoldingObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'HOLDING' }>;
 type PortfolioObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'PORTFOLIO' }>;
 
@@ -167,8 +163,8 @@ type StatsObjectChanges2 = {
     readonly holdingStats: {
       [ownerIdAndSymbol: string]: StatsObjects['holdingStatsChanges'][string];
     };
-    readonly positions: {
-      [positionId: string]: StatsObjects['positionChanges'][string];
+    readonly lots: {
+      [lotId: string]: StatsObjects['lotChanges'][string];
     };
   };
   readonly changes: {
@@ -180,9 +176,9 @@ type StatsObjectChanges2 = {
       set: StatsObjects['holdingStatsChanges'][string][];
       remove: StatsObjects['holdingStatsChanges'][string][];
     };
-    readonly positions: {
-      set: StatsObjects['positionChanges'][string][];
-      remove: StatsObjects['positionChanges'][string][];
+    readonly lots: {
+      set: StatsObjects['lotChanges'][string][];
+      remove: StatsObjects['lotChanges'][string][];
     };
   };
 };

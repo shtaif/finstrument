@@ -28,7 +28,7 @@ function createHoldingMarketDataLoader(): DataLoader<
                 symbol: true,
                 ownerId: true,
                 lastRelatedTradeId: true,
-                totalPositionCount: true,
+                totalLotCount: true,
                 totalQuantity: true,
                 totalPresentInvestedAmount: true,
                 totalRealizedAmount: true,

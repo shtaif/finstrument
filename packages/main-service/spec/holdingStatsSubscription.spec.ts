@@ -74,7 +74,7 @@ const reusableHoldingStats = reusableTradeDatas.map(({ id, ownerId, symbol, perf
   symbol,
   relatedTradeId: id,
   changedAt: performedAt,
-  totalPositionCount: 2,
+  totalLotCount: 2,
   totalQuantity: 2,
   totalPresentInvestedAmount: 100,
   totalRealizedAmount: 100,
@@ -145,7 +145,7 @@ describe('Subscription.holdingStats ', () => {
         symbol,
         relatedTradeId: id,
         changedAt: performedAt,
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 2,
         totalPresentInvestedAmount: 100,
         totalRealizedAmount: 100,
@@ -227,7 +227,7 @@ describe('Subscription.holdingStats ', () => {
           symbol,
           relatedTradeId: id,
           changedAt: performedAt,
-          totalPositionCount: 2,
+          totalLotCount: 2,
           totalQuantity: 2,
           totalPresentInvestedAmount: 100,
           totalRealizedAmount: 100,
@@ -280,7 +280,7 @@ describe('Subscription.holdingStats ', () => {
               symbol: 'ADBE',
               relatedTradeId: mockTradeIds[2],
               changedAt: '2024-01-03T11:11:11.000Z',
-              totalPositionCount: 3,
+              totalLotCount: 3,
               totalQuantity: 3,
               totalPresentInvestedAmount: 110,
               totalRealizedAmount: 100,
@@ -302,7 +302,7 @@ describe('Subscription.holdingStats ', () => {
               symbol: 'ADBE',
               relatedTradeId: mockTradeIds[3],
               changedAt: '2024-01-04T11:11:11.000Z',
-              totalPositionCount: 3,
+              totalLotCount: 3,
               totalQuantity: 3,
               totalPresentInvestedAmount: 120,
               totalRealizedAmount: 100,
@@ -507,7 +507,7 @@ describe('Subscription.holdingStats ', () => {
         symbol,
         relatedTradeId: id,
         changedAt: performedAt,
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 2,
         totalPresentInvestedAmount: 100,
         totalRealizedAmount: 100,
@@ -605,7 +605,7 @@ describe('Subscription.holdingStats ', () => {
           symbol,
           relatedTradeId: id,
           changedAt: performedAt,
-          totalPositionCount: 2,
+          totalLotCount: 2,
           totalQuantity: 2,
           totalPresentInvestedAmount: 100,
           totalRealizedAmount: 100,
@@ -827,7 +827,7 @@ describe('Subscription.holdingStats ', () => {
       await HoldingStatsChangeModel.bulkCreate(
         reusableHoldingStats.slice(0, 2).map(h => ({
           ...h,
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 3,
           totalPresentInvestedAmount: 30,
         }))
@@ -923,7 +923,7 @@ describe('Subscription.holdingStats ', () => {
       await HoldingStatsChangeModel.bulkCreate(
         reusableHoldingStats.slice(0, 2).map(h => ({
           ...h,
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 16,
         }))
@@ -960,7 +960,7 @@ describe('Subscription.holdingStats ', () => {
             await HoldingStatsChangeModel.create({
               ...reusableHoldingStats[2],
               symbol: 'ADBE',
-              totalPositionCount: 2,
+              totalLotCount: 2,
               totalQuantity: 4,
               totalPresentInvestedAmount: 38,
             });
@@ -974,7 +974,7 @@ describe('Subscription.holdingStats ', () => {
             await HoldingStatsChangeModel.create({
               ...reusableHoldingStats[3],
               symbol: 'AAPL',
-              totalPositionCount: 3,
+              totalLotCount: 3,
               totalQuantity: 6,
               totalPresentInvestedAmount: 58,
             });
@@ -1049,7 +1049,7 @@ describe('Subscription.holdingStats ', () => {
         await HoldingStatsChangeModel.bulkCreate(
           reusableHoldingStats.slice(0, 2).map(h => ({
             ...h,
-            totalPositionCount: 0,
+            totalLotCount: 0,
             totalQuantity: 0,
             totalPresentInvestedAmount: 0,
           }))
@@ -1082,7 +1082,7 @@ describe('Subscription.holdingStats ', () => {
             await TradeRecordModel.create(reusableTradeDatas[2]);
             await HoldingStatsChangeModel.create({
               ...reusableHoldingStats[2],
-              totalPositionCount: 1,
+              totalLotCount: 1,
               totalQuantity: 2,
               totalPresentInvestedAmount: 16,
             });
@@ -1099,7 +1099,7 @@ describe('Subscription.holdingStats ', () => {
             await TradeRecordModel.create(reusableTradeDatas[3]);
             await HoldingStatsChangeModel.create({
               ...reusableHoldingStats[3],
-              totalPositionCount: 2,
+              totalLotCount: 2,
               totalQuantity: 4,
               totalPresentInvestedAmount: 36,
             });
@@ -1170,13 +1170,13 @@ describe('Subscription.holdingStats ', () => {
       await HoldingStatsChangeModel.bulkCreate([
         {
           ...reusableHoldingStats[0],
-          totalPositionCount: 0,
+          totalLotCount: 0,
           totalQuantity: 0,
           totalPresentInvestedAmount: 0,
         },
         {
           ...reusableHoldingStats[1],
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 1,
           totalPresentInvestedAmount: 4,
         },
@@ -1317,7 +1317,7 @@ describe('Subscription.holdingStats ', () => {
         await HoldingStatsChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.2,
             totalRealizedAmount: 0,
@@ -1326,7 +1326,7 @@ describe('Subscription.holdingStats ', () => {
           },
           {
             ...reusableHoldingStats[1],
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.4,
             totalRealizedAmount: 0,

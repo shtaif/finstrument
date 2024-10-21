@@ -2,7 +2,7 @@ import { z } from 'zod';
 import positionRecordSchema from './positionRecordSchema.js';
 
 const userStoredDataSchema = z.object({
-  positions: z.array(positionRecordSchema),
+  lots: z.array(positionRecordSchema),
 });
 
 type UserStoredData = z.infer<typeof userStoredDataSchema>;

@@ -13,18 +13,18 @@ import {
 import { marketDataService, type UpdatedSymbolPriceMap } from '../../marketDataService/index.js';
 import { observeStatsObjectChanges } from '../../observeStatsObjectChanges/index.js';
 
-export { getPositionLiveMarketData, type PositionMarketDataUpdate, type PositionPnlInfo };
+export { getLotLiveMarketData, type LotMarketDataUpdate, type LotPnlInfo };
 
-function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: {
+function getLotLiveMarketData<TTranslateCurrencies extends string>(params: {
   specifiers: {
-    positionId: string;
+    lotId: string;
   }[];
   // specifiers: {
-  //   positionId: string;
+  //   lotId: string;
   //   ownerId?: string;
   // }[];
   translateToCurrencies?: TTranslateCurrencies[];
-}): AsyncIterable<PositionMarketDataUpdate<TTranslateCurrencies>[]> {
+}): AsyncIterable<LotMarketDataUpdate<TTranslateCurrencies>[]> {
   const paramsNorm = {
     specifiers: params.specifiers,
     translateToCurrencies: params.translateToCurrencies ?? [],
@@ -34,25 +34,25 @@ function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: 
     return empty();
   }
 
-  const changedPositionsIter = pipe(
+  const changedLotsIter = pipe(
     observeStatsObjectChanges({
-      specifiers: params.specifiers.map(({ positionId }) => ({ type: 'POSITION', positionId })),
+      specifiers: params.specifiers.map(({ lotId }) => ({ type: 'LOT', lotId })),
     }),
-    itMap(({ changes }) => changes.positions.set),
+    itMap(({ changes }) => changes.lots.set),
     itShare()
   );
 
   const symbolPriceDataIter = pipe(
-    changedPositionsIter,
-    itMap(positions => {
-      const targetSymbols = pipe(positions, v => v.map(({ symbol }) => symbol));
+    changedLotsIter,
+    itMap(lots => {
+      const targetSymbols = pipe(lots, v => v.map(({ symbol }) => symbol));
       const translateCurrenciesExchangeSymbols = pipe(
-        positions,
+        lots,
         v => map(v, ({ symbolInfo }) => symbolInfo.currency),
         v => compact(v),
         v =>
-          v.flatMap(posCurrency =>
-            paramsNorm.translateToCurrencies.map(adjCurrency => `${posCurrency}${adjCurrency}=X`)
+          v.flatMap(lotCurrency =>
+            paramsNorm.translateToCurrencies.map(adjCurrency => `${lotCurrency}${adjCurrency}=X`)
           )
       );
       return [...targetSymbols, ...translateCurrenciesExchangeSymbols];
@@ -61,51 +61,51 @@ function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: 
   );
 
   return itLazyDefer(() => {
-    let allPositions = [] as ExtractAsyncIterableValue<typeof changedPositionsIter>;
+    let allLots = [] as ExtractAsyncIterableValue<typeof changedLotsIter>;
     const allSymbolPriceData = {} as UpdatedSymbolPriceMap;
 
     return pipe(
       itMerge(
         pipe(
-          changedPositionsIter,
-          itTap(changedPositions => (allPositions = changedPositions))
+          changedLotsIter,
+          itTap(changedPositions => (allLots = changedPositions))
         ),
         pipe(
           symbolPriceDataIter,
           itTap(changedSymbols => assign(allSymbolPriceData, changedSymbols)),
           itMap(changedSymbols =>
-            allPositions.filter(
-              pos =>
-                pos.symbol in changedSymbols ||
+            allLots.filter(
+              lot =>
+                lot.symbol in changedSymbols ||
                 (paramsNorm.translateToCurrencies.length &&
-                  pos.symbolInfo.currency &&
+                  lot.symbolInfo.currency &&
                   paramsNorm.translateToCurrencies.some(
-                    adjCurrency => `${pos.symbolInfo.currency!}${adjCurrency}=X` in changedSymbols
+                    adjCurrency => `${lot.symbolInfo.currency!}${adjCurrency}=X` in changedSymbols
                   ))
             )
           )
         )
       ),
-      itMap(positionsToRecalculate => {
+      itMap(lotsToRecalculate => {
         return pipe(
-          positionsToRecalculate,
-          v => filter(v, pos => pos.symbol in allSymbolPriceData),
+          lotsToRecalculate,
+          v => filter(v, lot => lot.symbol in allSymbolPriceData),
           v =>
-            map(v, pos => {
+            map(v, lot => {
               const pnlAmount =
-                pos.remainingQuantity *
-                ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) -
-                  pos.openingTrade.price);
+                lot.remainingQuantity *
+                ((allSymbolPriceData[lot.symbol]?.regularMarketPrice ?? 0) -
+                  lot.openingTrade.price);
 
               const pnlPercent =
-                ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) /
-                  pos.openingTrade.price -
+                ((allSymbolPriceData[lot.symbol]?.regularMarketPrice ?? 0) /
+                  lot.openingTrade.price -
                   1) *
                 100;
 
               const pnlByTranslateCurrencies = pipe(
                 paramsNorm.translateToCurrencies.map(translateCurrency => {
-                  const exchangeSymbol = `${pos.symbolInfo.currency}${translateCurrency}=X`;
+                  const exchangeSymbol = `${lot.symbolInfo.currency}${translateCurrency}=X`;
                   const exchangeRate = allSymbolPriceData[exchangeSymbol]?.regularMarketPrice;
                   return !exchangeRate
                     ? undefined
@@ -119,7 +119,7 @@ function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: 
               );
 
               return {
-                positionId: pos.id,
+                lotId: lot.id,
                 profitOrLoss: {
                   percent: pnlPercent,
                   amount: pnlAmount,
@@ -129,17 +129,17 @@ function getPositionLiveMarketData<TTranslateCurrencies extends string>(params: 
             })
         );
       }),
-      itFilter(positionUpdates => !!positionUpdates.length)
+      itFilter(lotUpdates => !!lotUpdates.length)
     );
   });
 }
 
-type PositionMarketDataUpdate<TTranslateCurrencies extends string = string> = {
-  positionId: string;
-  profitOrLoss: PositionPnlInfo<TTranslateCurrencies>;
+type LotMarketDataUpdate<TTranslateCurrencies extends string = string> = {
+  lotId: string;
+  profitOrLoss: LotPnlInfo<TTranslateCurrencies>;
 };
 
-type PositionPnlInfo<TTranslateCurrencies extends string> = {
+type LotPnlInfo<TTranslateCurrencies extends string> = {
   percent: number;
   amount: number;
   byTranslateCurrencies: {
@@ -152,16 +152,16 @@ type PositionPnlInfo<TTranslateCurrencies extends string> = {
 // (async () => {
 //   try {
 //     const iter = pipe(
-//       getPositionLiveMarketData({
+//       getLotsLiveMarketData({
 //         specifiers: [
-//           { positionId: 'd8564fe6-e1f6-474e-998b-0754c15de21e' },
-//           { positionId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5' },
+//           { lotId: 'd8564fe6-e1f6-474e-998b-0754c15de21e' },
+//           { lotId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5' },
 
-//           // { positionId: 'd8564fe6-e1f6-474e-998b-0754c15de21e___' },
-//           // { positionId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5___' },
+//           // { lotId: 'd8564fe6-e1f6-474e-998b-0754c15de21e___' },
+//           // { lotId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5___' },
 
-//           // { positionId: 'd8564fe6-e1f6-474e-998b-000000000000' },
-//           // { positionId: '2d1b5cf0-a28c-456f-8378-000000000000' },
+//           // { lotId: 'd8564fe6-e1f6-474e-998b-000000000000' },
+//           // { lotId: '2d1b5cf0-a28c-456f-8378-000000000000' },
 //         ],
 //         translateToCurrencies: ['ILS', 'GBP'],
 //       })

@@ -1,7 +1,7 @@
 import { compact } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
-import type { Resolvers, Subscription } from '../../../generated/graphql-schema.d.js';
+import type { Resolvers, Subscription } from '../../../generated/graphql-schema.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
 import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
@@ -10,15 +10,15 @@ export { resolvers };
 
 const resolvers = {
   Subscription: {
-    positions: {
+    lots: {
       subscribe: authenticatedSessionResolverMiddleware((_, args, _ctx, info) => {
-        // TODO: Modify this resolver so it doesn't just target the given position IDs directly, but rather adds also a condition for their owner to be the actual requestor
+        // TODO: Modify this resolver so it doesn't just target the given lot IDs directly, but rather adds also a condition for their owner to be the actual requestor
 
-        const requestedFields = gqlFormattedFieldSelectionTree<Subscription['positions']>(info);
+        const requestedFields = gqlFormattedFieldSelectionTree<Subscription['lots']>(info);
 
         const specifiers = args.filters.ids.map(id => ({
-          type: 'POSITION' as const,
-          positionId: id,
+          type: 'LOT' as const,
+          lotId: id,
         }));
 
         const translateCurrency =
@@ -29,9 +29,9 @@ const resolvers = {
             specifiers,
             translateToCurrencies: compact([translateCurrency]),
             fields: {
-              positions: {
+              lots: {
                 type: !!requestedFields.type,
-                position: pipe(requestedFields.data?.subFields, fields => ({
+                lot: pipe(requestedFields.data?.subFields, fields => ({
                   id: !!fields?.id,
                   ownerId: !!fields?.ownerId,
                   openingTradeId: !!fields?.openingTradeId,
@@ -62,10 +62,10 @@ const resolvers = {
             },
           }),
           itMap(updates =>
-            updates.positions.map(({ type, position, priceData, pnl }) => ({
+            updates.lots.map(({ type, lot, priceData, pnl }) => ({
               type,
               data: {
-                ...position,
+                ...lot,
                 priceData,
                 unrealizedPnl: !pnl
                   ? undefined
@@ -77,8 +77,8 @@ const resolvers = {
               },
             }))
           ),
-          itMap(relevantPositionUpdates => ({
-            positions: relevantPositionUpdates,
+          itMap(relevantLotUpdates => ({
+            lots: relevantLotUpdates,
           }))
         );
       }),

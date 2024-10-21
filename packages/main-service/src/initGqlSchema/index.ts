@@ -19,7 +19,7 @@ import { resolvers as instrumentInfoResolvers } from './schema/InstrumentInfo/re
 import { resolvers as aggregatePnlResolvers } from './schema/AggregatePnl/resolvers.js';
 import { resolvers as observedPortfolioStatsResolvers } from './schema/ObservedPortfolioStats/resolvers.js';
 import { resolvers as observedHoldingStatsResolvers } from './schema/ObservedHoldingStats/resolvers.js';
-import { resolvers as observedPositionsResolvers } from './schema/ObservedPositions/resolvers.js';
+import { resolvers as observedLotsResolvers } from './schema/ObservedLots/resolvers.js';
 import { resolvers as setTradesResultResolvers } from './schema/SetTradesResult/resolvers.js';
 import { resolvers as userResolvers } from './schema/User/resolvers.js';
 import { resolvers as meInfoResolvers } from './schema/MeInfo/resolvers.js';
@@ -42,7 +42,7 @@ const typeDefs = await Promise.all(
     `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
     `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
     `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
-    `${import.meta.dirname}/schema/ObservedPositions/schema.graphql`,
+    `${import.meta.dirname}/schema/ObservedLots/schema.graphql`,
     `${import.meta.dirname}/schema/SetTradesResult/schema.graphql`,
   ].map(defsFilepath => readFile(defsFilepath, 'utf-8'))
 );
@@ -60,7 +60,7 @@ const resolvers = [
   aggregatePnlResolvers,
   observedPortfolioStatsResolvers,
   observedHoldingStatsResolvers,
-  observedPositionsResolvers,
+  observedLotsResolvers,
   setTradesResultResolvers,
 ];
 
@@ -201,7 +201,7 @@ function olderAndProbablyUnusedResolversNeedToSortOut() {
     HoldingRevenueChange: {
       async holding(parentRevenueChange) {
         // const userAlias = parentRevenueChange.holding!.userAlias!;
-        // const positions = await positionsService.retrievePositions({ filters: { userAlias } });
+        // const positions = await positionsService.retrieveLots({ filters: { userAlias } });
         return {
           symbol: parentRevenueChange.symbol,
           breakEvenPrice: 0.011,

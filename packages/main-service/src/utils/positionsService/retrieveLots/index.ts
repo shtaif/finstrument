@@ -1,17 +1,13 @@
 import { Sequelize, Op, type WhereOptions } from 'sequelize';
 import { mapValues } from 'lodash-es';
 import { CustomError } from 'shared-utils';
-import {
-  PositionModel,
-  TradeRecordModel,
-  type PositionModelAttributes,
-} from '../../../db/index.js';
+import { LotModel, TradeRecordModel, type LotModelAttributes } from '../../../db/index.js';
 import { type LogicCombinable } from '../../buildWhereClauseFromLogicCombinables.js';
 import { isNotEmpty } from '../../isNotEmpty.js';
 
-export { retrievePositions, type Position };
+export { retrieveLots, type Lot };
 
-async function retrievePositions(params: {
+async function retrieveLots(params: {
   filters: LogicCombinable<{
     ids?: string[];
     ownerIds?: string[];
@@ -27,7 +23,7 @@ async function retrievePositions(params: {
     'openedAt' | 'remainingQuantity' | 'realizedProfitOrLoss' | 'investedAmount',
     'ASC' | 'DESC',
   ];
-}): Promise<Position[]> {
+}): Promise<Lot[]> {
   const normParams = {
     filters: params.filters,
     orderBy: params.orderBy ?? ['openedAt', 'DESC'],
@@ -42,7 +38,7 @@ async function retrievePositions(params: {
   const tradeRecordModelFields = mapValues(TradeRecordModel.getAttributes(), attr => attr!.field);
 
   try {
-    const positions = await PositionModel.findAll({
+    const lots = await LotModel.findAll({
       attributes: {
         include: [
           [
@@ -109,7 +105,7 @@ async function retrievePositions(params: {
           attributes: ['quantity', 'price', 'performedAt'],
         },
         {
-          association: 'positionClosings',
+          association: 'lotClosings',
           required: false,
           duplicating: false,
           attributes: ['closedQuantity'],
@@ -124,7 +120,7 @@ async function retrievePositions(params: {
       ],
     });
 
-    return positions.map(pos => ({
+    return lots.map(pos => ({
       ...pos.dataValues,
       originalQuantity: pos.openingTrade.quantity,
     }));
@@ -145,6 +141,6 @@ async function retrievePositions(params: {
   }
 }
 
-type Position = PositionModelAttributes & {
+type Lot = LotModelAttributes & {
   originalQuantity: number;
 };

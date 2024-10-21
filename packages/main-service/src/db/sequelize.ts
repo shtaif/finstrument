@@ -3,8 +3,8 @@ import { env } from '../utils/env.js';
 import { UserModel } from './models/UserModel.js';
 import { TradeRecordModel } from './models/TradeRecordModel.js';
 import { InstrumentInfoModel } from './models/InstrumentInfoModel.js';
-import { PositionModel } from './models/PositionModel.js';
-import { PositionClosingModel } from './models/PositionClosingModel.js';
+import { LotModel } from './models/LotModel.js';
+import { LotClosingModel } from './models/LotClosingModel.js';
 import { HoldingStatsChangeModel } from './models/HoldingStatsChangeModel.js';
 import { PortfolioStatsChangeModel } from './models/PortfolioStatsChangeModel.js';
 import { PortfolioCompositionChangeModel } from './models/PortfolioCompositionChangeModel.js';
@@ -22,8 +22,8 @@ const sequelize = new Sequelize(env.POSTGRES_DB_CONNECTION_URL, {
     UserModel,
     TradeRecordModel,
     InstrumentInfoModel,
-    PositionModel,
-    PositionClosingModel,
+    LotModel,
+    LotClosingModel,
     HoldingStatsChangeModel,
     PortfolioStatsChangeModel,
     PortfolioCompositionChangeModel,

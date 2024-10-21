@@ -20,8 +20,8 @@ import {
   UserModel,
   HoldingStatsChangeModel,
   PortfolioStatsChangeModel,
-  PositionModel,
-  PositionClosingModel,
+  LotModel,
+  LotClosingModel,
 } from '../../../db/index.js';
 import { mainRedisClient } from '../../redisClients.js';
 import { userHoldingsChangedTopic } from '../../pubsubTopics/userHoldingsChangedTopic.js';
@@ -66,7 +66,7 @@ async function setPositions(params: {
     });
   }
 
-  const { tradeStats, positionChanges, latestHoldingStatsChanges, latestPortfolioStatsChanges } =
+  const { tradeStats, lotChanges, latestHoldingStatsChanges, latestPortfolioStatsChanges } =
     await sequelize.transaction(async t => {
       await sequelize.query(
         `LOCK TABLE ${[
@@ -74,8 +74,8 @@ async function setPositions(params: {
           UserModel,
           HoldingStatsChangeModel,
           PortfolioStatsChangeModel,
-          PositionModel,
-          PositionClosingModel,
+          LotModel,
+          LotClosingModel,
         ]
           .map(m => `"${pgSchemaName}"."${m.tableName}"`)
           .join(', ')} IN SHARE ROW EXCLUSIVE MODE;`,
@@ -87,7 +87,7 @@ async function setPositions(params: {
           transaction: t,
           filters: { ownerIds: [targetOwnerId] },
         })
-      ).map(({ symbol, totalPositionCount }) => ({ symbol, totalPositionCount }));
+      ).map(({ symbol, totalLotCount }) => ({ symbol, totalLotCount }));
 
       const symbolsHeldBefore = holdingStatsBefore.map(({ symbol }) => symbol);
 
@@ -174,7 +174,7 @@ async function setPositions(params: {
         v => sortBy(v, ({ performedAt }) => performedAt)
       );
 
-      const [tradesRemoved, positionIdsDeleteCandidates] =
+      const [tradesRemoved, lotIdsDeleteCandidates] =
         mode !== 'REPLACE'
           ? [[], []]
           : await (async () => {
@@ -191,8 +191,8 @@ async function setPositions(params: {
                 })
               ).map(({ id, symbol, quantity }) => ({ id, symbol, quantity }));
 
-              const positionIdsDeleteCandidates = (
-                await PositionModel.findAll({
+              const lotIdsDeleteCandidates = (
+                await LotModel.findAll({
                   transaction: t,
                   attributes: ['id'],
                   where: {
@@ -203,7 +203,7 @@ async function setPositions(params: {
                 })
               ).map(({ id }) => id);
 
-              // console.log({ positionIdsDeleteCandidates });
+              // console.log({ lotIdsDeleteCandidates });
 
               await TradeRecordModel.destroy({
                 transaction: t,
@@ -213,7 +213,7 @@ async function setPositions(params: {
                 },
               });
 
-              return [tradeDeleteCandidates, positionIdsDeleteCandidates];
+              return [tradeDeleteCandidates, lotIdsDeleteCandidates];
             })();
 
       const allResultingTrades = (
@@ -245,25 +245,25 @@ async function setPositions(params: {
       //   uniq
       // );
 
-      const symbolPositionCountsBefore = chain(holdingStatsBefore)
+      const symbolLotCountsBefore = chain(holdingStatsBefore)
         .keyBy(({ symbol }) => symbol)
-        .mapValues(({ totalPositionCount }) => totalPositionCount)
+        .mapValues(({ totalLotCount }) => totalLotCount)
         .value();
 
-      const symbolPositionCountsAfter = chain(allResultingTrades)
+      const symbolLotCountsAfter = chain(allResultingTrades)
         .groupBy(({ symbol }) => symbol)
         .mapValues(trades => trades.length)
         .value();
 
-      const symbolsRemoved = keys(symbolPositionCountsBefore)
-        .filter(symbol => !symbolPositionCountsAfter[symbol])
+      const symbolsRemoved = keys(symbolLotCountsBefore)
+        .filter(symbol => !symbolLotCountsAfter[symbol])
         .toSorted();
 
       const symbolsAddedOrChanged = pipe(
         [
           ...tradesToCreate.map(t => t.symbol),
           ...tradesToModify.map(t => t.symbol),
-          ...tradesRemoved.map(t => t.symbol).filter(symbol => symbolPositionCountsAfter[symbol]),
+          ...tradesRemoved.map(t => t.symbol).filter(symbol => symbolLotCountsAfter[symbol]),
         ],
         v => uniq(v),
         v => v.toSorted()
@@ -271,8 +271,8 @@ async function setPositions(params: {
 
       const instInfos = await asyncPipe(
         keys({
-          ...symbolPositionCountsBefore,
-          ...symbolPositionCountsAfter,
+          ...symbolLotCountsBefore,
+          ...symbolLotCountsAfter,
         }),
         allMentionedSymbolsBeforeAndAfter =>
           getInstrumentInfos({ symbols: allMentionedSymbolsBeforeAndAfter })
@@ -417,7 +417,7 @@ async function setPositions(params: {
         ...newlyAddedTrades.map(t => instInfos[t.symbol].currency),
       ]);
 
-      const posClosingsBySymbols = pipe(
+      const lotClosingsBySymbols = pipe(
         allResultingTrades,
         v => groupBy(v, ({ symbol }) => symbol),
         v =>
@@ -429,7 +429,7 @@ async function setPositions(params: {
           ),
         v =>
           mapValues(v, ([buys, sales]) => {
-            const posClosings: {
+            const lotClosings: {
               buyTradeId: string;
               associatedSellTradeId: string;
               closedQuantity: number;
@@ -449,30 +449,30 @@ async function setPositions(params: {
                 currBuy.remaining = 0;
                 bIdx++;
               }
-              posClosings.push({
+              lotClosings.push({
                 buyTradeId: currBuy.trade.id,
                 associatedSellTradeId: currSell.trade.id,
                 closedQuantity: closedQuant,
               });
             }
 
-            return posClosings;
+            return lotClosings;
           })
       );
 
-      // const buyTradeIdsThatHadChangesToTheirSellTrades = values(posClosingsBySymbols)
+      // const buyTradeIdsThatHadChangesToTheirSellTrades = values(lotClosingsBySymbols)
       //   .flat()
       //   .filter(
-      //     posClosing =>
-      //       newlyAddedTrades.some(({ id }) => id === posClosing.associatedSellTradeId) ||
-      //       modifiedTrades.some(({ id }) => id === posClosing.associatedSellTradeId)
+      //     lotClosing =>
+      //       newlyAddedTrades.some(({ id }) => id === lotClosing.associatedSellTradeId) ||
+      //       modifiedTrades.some(({ id }) => id === lotClosing.associatedSellTradeId)
       //   );
 
-      const changedOrAddedPositionIds = await asyncPipe(
+      const changedOrAddedLotIds = await asyncPipe(
         allResultingTrades
           .filter(({ quantity }) => quantity > 0)
           .map(async openingTrade => {
-            const currLotClosings = posClosingsBySymbols[openingTrade.symbol].filter(
+            const currLotClosings = lotClosingsBySymbols[openingTrade.symbol].filter(
               ({ buyTradeId }) => buyTradeId === openingTrade.id
             );
 
@@ -488,7 +488,7 @@ async function setPositions(params: {
 
             if (newlyAddedTrades.some(newlyAddedTrade => newlyAddedTrade.id === openingTrade.id)) {
               return (
-                await PositionModel.create(
+                await LotModel.create(
                   {
                     ownerId: targetOwnerId,
                     openingTradeId: openingTrade.id,
@@ -501,7 +501,7 @@ async function setPositions(params: {
                 )
               ).id;
             } else {
-              const [, affectedRows] = await PositionModel.update(
+              const [, affectedRows] = await LotModel.update(
                 { remainingQuantity, realizedProfitOrLoss },
                 {
                   transaction: t,
@@ -515,16 +515,16 @@ async function setPositions(params: {
                   },
                 }
               );
-              const possiblyUpdatedMatchingPosition = affectedRows.at(0);
-              return possiblyUpdatedMatchingPosition?.id;
+              const possiblyUpdatedMatchingLot = affectedRows.at(0);
+              return possiblyUpdatedMatchingLot?.id;
             }
           }),
         v => Promise.all(v),
         compact
       );
 
-      // const positionIdsDeleteCandidates = (
-      //   await PositionModel.findAll({
+      // const lotIdsDeleteCandidates = (
+      //   await LotModel.findAll({
       //     transaction: t,
       //     attributes: ['id'],
       //     where: {
@@ -533,21 +533,21 @@ async function setPositions(params: {
       //   })
       // ).map(({ id }) => id);
 
-      // const ___AFTER = await PositionModel.findAll({
+      // const ___AFTER = await LotModel.findAll({
       //   transaction: t,
       //   attributes: ['id'],
       // });
 
       // console.log({ ___BEFORE, ___AFTER });
 
-      // TODO: Is the following needed? Since each trade deletion cascades into its referencing position, at this point this shouldn't actually ever have anything left to delete - need to log result to verify
-      await PositionModel.destroy({
+      // TODO: Is the following needed? Since each trade deletion cascades into its referencing lot, at this point this shouldn't actually ever have anything left to delete - need to log result to verify
+      await LotModel.destroy({
         transaction: t,
-        where: { id: positionIdsDeleteCandidates },
+        where: { id: lotIdsDeleteCandidates },
       });
 
-      const openingTradeIdsToPosIdsMap = await asyncPipe(
-        PositionModel.findAll({
+      const openingTradeIdsToLotIdsMap = await asyncPipe(
+        LotModel.findAll({
           transaction: t,
           attributes: ['id', 'openingTradeId'],
         }),
@@ -555,12 +555,12 @@ async function setPositions(params: {
         v => mapValues(v, ({ id }) => id)
       );
 
-      await PositionClosingModel.destroy({ transaction: t, where: {} });
-      await PositionClosingModel.bulkCreate(
-        Object.values(posClosingsBySymbols)
+      await LotClosingModel.destroy({ transaction: t, where: {} });
+      await LotClosingModel.bulkCreate(
+        Object.values(lotClosingsBySymbols)
           .flat()
           .map(({ buyTradeId, associatedSellTradeId, closedQuantity }) => ({
-            positionId: openingTradeIdsToPosIdsMap[buyTradeId],
+            lotId: openingTradeIdsToLotIdsMap[buyTradeId],
             associatedTradeId: associatedSellTradeId,
             closedQuantity,
           })),
@@ -580,9 +580,9 @@ async function setPositions(params: {
           modifiedCount: tradesToModify.length,
           removedCount: tradesRemoved.length,
         },
-        positionChanges: {
-          set: changedOrAddedPositionIds,
-          remove: positionIdsDeleteCandidates,
+        lotChanges: {
+          set: changedOrAddedLotIds,
+          remove: lotIdsDeleteCandidates,
         },
         latestHoldingStatsChanges: {
           set: symbolsAddedOrChanged,
@@ -605,9 +605,9 @@ async function setPositions(params: {
       set: latestHoldingStatsChanges.set,
       remove: latestHoldingStatsChanges.remove,
     },
-    positions: {
-      set: positionChanges.set,
-      remove: positionChanges.remove,
+    lots: {
+      set: lotChanges.set,
+      remove: lotChanges.remove,
     },
   });
 

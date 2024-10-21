@@ -6,10 +6,10 @@ export { resolvers };
 
 const resolvers = {
   Query: {
-    positions: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
+    lots: authenticatedSessionResolverMiddleware(async (_, args, ctx) => {
       const activeUserId = ctx.activeSession.activeUserId;
 
-      const positions = await positionsService.retrievePositions({
+      const lots = await positionsService.retrieveLots({
         filters: {
           and: [
             { ownerIds: [activeUserId] },
@@ -25,15 +25,15 @@ const resolvers = {
         orderBy: ['openedAt', 'DESC'],
       });
 
-      return positions;
+      return lots;
     }),
   },
 
-  Position: {
-    async instrument(position, _, ctx) {
+  Lot: {
+    async instrument(lot, _, ctx) {
       // TODO: Add a GraphQL middleware which logs resolver exceptions internally as it catches them
 
-      const instrumentInfo = await ctx.instrumentInfoLoader.load(position.symbol!);
+      const instrumentInfo = await ctx.instrumentInfoLoader.load(lot.symbol!);
 
       return {
         symbol: instrumentInfo.symbol,
@@ -48,15 +48,15 @@ const resolvers = {
       };
     },
 
-    async priceData(position, _, ctx) {
+    async priceData(lot, _, ctx) {
       const instrumentCurrMarketData = (await ctx.instrumentCurrentMarketDataLoader.load(
-        position.symbol!
+        lot.symbol!
       ))!;
       return instrumentCurrMarketData;
     },
 
-    async unrealizedPnl(position, _, ctx) {
-      const currMarketData = (await ctx.positionMarketDataLoader.load(position.id!))!;
+    async unrealizedPnl(lot, _, ctx) {
+      const currMarketData = (await ctx.lotMarketDataLoader.load(lot.id!))!;
       return {
         amount: currMarketData.pnl.amount,
         percent: currMarketData.pnl.percent,
