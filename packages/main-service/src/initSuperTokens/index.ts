@@ -26,6 +26,7 @@ function initSuperTokens(params: {
     },
     recipeList: [
       SupertokensRecipeSession.init({
+        exposeAccessTokenToFrontendInCookieBasedAuth: true,
         cookieDomain: params.sessionCookieDomain,
         ...(new URL(params.apiDomain).protocol === 'https:'
           ? {

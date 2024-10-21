@@ -1,6 +1,7 @@
 import express from 'express';
 import { ApolloServer } from '@apollo/server';
 import { expressMiddleware } from '@apollo/server/express4';
+import StSession from 'supertokens-node/recipe/session';
 import { initedGqlSchema } from '../initGqlSchema/index.js';
 import { appGqlContext, type AppGqlContextValue } from '../initGqlSchema/appGqlContext.js';
 
@@ -24,8 +25,17 @@ async function createGraphqlAppMiddleware(): Promise<{
     graphqlAppMiddleware: expressMiddleware(apolloServer, {
       context: async expressCtxFunctionArg => {
         return await appGqlContext({
-          req: expressCtxFunctionArg.req,
-          res: expressCtxFunctionArg.res,
+          getSession: async () => {
+            const stSession = await StSession.getSession(
+              expressCtxFunctionArg.req,
+              expressCtxFunctionArg.res,
+              { sessionRequired: false }
+            );
+            const userId = stSession?.getUserId();
+            return {
+              activeUserId: userId,
+            };
+          },
         });
       },
     }),

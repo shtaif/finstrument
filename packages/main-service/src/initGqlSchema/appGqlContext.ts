@@ -1,6 +1,4 @@
-import type http from 'node:http';
 import { once } from 'lodash-es';
-import Session from 'supertokens-node/recipe/session';
 import {
   createHoldingMarketDataLoader,
   type HoldingMarketStats,
@@ -36,8 +34,7 @@ export {
 };
 
 const appGqlContext = async (injectedInfo: {
-  req: http.IncomingMessage;
-  res?: http.OutgoingMessage;
+  getSession: () => Promise<{ activeUserId: string | undefined }>;
 }): Promise<{
   getSession: () => Promise<{ activeUserId: string | undefined }>;
   portfolioStatsLoader: ReturnType<typeof createPortfolioStatsLoader>;
@@ -51,14 +48,7 @@ const appGqlContext = async (injectedInfo: {
   instrumentCurrentMarketDataLoader: ReturnType<typeof createInstrumentCurrentMarketDataLoader>;
   // observedStatsObjectsLoader: ReturnType<typeof createObservedStatsObjectsLoader>;
 }> => {
-  const getSession = once(async () => {
-    const { req, res } = injectedInfo;
-    const supertokensSession = await Session.getSession(req, res ?? {}, { sessionRequired: false });
-    const userId = supertokensSession?.getUserId();
-    return {
-      activeUserId: userId,
-    };
-  });
+  const getSession = once(async () => await injectedInfo.getSession());
 
   const portfolioStatsLoader = createPortfolioStatsLoader();
   const portfolioStatsChangesLoader = createPortfolioStatsChangesLoader();

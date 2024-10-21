@@ -1,0 +1,7 @@
+.cmp-symbol-name-tag {
+  font-size: 16px;
+
+  .currency-override-prefix {
+    color: rgba(255, 255, 255, 0.25);
+  }
+}

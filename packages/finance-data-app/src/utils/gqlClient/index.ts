@@ -1,6 +1,7 @@
 import { pipe } from 'shared-utils';
 import { ApolloClient, InMemoryCache, split, HttpLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
+import { getAccessToken as stSessionGetAccessToken } from 'supertokens-auth-react/recipe/session';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient as createGqlWsClient } from 'graphql-ws';
 
@@ -11,11 +12,17 @@ const httpLink = new HttpLink({
 });
 
 const gqlWsClient = createGqlWsClient({
+  lazy: true,
+  keepAlive: 0,
+  lazyCloseTimeout: 4000,
   url: pipe(
     import.meta.env.VITE_API_URL,
     $ => new URL($),
     $ => `${$.protocol === 'https:' ? 'wss' : 'ws'}://${$.host}/graphql`
   ),
+  connectionParams: async () => ({
+    accessToken: await stSessionGetAccessToken(),
+  }),
 });
 
 const wsLink = new GraphQLWsLink(gqlWsClient);

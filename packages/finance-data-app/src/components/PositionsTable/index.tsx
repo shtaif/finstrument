@@ -1,9 +1,10 @@
 import React, { memo, type ReactElement, type ReactNode } from 'react';
 import { range } from 'lodash-es';
-import { Table, Tag, Skeleton, Tooltip } from 'antd';
+import { Table, Skeleton, Tooltip } from 'antd';
 import { type MaybeAsyncIterable } from 'iterable-operators';
 import { Iterate } from 'react-async-iterable';
 import { LivePriceDisplay } from '../LivePriceDisplay';
+import { SymbolNameTag } from './components/SymbolNameTag';
 import { SymbolPriceUpdatedAt } from './components/SymbolPriceUpdatedAt';
 import { MarketStateIndicatorIcon } from './components/MarketStateIndicatorIcon';
 import {
@@ -56,13 +57,7 @@ function PositionsTable(props: {
               title: <>Symbol</>,
               className: 'symbol-cell',
               render: (_, pos) =>
-                loading ? (
-                  <CellSkeleton />
-                ) : (
-                  <Tag className="symbol-name-tag" color="geekblue">
-                    {pos.symbol}
-                  </Tag>
-                ),
+                loading ? <CellSkeleton /> : <SymbolNameTag symbol={pos.symbol} />,
             },
             {
               title: <>Current Price</>,
@@ -106,7 +101,7 @@ function PositionsTable(props: {
                 ) : quantity === undefined ? (
                   '-'
                 ) : (
-                  quantity.toLocaleString()
+                  <>{quantity.toLocaleString()}</>
                 ),
             },
             {
