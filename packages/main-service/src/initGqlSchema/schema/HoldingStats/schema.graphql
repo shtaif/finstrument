@@ -7,7 +7,7 @@ type HoldingStats {
   lastRelatedTradeId: ID!
   symbol: ID!
   lastChangedAt: DateTime!
-  totalPositionCount: Int!
+  totalLotCount: Int!
   totalQuantity: Float!
   totalPresentInvestedAmount: Float!
   totalRealizedAmount: Float!

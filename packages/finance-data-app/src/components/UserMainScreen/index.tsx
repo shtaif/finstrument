@@ -106,8 +106,8 @@ function UserMainScreen() {
                           iter: [
                             () =>
                               pipe(
-                                createPositionDataIter({ symbol }),
-                                itMap(({ positions }) => positions)
+                                createLotDataIter({ symbol }),
+                                itMap(({ lots }) => lots)
                               ),
                             [symbol],
                           ],
@@ -212,36 +212,36 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
 type HoldingStatsDataSubscriptionResult = DocumentType<typeof holdingStatsDataSubscription>;
 type HoldingStatsItem = HoldingStatsDataSubscriptionResult['holdingStats'][number]['data'];
 
-function createPositionDataIter({ symbol }: { symbol: string }): AsyncIterable<{
-  positions: PositionItem[];
+function createLotDataIter({ symbol }: { symbol: string }): AsyncIterable<{
+  lots: LotItem[];
   errors: readonly GraphQLError[] | undefined;
 }> {
   return pipe(
     itLazyDefer(async () => {
-      const queriedPositions = await gqlClient.query({
+      const queriedLots = await gqlClient.query({
         variables: { symbol },
-        query: positionQuery,
+        query: lotQuery,
       });
 
-      const posIds = queriedPositions.data.positions.map(({ id }) => id);
+      const lotIds = queriedLots.data.lots.map(({ id }) => id);
 
-      const allCurPositions = {} as { [symbol: string]: PositionItem };
+      const allCurrLots = {} as { [symbol: string]: LotItem };
 
       return pipe(
-        gqlWsClient.iterate<PositionDataSubscriptionResult>({
-          variables: { ids: posIds },
-          query: gqlPrint(positionDataSubscription),
+        gqlWsClient.iterate<LotDataSubscriptionResult>({
+          variables: { ids: lotIds },
+          query: gqlPrint(lotDataSubscription),
         }),
         itTap(next => {
-          for (const update of next.data?.positions ?? []) {
+          for (const update of next.data?.lots ?? []) {
             ({
-              ['SET']: () => (allCurPositions[update.data.id] = update.data),
-              ['REMOVE']: () => delete allCurPositions[update.data.id],
+              ['SET']: () => (allCurrLots[update.data.id] = update.data),
+              ['REMOVE']: () => delete allCurrLots[update.data.id],
             })[update.type]();
           }
         }),
         itMap(next => ({
-          positions: Object.values(allCurPositions),
+          lots: Object.values(allCurrLots),
           errors: next.errors,
         }))
       );
@@ -250,17 +250,17 @@ function createPositionDataIter({ symbol }: { symbol: string }): AsyncIterable<{
   );
 }
 
-const positionQuery = graphql(/* GraphQL */ `
-  query PositionsQuery($symbol: ID!) {
-    positions(filters: { symbols: [$symbol] }) {
+const lotQuery = graphql(/* GraphQL */ `
+  query LotsQuery($symbol: ID!) {
+    lots(filters: { symbols: [$symbol] }) {
       id
     }
   }
 `);
 
-const positionDataSubscription = graphql(/* GraphQL */ `
-  subscription PositionDataSubscription($ids: [ID!]!) {
-    positions(filters: { ids: $ids }) {
+const lotDataSubscription = graphql(/* GraphQL */ `
+  subscription LotDataSubscription($ids: [ID!]!) {
+    lots(filters: { ids: $ids }) {
       type
       data {
         id
@@ -276,5 +276,5 @@ const positionDataSubscription = graphql(/* GraphQL */ `
   }
 `);
 
-type PositionDataSubscriptionResult = DocumentType<typeof positionDataSubscription>;
-type PositionItem = PositionDataSubscriptionResult['positions'][number]['data'];
+type LotDataSubscriptionResult = DocumentType<typeof lotDataSubscription>;
+type LotItem = LotDataSubscriptionResult['lots'][number]['data'];

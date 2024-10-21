@@ -5,7 +5,7 @@ import {
   HoldingStatsChangeModel,
   InstrumentInfoModel,
   PortfolioStatsChangeModel,
-  PositionModel,
+  LotModel,
   TradeRecordModel,
   UserModel,
 } from '../src/db/index.js';
@@ -70,7 +70,7 @@ beforeEach(async () => {
   await Promise.all([
     HoldingStatsChangeModel.destroy({ where: {} }),
     PortfolioStatsChangeModel.destroy({ where: {} }),
-    PositionModel.destroy({ where: {} }),
+    LotModel.destroy({ where: {} }),
   ]);
 });
 
@@ -78,7 +78,7 @@ afterAll(async () => {
   await Promise.all([
     HoldingStatsChangeModel.destroy({ where: {} }),
     PortfolioStatsChangeModel.destroy({ where: {} }),
-    PositionModel.destroy({ where: {} }),
+    LotModel.destroy({ where: {} }),
     TradeRecordModel.destroy({ where: {} }),
     InstrumentInfoModel.destroy({ where: {} }),
     UserModel.destroy({ where: {} }),
@@ -124,10 +124,10 @@ describe('Mutation.setTrades', () => {
       },
     });
 
-    const [redisEvent, positionsCreated, holdingStatsChangesCreated, portfolioStatsChangesCreated] =
+    const [redisEvent, lotsCreated, holdingStatsChangesCreated, portfolioStatsChangesCreated] =
       await Promise.all([
         redisEventPromise,
-        (async () => (await PositionModel.findAll()).map(r => r.dataValues))(),
+        (async () => (await LotModel.findAll()).map(r => r.dataValues))(),
         (async () => (await HoldingStatsChangeModel.findAll()).map(r => r.dataValues))(),
         (async () => (await PortfolioStatsChangeModel.findAll()).map(r => r.dataValues))(),
       ]);
@@ -136,9 +136,9 @@ describe('Mutation.setTrades', () => {
       ownerId: mockUserId1,
       portfolioStats: { set: [], remove: [] },
       holdingStats: { set: [], remove: [] },
-      positions: { set: [], remove: [] },
+      lots: { set: [], remove: [] },
     });
-    expect(positionsCreated).toStrictEqual([]);
+    expect(lotsCreated).toStrictEqual([]);
     expect(holdingStatsChangesCreated).toStrictEqual([]);
     expect(portfolioStatsChangesCreated).toStrictEqual([]);
   });
@@ -186,7 +186,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       tradesCreated,
-      positionsCreated,
+      lotsCreated,
       holdingStatsChangesCreated,
       portfolioStatsChangesCreated,
     ] = await Promise.all([
@@ -194,9 +194,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -215,8 +213,8 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
-        set: [positionsCreated[0].id, positionsCreated[1].id, positionsCreated[2].id],
+      lots: {
+        set: [lotsCreated[0].id, lotsCreated[1].id, lotsCreated[2].id],
         remove: [],
       },
     });
@@ -254,7 +252,7 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(positionsCreated).toStrictEqual([
+    expect(lotsCreated).toStrictEqual([
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -296,7 +294,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-01, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.2,
         totalRealizedAmount: 0,
@@ -308,7 +306,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-02, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 4.6,
         totalRealizedAmount: 0,
@@ -320,7 +318,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'AAPL',
         changedAt: new Date('2024-01-03, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.6,
         totalRealizedAmount: 0,
@@ -396,8 +394,8 @@ describe('Mutation.setTrades', () => {
         ])
       ).map(record => record.dataValues);
 
-      const initialPositions = (
-        await PositionModel.bulkCreate([
+      const initialLots = (
+        await LotModel.bulkCreate([
           {
             ownerId: mockUserId1,
             openingTradeId: initialTrades[0].id,
@@ -432,7 +430,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[0].id,
             symbol: 'ADBE',
             changedAt: new Date('2024-01-01, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.2,
             totalRealizedAmount: 0,
@@ -444,7 +442,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[1].id,
             symbol: 'AAPL',
             changedAt: new Date('2024-01-02, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.4,
             totalRealizedAmount: 0,
@@ -456,7 +454,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[2].id,
             symbol: 'NVDA',
             changedAt: new Date('2024-01-03, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.6,
             totalRealizedAmount: 0,
@@ -541,7 +539,7 @@ describe('Mutation.setTrades', () => {
       const [
         redisEvent,
         allFinalTrades,
-        allFinalPositions,
+        allFinalLots,
         allFinalHoldingStatsChanges,
         allFinalPortfolioStatsChanges,
       ] = await Promise.all([
@@ -549,7 +547,7 @@ describe('Mutation.setTrades', () => {
         TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
-        PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
+        LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
         HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -570,14 +568,14 @@ describe('Mutation.setTrades', () => {
           set: [],
           remove: ['AAPL', 'ADBE'],
         },
-        positions: {
+        lots: {
           set: [],
-          remove: [initialPositions[0].id, initialPositions[1].id],
+          remove: [initialLots[0].id, initialLots[1].id],
         },
       });
 
       expect(allFinalTrades).toStrictEqual([initialTrades[2]]);
-      expect(allFinalPositions).toStrictEqual([initialPositions[2]]);
+      expect(allFinalLots).toStrictEqual([initialLots[2]]);
       expect(allFinalHoldingStatsChanges).toStrictEqual([initialHoldingStats[2]]);
       expect(allFinalPortfolioStatsChanges).toStrictEqual([
         {
@@ -621,8 +619,8 @@ describe('Mutation.setTrades', () => {
         ])
       ).map(record => record.dataValues);
 
-      const initialPositions = (
-        await PositionModel.bulkCreate([
+      const initialLots = (
+        await LotModel.bulkCreate([
           {
             ownerId: mockUserId1,
             openingTradeId: initialTrades[0].id,
@@ -657,7 +655,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[0].id,
             symbol: 'ADBE',
             changedAt: new Date('2024-01-01, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.2,
             totalRealizedAmount: 0,
@@ -669,7 +667,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[1].id,
             symbol: 'AAPL',
             changedAt: new Date('2024-01-02, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.4,
             totalRealizedAmount: 0,
@@ -681,7 +679,7 @@ describe('Mutation.setTrades', () => {
             relatedTradeId: initialTrades[2].id,
             symbol: 'NVDA',
             changedAt: new Date('2024-01-03, 00:00:00'),
-            totalPositionCount: 1,
+            totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.6,
             totalRealizedAmount: 0,
@@ -766,7 +764,7 @@ describe('Mutation.setTrades', () => {
       const [
         redisEvent,
         allFinalTrades,
-        allFinalPositions,
+        allFinalLots,
         allFinalHoldingStatsChanges,
         allFinalPortfolioStatsChanges,
       ] = await Promise.all([
@@ -774,7 +772,7 @@ describe('Mutation.setTrades', () => {
         TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
-        PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
+        LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
         HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -789,10 +787,10 @@ describe('Mutation.setTrades', () => {
         ownerId: mockUserId1,
         portfolioStats: { set: [], remove: [] },
         holdingStats: { set: [], remove: [] },
-        positions: { set: [], remove: [] },
+        lots: { set: [], remove: [] },
       });
       expect(allFinalTrades).toStrictEqual(initialTrades);
-      expect(allFinalPositions).toStrictEqual(initialPositions);
+      expect(allFinalLots).toStrictEqual(initialLots);
       expect(allFinalHoldingStatsChanges).toStrictEqual(initialHoldingStats);
       expect(allFinalPortfolioStatsChanges).toStrictEqual(initialPortfolioStats);
     }
@@ -812,8 +810,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -832,7 +830,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -899,7 +897,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -907,9 +905,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -922,7 +918,7 @@ describe('Mutation.setTrades', () => {
       ownerId: mockUserId1,
       portfolioStats: { remove: [], set: [{ forCurrency: 'GBP' }] },
       holdingStats: { remove: [], set: ['VUAG'] },
-      positions: { remove: [], set: [allFinalPositions[0].id, allFinalPositions[1].id] },
+      lots: { remove: [], set: [allFinalLots[0].id, allFinalLots[1].id] },
     });
 
     expect(allFinalTrades).toStrictEqual([
@@ -949,7 +945,7 @@ describe('Mutation.setTrades', () => {
       initialTrades[0],
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
+    expect(allFinalLots).toStrictEqual([
       {
         id: expect.any(String),
         ownerId: mockUserId1,
@@ -972,7 +968,7 @@ describe('Mutation.setTrades', () => {
         realizedProfitOrLoss: 0,
         remainingQuantity: 2,
       },
-      initialPositions[0],
+      initialLots[0],
     ]);
 
     expect(allFinalHoldingStatsChanges).toStrictEqual([
@@ -981,7 +977,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[0].id,
         symbol: 'VUAG',
         changedAt: new Date('2024-01-01, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.2,
         totalRealizedAmount: 0,
@@ -993,7 +989,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[1].id,
         symbol: 'VUAG',
         changedAt: new Date('2024-01-02, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 4.6,
         totalRealizedAmount: 0,
@@ -1042,8 +1038,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -1062,7 +1058,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -1129,7 +1125,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -1137,9 +1133,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -1158,8 +1152,8 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL:EUR', 'ADBE:GBP'],
         remove: [],
       },
-      positions: {
-        set: [allFinalPositions[0].id, allFinalPositions[1].id],
+      lots: {
+        set: [allFinalLots[0].id, allFinalLots[1].id],
         remove: [],
       },
     });
@@ -1188,7 +1182,7 @@ describe('Mutation.setTrades', () => {
       initialTrades[0],
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
+    expect(allFinalLots).toStrictEqual([
       {
         id: expect.any(String),
         ownerId: mockUserId1,
@@ -1211,7 +1205,7 @@ describe('Mutation.setTrades', () => {
         realizedProfitOrLoss: 0,
         remainingQuantity: 2,
       },
-      initialPositions[0],
+      initialLots[0],
     ]);
 
     expect(allFinalHoldingStatsChanges).toStrictEqual([
@@ -1220,7 +1214,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[0].id,
         symbol: 'ADBE:GBP',
         changedAt: new Date('2024-01-01, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.2,
         totalRealizedAmount: 0,
@@ -1232,7 +1226,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[1].id,
         symbol: 'AAPL:EUR',
         changedAt: new Date('2024-01-02, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.4,
         totalRealizedAmount: 0,
@@ -1281,8 +1275,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -1301,7 +1295,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 0,
@@ -1369,7 +1363,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -1377,9 +1371,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -1398,12 +1390,12 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
+      lots: {
         set: [
-          allFinalPositions[1].id,
-          allFinalPositions[2].id,
-          allFinalPositions[3].id,
-          allFinalPositions[4].id,
+          allFinalLots[1].id,
+          allFinalLots[2].id,
+          allFinalLots[3].id,
+          allFinalLots[4].id,
         ],
         remove: [],
       },
@@ -1448,8 +1440,8 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
-      initialPositions[0],
+    expect(allFinalLots).toStrictEqual([
+      initialLots[0],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -1503,7 +1495,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-02, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.2,
         totalRealizedAmount: 0,
@@ -1515,7 +1507,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-03, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 4.6,
         totalRealizedAmount: 0,
@@ -1527,7 +1519,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'AAPL',
         changedAt: new Date('2024-01-04, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.6,
         totalRealizedAmount: 0,
@@ -1539,7 +1531,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'AAPL',
         changedAt: new Date('2024-01-05, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 5.4,
         totalRealizedAmount: 0,
@@ -1623,8 +1615,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -1659,7 +1651,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -1671,7 +1663,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.4,
           totalRealizedAmount: 0,
@@ -1683,7 +1675,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-04, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.8,
           totalRealizedAmount: 0,
@@ -1772,7 +1764,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -1780,9 +1772,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -1801,8 +1791,8 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
-        set: [allFinalPositions[2].id, allFinalPositions[4].id],
+      lots: {
+        set: [allFinalLots[2].id, allFinalLots[4].id],
         remove: [],
       },
     });
@@ -1834,9 +1824,9 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
-      initialPositions[0],
-      initialPositions[1],
+    expect(allFinalLots).toStrictEqual([
+      initialLots[0],
+      initialLots[1],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -1848,7 +1838,7 @@ describe('Mutation.setTrades', () => {
         realizedProfitOrLoss: 0,
         remainingQuantity: 2,
       },
-      initialPositions[2],
+      initialLots[2],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -1870,7 +1860,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-03, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 4.8,
         totalRealizedAmount: 0,
@@ -1883,7 +1873,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'AAPL',
         changedAt: new Date('2024-01-05, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalQuantity: 4,
         totalPresentInvestedAmount: 5.6,
         totalRealizedAmount: 0,
@@ -1971,8 +1961,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -2023,7 +2013,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 0,
@@ -2035,7 +2025,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 2,
+          totalLotCount: 2,
           totalQuantity: 4,
           totalPresentInvestedAmount: 4.6,
           totalRealizedAmount: 0,
@@ -2047,7 +2037,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -2059,7 +2049,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[3].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-04, 00:00:00'),
-          totalPositionCount: 2,
+          totalLotCount: 2,
           totalQuantity: 4,
           totalPresentInvestedAmount: 5.4,
           totalRealizedAmount: 0,
@@ -2071,7 +2061,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[4].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-05, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 3,
           totalRealizedAmount: 0,
@@ -2178,7 +2168,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -2186,9 +2176,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -2207,17 +2195,17 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
+      lots: {
         set: [],
-        remove: [initialPositions[1].id, initialPositions[3].id],
+        remove: [initialLots[1].id, initialLots[3].id],
       },
     });
 
     expect(allFinalTrades).toStrictEqual([initialTrades[0], initialTrades[2], initialTrades[4]]);
-    expect(allFinalPositions).toStrictEqual([
-      initialPositions[0],
-      initialPositions[2],
-      initialPositions[4],
+    expect(allFinalLots).toStrictEqual([
+      initialLots[0],
+      initialLots[2],
+      initialLots[4],
     ]);
     expect(allFinalHoldingStatsChanges).toStrictEqual([
       initialHoldingStats[0],
@@ -2269,8 +2257,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -2305,7 +2293,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 0,
@@ -2317,7 +2305,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 0,
+          totalLotCount: 0,
           totalQuantity: 0,
           totalPresentInvestedAmount: 0,
           totalRealizedAmount: 2.4,
@@ -2329,7 +2317,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -2341,7 +2329,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[3].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-04, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.8,
           totalRealizedAmount: 0,
@@ -2436,7 +2424,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -2444,9 +2432,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -2465,14 +2451,14 @@ describe('Mutation.setTrades', () => {
         set: [],
         remove: ['AAPL', 'ADBE'],
       },
-      positions: {
+      lots: {
         set: [],
-        remove: [initialPositions[0].id, initialPositions[1].id],
+        remove: [initialLots[0].id, initialLots[1].id],
       },
     });
 
     expect(allFinalTrades).toStrictEqual([initialTrades[3]]);
-    expect(allFinalPositions).toStrictEqual([initialPositions[2]]);
+    expect(allFinalLots).toStrictEqual([initialLots[2]]);
     expect(allFinalHoldingStatsChanges).toStrictEqual([initialHoldingStats[3]]);
     expect(allFinalPortfolioStatsChanges).toStrictEqual([
       {
@@ -2515,8 +2501,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -2551,7 +2537,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 0,
@@ -2563,7 +2549,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 2,
+          totalLotCount: 2,
           totalQuantity: 4,
           totalPresentInvestedAmount: 4.6,
           totalRealizedAmount: 0,
@@ -2575,7 +2561,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -2664,7 +2650,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -2672,9 +2658,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -2693,8 +2677,8 @@ describe('Mutation.setTrades', () => {
         set: ['ADBE'],
         remove: [],
       },
-      positions: {
-        set: [initialPositions[0].id, initialPositions[1].id],
+      lots: {
+        set: [initialLots[0].id, initialLots[1].id],
         remove: [],
       },
     });
@@ -2726,10 +2710,10 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
+    expect(allFinalLots).toStrictEqual([
       {
         ownerId: mockUserId1,
-        id: initialPositions[0].id,
+        id: initialLots[0].id,
         openingTradeId: initialTrades[0].id,
         symbol: 'ADBE',
         openedAt: new Date('2024-01-01, 00:00:00'),
@@ -2740,7 +2724,7 @@ describe('Mutation.setTrades', () => {
       },
       {
         ownerId: mockUserId1,
-        id: initialPositions[1].id,
+        id: initialLots[1].id,
         openingTradeId: initialTrades[1].id,
         symbol: 'ADBE',
         openedAt: new Date('2024-01-02, 00:00:00'),
@@ -2749,7 +2733,7 @@ describe('Mutation.setTrades', () => {
         realizedProfitOrLoss: 0.3999999999999999,
         remainingQuantity: 0,
       },
-      initialPositions[2],
+      initialLots[2],
     ]);
 
     expect(allFinalHoldingStatsChanges).toStrictEqual([
@@ -2761,7 +2745,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[3].id,
         symbol: 'ADBE',
         changedAt: new Date('2024-01-04, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.3999999999999995,
         totalRealizedAmount: 2.8,
@@ -2773,7 +2757,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[4].id,
         symbol: 'ADBE',
         changedAt: new Date('2024-01-05, 00:00:00'),
-        totalPositionCount: 0,
+        totalLotCount: 0,
         totalQuantity: 0,
         totalPresentInvestedAmount: -4.440892098500626e-16,
         totalRealizedAmount: 5.6,
@@ -2839,8 +2823,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -2875,7 +2859,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 0,
@@ -2887,7 +2871,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.4,
           totalRealizedAmount: 0,
@@ -2899,7 +2883,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.6,
           totalRealizedAmount: 0,
@@ -2988,7 +2972,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -2996,9 +2980,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -3017,8 +2999,8 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
-        set: [allFinalPositions[0].id, allFinalPositions[1].id],
+      lots: {
+        set: [allFinalLots[0].id, allFinalLots[1].id],
         remove: [],
       },
     });
@@ -3039,18 +3021,18 @@ describe('Mutation.setTrades', () => {
       initialTrades[2],
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
+    expect(allFinalLots).toStrictEqual([
       {
-        ...initialPositions[0],
+        ...initialLots[0],
         remainingQuantity: 3,
         recordUpdatedAt: expect.any(Date),
       },
       {
-        ...initialPositions[1],
+        ...initialLots[1],
         remainingQuantity: 3,
         recordUpdatedAt: expect.any(Date),
       },
-      initialPositions[2],
+      initialLots[2],
     ]);
 
     expect(allFinalHoldingStatsChanges).toStrictEqual([
@@ -3120,8 +3102,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -3156,7 +3138,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 3,
           totalPresentInvestedAmount: 3.3,
           totalRealizedAmount: 0,
@@ -3167,7 +3149,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 2.2,
           totalRealizedAmount: 1.1,
@@ -3178,7 +3160,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-03, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 3,
           totalPresentInvestedAmount: 3.6,
           totalRealizedAmount: 0,
@@ -3189,7 +3171,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[3].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-04, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 1,
           totalPresentInvestedAmount: 2.4,
           totalRealizedAmount: 1.2,
@@ -3200,7 +3182,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[4].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-05, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalPresentInvestedAmount: 4,
           totalRealizedAmount: 0,
@@ -3303,7 +3285,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -3311,9 +3293,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -3332,8 +3312,8 @@ describe('Mutation.setTrades', () => {
         set: ['AAPL', 'ADBE'],
         remove: [],
       },
-      positions: {
-        set: [initialPositions[0].id, initialPositions[1].id],
+      lots: {
+        set: [initialLots[0].id, initialLots[1].id],
         remove: [],
       },
     });
@@ -3354,27 +3334,27 @@ describe('Mutation.setTrades', () => {
       initialTrades[4],
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
+    expect(allFinalLots).toStrictEqual([
       {
-        ...initialPositions[0],
+        ...initialLots[0],
         recordUpdatedAt: expect.any(Date),
         remainingQuantity: 1,
         realizedProfitOrLoss: 0.19999999999999973,
       },
       {
-        ...initialPositions[1],
+        ...initialLots[1],
         recordUpdatedAt: expect.any(Date),
         remainingQuantity: 0,
         realizedProfitOrLoss: 0.30000000000000027,
       },
-      initialPositions[2],
+      initialLots[2],
     ]);
 
     expect(allFinalHoldingStatsChanges).toStrictEqual([
       {
         ...initialHoldingStats[0],
         symbol: 'ADBE',
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 3,
         totalPresentInvestedAmount: 3.3000000000000003,
         totalRealizedAmount: 0,
@@ -3384,7 +3364,7 @@ describe('Mutation.setTrades', () => {
       {
         ...initialHoldingStats[1],
         symbol: 'ADBE',
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 1,
         totalPresentInvestedAmount: 1.1,
         totalRealizedAmount: 2.4,
@@ -3394,7 +3374,7 @@ describe('Mutation.setTrades', () => {
       {
         ...initialHoldingStats[2],
         symbol: 'AAPL',
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 3,
         totalPresentInvestedAmount: 3.5999999999999996,
         totalRealizedAmount: 0,
@@ -3404,7 +3384,7 @@ describe('Mutation.setTrades', () => {
       {
         ...initialHoldingStats[3],
         symbol: 'AAPL',
-        totalPositionCount: 0,
+        totalLotCount: 0,
         totalQuantity: 0,
         totalPresentInvestedAmount: 0,
         totalRealizedAmount: 3.9000000000000004,
@@ -3480,8 +3460,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -3509,7 +3489,7 @@ describe('Mutation.setTrades', () => {
           symbol: 'ADBE',
           changedAt: new Date('2024-01-01, 00:00:00'),
           totalPresentInvestedAmount: 2.2,
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalRealizedAmount: 0,
           totalRealizedProfitOrLossAmount: 0,
@@ -3521,7 +3501,7 @@ describe('Mutation.setTrades', () => {
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
           totalPresentInvestedAmount: 0,
-          totalPositionCount: 0,
+          totalLotCount: 0,
           totalQuantity: 0,
           totalRealizedAmount: 2.4,
           totalRealizedProfitOrLossAmount: 0.19999999999999973,
@@ -3533,7 +3513,7 @@ describe('Mutation.setTrades', () => {
           symbol: 'NVDA',
           changedAt: new Date('2024-01-03, 00:00:00'),
           totalPresentInvestedAmount: 2.6,
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalQuantity: 2,
           totalRealizedAmount: 0,
           totalRealizedProfitOrLossAmount: 0,
@@ -3620,7 +3600,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -3628,9 +3608,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
-        recs.map(r => r.dataValues)
-      ),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
@@ -3649,8 +3627,8 @@ describe('Mutation.setTrades', () => {
         set: ['ADBE'],
         remove: [],
       },
-      positions: {
-        set: [allFinalPositions[2].id],
+      lots: {
+        set: [allFinalLots[2].id],
         remove: [],
       },
     });
@@ -3675,9 +3653,9 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
-      initialPositions[0],
-      initialPositions[1],
+    expect(allFinalLots).toStrictEqual([
+      initialLots[0],
+      initialLots[1],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -3700,7 +3678,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: allFinalTrades[3].id,
         symbol: 'ADBE',
         changedAt: new Date('2024-01-04, 00:00:00'),
-        totalPositionCount: 1,
+        totalLotCount: 1,
         totalQuantity: 2,
         totalPresentInvestedAmount: 2.8,
         totalRealizedAmount: 2.4,
@@ -3756,8 +3734,8 @@ describe('Mutation.setTrades', () => {
       ])
     ).map(record => record.dataValues);
 
-    const initialPositions = (
-      await PositionModel.bulkCreate([
+    const initialLots = (
+      await LotModel.bulkCreate([
         {
           ownerId: mockUserId1,
           openingTradeId: initialTrades[0].id,
@@ -3792,7 +3770,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[0].id,
           symbol: 'NVDA',
           changedAt: new Date('2024-01-01, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalPresentInvestedAmount: 2.2,
           totalQuantity: 2,
           totalRealizedAmount: 0,
@@ -3804,7 +3782,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[1].id,
           symbol: 'ADBE',
           changedAt: new Date('2024-01-02, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalPresentInvestedAmount: 2.2,
           totalQuantity: 2,
           totalRealizedAmount: 0,
@@ -3816,7 +3794,7 @@ describe('Mutation.setTrades', () => {
           relatedTradeId: initialTrades[2].id,
           symbol: 'AAPL',
           changedAt: new Date('2024-01-04, 00:00:00'),
-          totalPositionCount: 1,
+          totalLotCount: 1,
           totalPresentInvestedAmount: 2.6,
           totalQuantity: 2,
           totalRealizedAmount: 0,
@@ -3904,7 +3882,7 @@ describe('Mutation.setTrades', () => {
     const [
       redisEvent,
       allFinalTrades,
-      allFinalPositions,
+      allFinalLots,
       allFinalHoldingStatsChanges,
       allFinalPortfolioStatsChanges,
     ] = await Promise.all([
@@ -3912,7 +3890,7 @@ describe('Mutation.setTrades', () => {
       TradeRecordModel.findAll({ order: [['performedAt', 'ASC']] }).then(r =>
         r.map(r => r.dataValues)
       ),
-      PositionModel.findAll({ order: [['openedAt', 'ASC']] }).then(r => r.map(r => r.dataValues)),
+      LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(r => r.map(r => r.dataValues)),
       HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>
         r.map(r => r.dataValues)
       ),
@@ -3925,9 +3903,9 @@ describe('Mutation.setTrades', () => {
       ownerId: mockUserId1,
       portfolioStats: { set: [{ forCurrency: 'USD' }], remove: [] },
       holdingStats: { set: ['AAPL', 'ADBE'], remove: ['NVDA'] },
-      positions: {
-        set: [allFinalPositions[1].id, allFinalPositions[3].id],
-        remove: [initialPositions[0].id],
+      lots: {
+        set: [allFinalLots[1].id, allFinalLots[3].id],
+        remove: [initialLots[0].id],
       },
     });
 
@@ -3957,8 +3935,8 @@ describe('Mutation.setTrades', () => {
       },
     ]);
 
-    expect(allFinalPositions).toStrictEqual([
-      initialPositions[1],
+    expect(allFinalLots).toStrictEqual([
+      initialLots[1],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -3970,7 +3948,7 @@ describe('Mutation.setTrades', () => {
         realizedProfitOrLoss: 0,
         remainingQuantity: 2,
       },
-      initialPositions[2],
+      initialLots[2],
       {
         ownerId: mockUserId1,
         id: expect.any(String),
@@ -3991,7 +3969,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'ADBE',
         changedAt: new Date('2024-01-03, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalPresentInvestedAmount: 4.6,
         totalQuantity: 4,
         totalRealizedAmount: 0,
@@ -4004,7 +3982,7 @@ describe('Mutation.setTrades', () => {
         relatedTradeId: expect.any(String),
         symbol: 'AAPL',
         changedAt: new Date('2024-01-05, 00:00:00'),
-        totalPositionCount: 2,
+        totalLotCount: 2,
         totalPresentInvestedAmount: 5.4,
         totalQuantity: 4,
         totalRealizedAmount: 0,

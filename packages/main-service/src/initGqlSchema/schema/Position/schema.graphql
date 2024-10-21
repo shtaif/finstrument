@@ -1,8 +1,8 @@
 type Query {
-  positions(filters: PositionsFilters): [Position!]!
+  lots(filters: LotsFilters): [Lot!]!
 }
 
-type Position {
+type Lot {
   id: ID!
   ownerId: ID!
   openingTradeId: ID!
@@ -18,10 +18,10 @@ type Position {
   unrealizedPnl: PnlInfo!
 }
 
-input PositionsFilters {
+input LotsFilters {
   ids: [ID!]
   symbols: [ID!]
 }
 
 # owner!: UserModel;
-# positionClosings!: PositionClosingModel[];
+# lotClosings!: LotClosingModel[];

@@ -48,7 +48,7 @@ const userHoldingsChangedTopicPayloadSchema = z.object({
     set: z.array(z.string().min(1)),
     remove: z.array(z.string().min(1)),
   }),
-  positions: z.object({
+  lots: z.object({
     set: z.array(z.string().min(1)),
     remove: z.array(z.string().min(1)),
   }),

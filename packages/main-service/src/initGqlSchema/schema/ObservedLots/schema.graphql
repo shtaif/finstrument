@@ -1,18 +1,18 @@
 type Subscription {
-  positions(filters: PositionsSubscriptionFilters!): [ObservedPositionUpdate!]!
+  lots(filters: LotsSubscriptionFilters!): [ObservedLotUpdate!]!
 }
 
-type ObservedPositionUpdate {
-  type: ObservedPositionUpdateType!
-  data: ObservedPosition!
+type ObservedLotUpdate {
+  type: ObservedLotUpdateType!
+  data: ObservedLot!
 }
 
-enum ObservedPositionUpdateType {
+enum ObservedLotUpdateType {
   SET
   REMOVE
 }
 
-type ObservedPosition {
+type ObservedLot {
   id: ID!
   ownerId: ID!
   openingTradeId: ID!
@@ -27,6 +27,6 @@ type ObservedPosition {
   unrealizedPnl: PnlInfo!
 }
 
-input PositionsSubscriptionFilters {
+input LotsSubscriptionFilters {
   ids: [ID!]!
 }

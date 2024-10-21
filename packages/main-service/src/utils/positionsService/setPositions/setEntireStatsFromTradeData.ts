@@ -35,7 +35,7 @@ async function setEntireStatsFromTradeData(params: {
     .map(trade => ({
       trade,
       holdingStats: {
-        totalPositionCount: 0,
+        totalLotCount: 0,
         totalQuantity: 0,
         totalPresentInvestedAmount: 0,
         totalRealizedAmount: 0,
@@ -54,7 +54,7 @@ async function setEntireStatsFromTradeData(params: {
       for (const items of values(v)) {
         let totalQuantity = 0;
         let totalPresentInvestedAmount = 0;
-        let totalPositionCount = 0;
+        let totalLotCount = 0;
         let totalRealizedAmount = 0;
         let totalRealizedProfitOrLossAmount = 0;
         let totalRealizedProfitOrLossRate = 0;
@@ -70,14 +70,14 @@ async function setEntireStatsFromTradeData(params: {
           totalQuantity += item.trade.quantity;
 
           if (item.trade.quantity > 0) {
-            totalPositionCount++;
+            totalLotCount++;
             totalPresentInvestedAmount += item.trade.quantity * item.trade.price;
           } else {
             let sellQuantRemaining = -item.trade.quantity;
             totalRealizedAmount += -item.trade.quantity * item.trade.price;
 
             while (sellQuantRemaining >= earliestOpenPosRemainingQuant) {
-              totalPositionCount--;
+              totalLotCount--;
 
               helperStats.totalOriginalInvestedAmountRealized +=
                 earliestOpenPosRemainingQuant * items[earliestOpenPosIdx].trade.price;
@@ -121,7 +121,7 @@ async function setEntireStatsFromTradeData(params: {
           }
 
           item.holdingStats = {
-            totalPositionCount,
+            totalLotCount,
             totalQuantity,
             totalPresentInvestedAmount,
             totalRealizedAmount,
@@ -237,7 +237,7 @@ async function setEntireStatsFromTradeData(params: {
       ownerId: params.ownerId,
       symbol: trade.symbol,
       relatedTradeId: trade.id,
-      totalPositionCount: holdingStats.totalPositionCount,
+      totalLotCount: holdingStats.totalLotCount,
       totalQuantity: holdingStats.totalQuantity,
       totalPresentInvestedAmount: holdingStats.totalPresentInvestedAmount,
       totalRealizedAmount: holdingStats.totalRealizedAmount,

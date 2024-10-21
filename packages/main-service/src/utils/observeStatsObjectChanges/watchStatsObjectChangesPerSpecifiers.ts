@@ -7,9 +7,9 @@ import { userHoldingsChangedTopic } from '../pubsubTopics/userHoldingsChangedTop
 export { watchStatsObjectChangesPerSpecifiers, type StatsObjectChangeSpecs };
 
 function watchStatsObjectChangesPerSpecifiers(specifiers: {
-  position: {
-    positionOwnerId: string;
-    positionId: string;
+  lot: {
+    lotOwnerId: string;
+    lotId: string;
   }[];
   holding: {
     holdingPortfolioOwnerId: string;
@@ -23,7 +23,7 @@ function watchStatsObjectChangesPerSpecifiers(specifiers: {
   const targetOwnerIdsToSubscribeFor = [
     ...specifiers.portfolio.map(p => p.portfolioOwnerId),
     ...specifiers.holding.map(h => h.holdingPortfolioOwnerId),
-    ...specifiers.position.map(p => p.positionOwnerId),
+    ...specifiers.lot.map(p => p.lotOwnerId),
   ];
 
   return pipe(
@@ -68,19 +68,16 @@ function watchStatsObjectChangesPerSpecifiers(specifiers: {
           }))
       );
 
-      const [positionsToSetSpecs, positionsToRemoveSpecs] = [
-        event.positions.set,
-        event.positions.remove,
-      ].map(positions =>
+      const [lotsToSetSpecs, lotsToRemoveSpecs] = [event.lots.set, event.lots.remove].map(lots =>
         pipe(
-          positions,
+          lots,
           v =>
             intersectionWith(
               v,
-              specifiers.position,
-              (posIdChanged, posSpecified) => posIdChanged === posSpecified.positionId
+              specifiers.lot,
+              (lotIdChanged, lotSpecified) => lotIdChanged === lotSpecified.lotId
             ),
-          v => v.map(positionId => ({ positionId }))
+          v => v.map(lotId => ({ lotId }))
         )
       );
 
@@ -93,15 +90,15 @@ function watchStatsObjectChangesPerSpecifiers(specifiers: {
           set: holdingStatsToSetSpecs,
           remove: holdingStatsToRemoveSpecs,
         },
-        positions: {
-          set: positionsToSetSpecs,
-          remove: positionsToRemoveSpecs,
+        lots: {
+          set: lotsToSetSpecs,
+          remove: lotsToRemoveSpecs,
         },
       };
     })
     // itFilter(
-    //   ([portfolioStatsChanges, holdingStatsChanges, positionChanges]) =>
-    //     !!portfolioStatsChanges.length || !!holdingStatsChanges.length || !!positionChanges.length
+    //   ([portfolioStatsChanges, holdingStatsChanges, lotChanges]) =>
+    //     !!portfolioStatsChanges.length || !!holdingStatsChanges.length || !!lotChanges.length
     // )
   );
 }
@@ -115,8 +112,8 @@ type StatsObjectChangeSpecs = {
     set: { holdingPortfolioOwnerId: string; holdingSymbol: string }[];
     remove: { holdingPortfolioOwnerId: string; holdingSymbol: string }[];
   };
-  readonly positions: {
-    set: { positionId: string }[];
-    remove: { positionId: string }[];
+  readonly lots: {
+    set: { lotId: string }[];
+    remove: { lotId: string }[];
   };
 };

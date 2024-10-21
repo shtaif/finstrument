@@ -6,7 +6,7 @@ async function publishUserHoldingChangedRedisEvent(data: {
   ownerId: string;
   portfolioStats?: { set?: { forCurrency: string }[]; remove?: { forCurrency: string }[] };
   holdingStats?: { set?: string[]; remove?: string[] };
-  positions?: { set?: string[]; remove?: string[] };
+  lots?: { set?: string[]; remove?: string[] };
 }): Promise<void> {
   await testRedisPublisher.publish(
     `user-holdings-changed:${data.ownerId}`,
@@ -20,9 +20,9 @@ async function publishUserHoldingChangedRedisEvent(data: {
         set: data?.holdingStats?.set ?? [],
         remove: data?.holdingStats?.remove ?? [],
       },
-      positions: {
-        set: data?.positions?.set ?? [],
-        remove: data?.positions?.remove ?? [],
+      lots: {
+        set: data?.lots?.set ?? [],
+        remove: data?.lots?.remove ?? [],
       },
     })
   );

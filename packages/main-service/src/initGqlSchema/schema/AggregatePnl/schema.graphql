@@ -1,7 +1,7 @@
 type Subscription {
   aggregatePnl(
     holdings: [AggregatePnlHoldingSpecifier!]
-    positions: [AggregatePnlPositionSpecifier!]
+    lots: [AggregatePnlLotSpecifier!]
   ): AggregatePnlChangeResult!
 }
 
@@ -9,8 +9,8 @@ input AggregatePnlHoldingSpecifier {
   symbol: ID!
 }
 
-input AggregatePnlPositionSpecifier {
-  positionId: ID!
+input AggregatePnlLotSpecifier {
+  lotId: ID!
 }
 
 type AggregatePnlChangeResult {

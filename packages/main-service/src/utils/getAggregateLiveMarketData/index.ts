@@ -51,28 +51,28 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
           ...keyBy(changes.holdingStats.set, ({ symbol }) => symbol),
           ...portfolioResolvedHoldingsFlattened,
         },
-        positionChanges: keyBy(changes.positions.set, ({ id }) => id),
+        lotChanges: keyBy(changes.lots.set, ({ id }) => id),
       };
     })
   );
 
   const symbolPriceDataIter = pipe(
     observedStatsObjectsIter,
-    itMap(({ holdingStatsChanges, positionChanges }) => {
+    itMap(({ holdingStatsChanges, lotChanges }) => {
       const targetSymbols = [
-        ...pipe(positionChanges, v => map(v, pos => pos.symbol)),
+        ...pipe(lotChanges, v => map(v, lot => lot.symbol)),
         ...pipe(holdingStatsChanges, v => map(v, holding => holding.symbol)),
       ];
 
       const translateCurrenciesExchangeSymbols = pipe(
         [
-          ...map(positionChanges, ({ symbolInfo }) => symbolInfo.currency),
+          ...map(lotChanges, ({ symbolInfo }) => symbolInfo.currency),
           ...map(holdingStatsChanges, ({ symbolInfo }) => symbolInfo.currency),
         ],
         v => compact(v),
         v =>
-          v.flatMap(posCurrency =>
-            paramsNorm.translateToCurrencies.map(adjCurrency => `${posCurrency}${adjCurrency}=X`)
+          v.flatMap(lotCurrency =>
+            paramsNorm.translateToCurrencies.map(adjCurrency => `${lotCurrency}${adjCurrency}=X`)
           )
       );
 
@@ -86,21 +86,21 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
     observedStatsObjectsIter =>
       itLazyDefer(() => {
         const allHoldingStatsChanges = {} as StatsObjects['holdingStatsChanges'];
-        const allPositionChanges = {} as StatsObjects['positionChanges'];
+        const allLotChanges = {} as StatsObjects['lotChanges'];
         const allSymbolPriceData = {} as UpdatedSymbolPriceMap;
 
         return pipe(
           itMerge(
             pipe(
               observedStatsObjectsIter,
-              itTap(({ holdingStatsChanges, positionChanges }) => {
+              itTap(({ holdingStatsChanges, lotChanges }) => {
                 assign(allHoldingStatsChanges, holdingStatsChanges);
-                assign(allPositionChanges, positionChanges);
+                assign(allLotChanges, lotChanges);
               }),
               itFilter(
-                ({ holdingStatsChanges, positionChanges }) =>
+                ({ holdingStatsChanges, lotChanges }) =>
                   every(holdingStatsChanges, h => h.symbol in allSymbolPriceData) &&
-                  every(positionChanges, pos => pos.symbol in allSymbolPriceData)
+                  every(lotChanges, lot => lot.symbol in allSymbolPriceData)
               )
             ),
             pipe(
@@ -133,23 +133,23 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
                 })
             );
 
-            const positionsCombinedPnlByCurrency = pipe(
-              allPositionChanges,
-              v => groupBy(v, pos => pos.symbolInfo.currency ?? ''),
+            const lotsCombinedPnlByCurrency = pipe(
+              allLotChanges,
+              v => groupBy(v, lot => lot.symbolInfo.currency ?? ''),
               v =>
-                mapValues(v, positions => {
+                mapValues(v, lots => {
                   const pnlAmount = reduce(
-                    positions,
-                    (total, pos) =>
+                    lots,
+                    (total, lot) =>
                       total +
-                      pos.remainingQuantity *
-                        ((allSymbolPriceData[pos.symbol]?.regularMarketPrice ?? 0) -
-                          pos.openingTrade.price),
+                      lot.remainingQuantity *
+                        ((allSymbolPriceData[lot.symbol]?.regularMarketPrice ?? 0) -
+                          lot.openingTrade.price),
                     0
                   );
                   const totalInvestedAmount = reduce(
-                    positions,
-                    (total, pos) => total + pos.remainingQuantity * pos.openingTrade.price,
+                    lots,
+                    (total, lot) => total + lot.remainingQuantity * lot.openingTrade.price,
                     0
                   );
                   return { pnlAmount, totalInvestedAmount };
@@ -157,20 +157,20 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
             );
 
             const nativeCurrencyTotals = pipe(
-              [...keys(holdingsCombinedPnlByCurrency), ...keys(positionsCombinedPnlByCurrency)],
+              [...keys(holdingsCombinedPnlByCurrency), ...keys(lotsCombinedPnlByCurrency)],
               v => [...new Set(v)],
               v =>
                 v.map(currency => {
                   const holdingsTotalPnlOfCurrency = holdingsCombinedPnlByCurrency[currency];
-                  const positionsTotalPnlOfCurrency = positionsCombinedPnlByCurrency[currency];
+                  const lotsTotalPnlOfCurrency = lotsCombinedPnlByCurrency[currency];
 
                   const totalPnlAmountCombined =
                     (holdingsTotalPnlOfCurrency?.pnlAmount ?? 0) +
-                    (positionsTotalPnlOfCurrency?.pnlAmount ?? 0);
+                    (lotsTotalPnlOfCurrency?.pnlAmount ?? 0);
 
                   const totalInvestedCombined =
                     (holdingsTotalPnlOfCurrency?.totalInvestedAmount ?? 0) +
-                    (positionsTotalPnlOfCurrency?.totalInvestedAmount ?? 0);
+                    (lotsTotalPnlOfCurrency?.totalInvestedAmount ?? 0);
 
                   return {
                     nativeCurrency: currency === '' ? null : currency,
@@ -232,10 +232,10 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
 //       itLazyDefer(() => {
 //         const allCurrTargetedDatas: {
 //           holdings: { [ownerAndSymbol: string]: HoldingMarketStatsData<TTranslateCurrencies> };
-//           positions: { [posId: string]: PositionMarketStatsData<TTranslateCurrencies> };
+//           lots: { [lotId: string]: LotMarketStatsData<TTranslateCurrencies> };
 //         } = {
 //           holdings: {},
-//           positions: {},
+//           lots: {},
 //         };
 //         return pipe(
 //           marketUpdatesIter,
@@ -244,17 +244,17 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
 //               allCurrTargetedDatas.holdings[`${update.holding.ownerId}_${update.holding.symbol}`] =
 //                 update;
 //             }
-//             for (const update of marketUpdates.positions) {
-//               allCurrTargetedDatas.positions[update.position.id] = update;
+//             for (const update of marketUpdates.lots) {
+//               allCurrTargetedDatas.lots[update.lot.id] = update;
 //             }
 //           }),
 //           itMap(() => {
 //             const calcedConstituents = [
 //               ...values(allCurrTargetedDatas.holdings),
-//               ...values(allCurrTargetedDatas.positions),
+//               ...values(allCurrTargetedDatas.lots),
 //             ];
 
-//             const holdingsAndPositionsCombinedPnlByCurrency = pipe(
+//             const holdingsAndLotsCombinedPnlByCurrency = pipe(
 //               calcedConstituents,
 //               v => groupBy(v, ({ price }) => price.currency ?? ''),
 //               v =>
@@ -293,7 +293,7 @@ function getAggregateLiveMarketData<TTranslateCurrencies extends string>(params:
 //             });
 
 //             return {
-//               nativeCurrencies: holdingsAndPositionsCombinedPnlByCurrency,
+//               nativeCurrencies: holdingsAndLotsCombinedPnlByCurrency,
 //               translateCurrencies: translateCurrencies,
 //             };
 //           })
@@ -328,8 +328,8 @@ type AggregateMarketDataUpdate<TTranslateCurrencies extends string = string> = {
   //       // { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
   //       { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'ADBE' },
   //       { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
-  //       { type: 'POSITION', positionId: 'c235e17f-b3e4-4051-8b9b-07b98126664d' },
-  //       { type: 'POSITION', positionId: '95795a49-9561-4494-ba17-3809f33af0a7' },
+  //       { type: 'LOT', lotId: 'c235e17f-b3e4-4051-8b9b-07b98126664d' },
+  //       { type: 'LOT', lotId: '95795a49-9561-4494-ba17-3809f33af0a7' },
   //     ],
   //     translateToCurrencies: ['ILS', 'GBP'],
   //   }),
@@ -345,14 +345,14 @@ type AggregateMarketDataUpdate<TTranslateCurrencies extends string = string> = {
 //     const iter = pipe(
 //       getAggregateLiveMarketData({
 //         specifiers: [
-//           { type: 'POSITION', positionId: 'd8564fe6-e1f6-474e-998b-0754c15de21e' },
-//           { type: 'POSITION', positionId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5' },
+//           { type: 'LOT', lotId: 'd8564fe6-e1f6-474e-998b-0754c15de21e' },
+//           { type: 'LOT', lotId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5' },
 
-//           // { type: 'POSITION', positionId: 'd8564fe6-e1f6-474e-998b-0754c15de21e___' },
-//           // { type: 'POSITION', positionId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5___' },
+//           // { type: 'LOT', lotId: 'd8564fe6-e1f6-474e-998b-0754c15de21e___' },
+//           // { type: 'LOT', lotId: '2d1b5cf0-a28c-456f-8378-0857ead93aa5___' },
 
-//           // { type: 'POSITION', positionId: 'd8564fe6-e1f6-474e-998b-000000000000' },
-//           // { type: 'POSITION', positionId: '2d1b5cf0-a28c-456f-8378-000000000000' },
+//           // { type: 'LOT', lotId: 'd8564fe6-e1f6-474e-998b-000000000000' },
+//           // { type: 'LOT', lotId: '2d1b5cf0-a28c-456f-8378-000000000000' },
 //         ],
 //         translateToCurrencies: ['ILS', 'GBP'],
 //       })

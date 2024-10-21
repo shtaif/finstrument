@@ -27,42 +27,42 @@ function getMarketDataByStatsObjectsIter(params: {
     itMap(currStats => ({
       portfolioStatsChanges: Object.values(currStats.portfolioStats),
       holdingStatsChanges: Object.values(currStats.holdingStats),
-      positionChanges: Object.values(currStats.positions),
+      lotChanges: Object.values(currStats.lots),
     })),
     !paramsNorm.ignoreClosedObjectStats
       ? identity
-      : itMap(({ portfolioStatsChanges, holdingStatsChanges, positionChanges }) =>
+      : itMap(({ portfolioStatsChanges, holdingStatsChanges, lotChanges }) =>
           pipe(
             [
               portfolioStatsChanges.filter(p => p.totalPresentInvestedAmount > 0),
-              holdingStatsChanges.filter(h => h.totalPositionCount > 0),
-              positionChanges.filter(p => p.remainingQuantity > 0),
+              holdingStatsChanges.filter(h => h.totalLotCount > 0),
+              lotChanges.filter(p => p.remainingQuantity > 0),
             ],
-            ([nonEmptyPortfolioStatsChanges, nonEmptyHoldingStatsChanges, nonClosedPositions]) => ({
+            ([nonEmptyPortfolioStatsChanges, nonEmptyHoldingStatsChanges, nonClosedLots]) => ({
               portfolioStatsChanges: nonEmptyPortfolioStatsChanges,
               holdingStatsChanges: nonEmptyHoldingStatsChanges,
-              positionChanges: nonClosedPositions,
+              lotChanges: nonClosedLots,
             })
           )
         ),
-    itMap(({ portfolioStatsChanges, holdingStatsChanges, positionChanges }) => {
+    itMap(({ portfolioStatsChanges, holdingStatsChanges, lotChanges }) => {
       const targetSymbols = [
         ...portfolioStatsChanges.flatMap(p => p.resolvedHoldings.map(h => h.symbol)),
         ...holdingStatsChanges.map(h => h.symbol),
-        ...positionChanges.map(p => p.symbol),
+        ...lotChanges.map(p => p.symbol),
       ];
 
       const translateCurrenciesExchangeSymbols = pipe(
         [
           ...portfolioStatsChanges.map(p => p.forCurrency),
           ...holdingStatsChanges.map(h => h.symbolInfo.currency),
-          ...positionChanges.map(p => p.symbolInfo.currency),
+          ...lotChanges.map(p => p.symbolInfo.currency),
         ],
         compact,
         v =>
-          v.flatMap(posCurrency =>
+          v.flatMap(lotCurrency =>
             paramsNorm.translateToCurrencies.map(
-              translateCurrency => `${posCurrency}${translateCurrency}=X`
+              translateCurrency => `${lotCurrency}${translateCurrency}=X`
             )
           )
       );

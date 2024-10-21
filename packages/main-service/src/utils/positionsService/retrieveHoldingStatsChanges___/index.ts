@@ -28,7 +28,7 @@ async function retrieveHoldingStatsChanges(params: {
     (
       | 'changedAt'
       | 'symbol'
-      | 'totalPositionCount'
+      | 'totalLotCount'
       | 'totalQuantity'
       | 'totalPresentInvestedAmount'
       | 'totalRealizedAmount'
@@ -103,7 +103,7 @@ async function retrieveHoldingStatsChanges(params: {
             'ownerId',
             'relatedTradeId',
             'symbol',
-            'totalPositionCount',
+            'totalLotCount',
             'totalQuantity',
             'totalPresentInvestedAmount',
             'totalRealizedAmount',

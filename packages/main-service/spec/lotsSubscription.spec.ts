@@ -5,8 +5,8 @@ import { asyncPipe, pipe } from 'shared-utils';
 import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
   InstrumentInfoModel,
-  PositionClosingModel,
-  PositionModel,
+  LotClosingModel,
+  LotModel,
   TradeRecordModel,
   UserModel,
 } from '../src/db/index.js';
@@ -70,7 +70,7 @@ const reusableTradeDatas = [
   },
 ];
 
-const reusablePositionDatas = [
+const reusableLotDatas = [
   {
     id: mockUuidFromNumber(1),
     ownerId: mockUserId1,
@@ -127,17 +127,14 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await Promise.all([
-    PositionClosingModel.destroy({ where: {} }),
-    PositionModel.destroy({ where: {} }),
-  ]);
+  await Promise.all([LotClosingModel.destroy({ where: {} }), LotModel.destroy({ where: {} })]);
   mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
   await Promise.all([
-    PositionClosingModel.destroy({ where: {} }),
-    PositionModel.destroy({ where: {} }),
+    LotClosingModel.destroy({ where: {} }),
+    LotModel.destroy({ where: {} }),
     TradeRecordModel.destroy({ where: {} }),
     InstrumentInfoModel.destroy({ where: {} }),
     UserModel.destroy({ where: {} }),
@@ -145,8 +142,8 @@ afterAll(async () => {
   unmockGqlContext();
 });
 
-describe('Subscription.positions ', () => {
-  it('Upon subscription immediately emits an initial message with the state of all targeted positions', async () => {
+describe('Subscription.lots ', () => {
+  it('Upon subscription immediately emits an initial message with the state of all targeted lots', async () => {
     await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -166,7 +163,7 @@ describe('Subscription.positions ', () => {
       },
     ]);
 
-    const positions = await PositionModel.bulkCreate([
+    const lots = await LotModel.bulkCreate([
       {
         id: mockUuidFromNumber(1),
         ownerId: mockUserId1,
@@ -195,11 +192,11 @@ describe('Subscription.positions ', () => {
       gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -223,11 +220,11 @@ describe('Subscription.positions ', () => {
 
     expect(firstItem).toStrictEqual({
       data: {
-        positions: [
+        lots: [
           {
             data: {
-              id: positions[1].id,
-              openingTradeId: positions[1].openingTradeId,
+              id: lots[1].id,
+              openingTradeId: lots[1].openingTradeId,
               ownerId: mockUserId1,
               symbol: 'AAPL',
               realizedProfitOrLoss: 0,
@@ -240,8 +237,8 @@ describe('Subscription.positions ', () => {
           },
           {
             data: {
-              id: positions[0].id,
-              openingTradeId: positions[0].openingTradeId,
+              id: lots[0].id,
+              openingTradeId: lots[0].openingTradeId,
               ownerId: mockUserId1,
               symbol: 'ADBE',
               realizedProfitOrLoss: 0.2,
@@ -257,26 +254,24 @@ describe('Subscription.positions ', () => {
     });
   });
 
-  it('If one or more IDs given via the `filters.ids` arg don\'t exist, an "INVALID_POSITION_IDS" error type is emitted', async () => {
+  it('If one or more IDs given via the `filters.ids` arg don\'t exist, an "INVALID_LOT_IDS" error type is emitted', async () => {
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
 
-    const positions = await PositionModel.bulkCreate([
-      { ...reusablePositionDatas[0], symbol: 'ADBE' },
-    ]);
+    const lots = await LotModel.bulkCreate([{ ...reusableLotDatas[0], symbol: 'ADBE' }]);
 
-    const firstExistingPosId = positions[0].id;
-    const secondNonexistingPosId = mockUuidFromNumber(2);
-    const thirdNonexistingPosId = mockUuidFromNumber(3);
+    const firstExistingLotId = lots[0].id;
+    const secondNonexistingLotId = mockUuidFromNumber(2);
+    const thirdNonexistingLotId = mockUuidFromNumber(3);
 
     const subscription = gqlWsClient.iterate({
       query: `
         subscription {
-          positions (
+          lots (
             filters: {
               ids: [
-                "${firstExistingPosId}"
-                "${secondNonexistingPosId}"
-                "${thirdNonexistingPosId}"
+                "${firstExistingLotId}"
+                "${secondNonexistingLotId}"
+                "${thirdNonexistingLotId}"
               ]
             }
           ) {
@@ -298,18 +293,14 @@ describe('Subscription.positions ', () => {
         errors: [
           {
             message:
-              `Some of the requested positions could not be found (2 in total):` +
-              `\nID "${secondNonexistingPosId}",` +
-              `\nID "${thirdNonexistingPosId}"`,
+              `Some of the requested lots could not be found (2 in total):` +
+              `\nID "${secondNonexistingLotId}",` +
+              `\nID "${thirdNonexistingLotId}"`,
             extensions: {
-              type: 'INVALID_POSITION_IDS',
+              type: 'INVALID_LOT_IDS',
               details: {
-                unmatchedPositionsIds: [secondNonexistingPosId, thirdNonexistingPosId],
-                positionIdsGiven: [
-                  firstExistingPosId,
-                  secondNonexistingPosId,
-                  thirdNonexistingPosId,
-                ],
+                unmatchedLotsIds: [secondNonexistingLotId, thirdNonexistingLotId],
+                lotIdsGiven: [firstExistingLotId, secondNonexistingLotId, thirdNonexistingLotId],
               },
             },
           },
@@ -318,28 +309,28 @@ describe('Subscription.positions ', () => {
     ]);
   });
 
-  it('Only positions matching the given `filters.ids` arg have updates emitted for', async () => {
+  it('Only lots matching the given `filters.ids` arg have updates emitted for', async () => {
     await TradeRecordModel.bulkCreate([
       { ...reusableTradeDatas[0], symbol: 'ADBE', quantity: 3, price: 1.1 },
       { ...reusableTradeDatas[1], symbol: 'AAPL', quantity: 3, price: 1.1 },
       { ...reusableTradeDatas[2], symbol: 'NVDA', quantity: 3, price: 1.1 },
     ]);
 
-    const positions = await PositionModel.bulkCreate([
+    const lots = await LotModel.bulkCreate([
       {
-        ...reusablePositionDatas[0],
+        ...reusableLotDatas[0],
         symbol: 'ADBE',
         remainingQuantity: 3,
         realizedProfitOrLoss: 0,
       },
       {
-        ...reusablePositionDatas[1],
+        ...reusableLotDatas[1],
         symbol: 'AAPL',
         remainingQuantity: 3,
         realizedProfitOrLoss: 0,
       },
       {
-        ...reusablePositionDatas[2],
+        ...reusableLotDatas[2],
         symbol: 'NVDA',
         remainingQuantity: 3,
         realizedProfitOrLoss: 0,
@@ -349,11 +340,11 @@ describe('Subscription.positions ', () => {
     const subscription = gqlWsClient.iterate({
       query: `
         subscription {
-          positions (
+          lots (
             filters: {
               ids: [
-                "${positions[0].id}"
-                "${positions[1].id}"
+                "${lots[0].id}"
+                "${lots[1].id}"
               ]
             }
           ) {
@@ -373,38 +364,38 @@ describe('Subscription.positions ', () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[3], symbol: 'NVDA', quantity: -2, price: 1.2 },
       ]);
-      await PositionModel.update(
+      await LotModel.update(
         {
           remainingQuantity: 1,
           realizedProfitOrLoss: 0.2,
         },
-        { where: { id: positions[2].id } }
+        { where: { id: lots[2].id } }
       );
       await publishUserHoldingChangedRedisEvent({
         ownerId: mockUserId1,
         portfolioStats: { set: [{ forCurrency: 'USD' }] },
         holdingStats: { set: ['NVDA'] },
-        positions: { set: [positions[2].id] },
+        lots: { set: [lots[2].id] },
       });
 
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[4], symbol: 'ADBE', quantity: -2, price: 1.2 },
         { ...reusableTradeDatas[5], symbol: 'NVDA', quantity: -2, price: 1.2 },
       ]);
-      await PositionModel.update(
+      await LotModel.update(
         {
           remainingQuantity: 1,
           realizedProfitOrLoss: 0.2,
         },
         {
-          where: { id: [positions[0].id, positions[2].id] },
+          where: { id: [lots[0].id, lots[2].id] },
         }
       );
       await publishUserHoldingChangedRedisEvent({
         ownerId: mockUserId1,
         portfolioStats: { set: [{ forCurrency: 'USD' }] },
         holdingStats: { set: ['ADBE', 'NVDA'] },
-        positions: { set: [positions[0].id, positions[2].id] },
+        lots: { set: [lots[0].id, lots[2].id] },
       });
 
       emissions.push((await subscription.next()).value);
@@ -412,10 +403,10 @@ describe('Subscription.positions ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   originalQuantity: 3,
                   remainingQuantity: 3,
                   realizedProfitOrLoss: 0,
@@ -423,7 +414,7 @@ describe('Subscription.positions ', () => {
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   originalQuantity: 3,
                   remainingQuantity: 3,
                   realizedProfitOrLoss: 0,
@@ -434,10 +425,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   originalQuantity: 3,
                   remainingQuantity: 1,
                   realizedProfitOrLoss: 0.2,
@@ -452,7 +443,7 @@ describe('Subscription.positions ', () => {
     }
   });
 
-  // it('*** *** *** Some of the requested positions are closed positions (1 in total): ID "10000000-0000-0000-0000-000000000000"', async () => {
+  // it('*** *** *** Some of the requested lots are closed lots (1 in total): ID "10000000-0000-0000-0000-000000000000"', async () => {
   //   await TradeRecordModel.bulkCreate([
   //     {
   //       id: mockTradeIds[0],
@@ -480,7 +471,7 @@ describe('Subscription.positions ', () => {
   //     },
   //   ]);
 
-  //   const positions = await PositionModel.bulkCreate([
+  //   const lots = await LotModel.bulkCreate([
   //     {
   //       id: mockUuidFromNumber(1),
   //       ownerId: mockUserId1,
@@ -509,11 +500,11 @@ describe('Subscription.positions ', () => {
   //     gqlWsClient.iterate({
   //       query: `
   //         subscription {
-  //           positions (
+  //           lots (
   //             filters: {
   //               ids: [
-  //                 "${positions[0].id}"
-  //                 "${positions[1].id}"
+  //                 "${lots[0].id}"
+  //                 "${lots[1].id}"
   //               ]
   //             }
   //           ) {
@@ -537,7 +528,7 @@ describe('Subscription.positions ', () => {
   // });
 
   it(
-    'When targeting only certain fields, only position changes that have any of these ' +
+    'When targeting only certain fields, only lot changes that have any of these ' +
       'fields modified will cause updates to be emitted',
     async () => {
       await TradeRecordModel.bulkCreate([
@@ -559,7 +550,7 @@ describe('Subscription.positions ', () => {
         },
       ]);
 
-      const positions = await PositionModel.bulkCreate([
+      const lots = await LotModel.bulkCreate([
         {
           id: mockUuidFromNumber(1),
           ownerId: mockUserId1,
@@ -587,11 +578,11 @@ describe('Subscription.positions ', () => {
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -610,8 +601,8 @@ describe('Subscription.positions ', () => {
 
         await mockMarketDataControl.onConnectionSend([
           {
-            [positions[0].symbol]: { regularMarketPrice: 10 },
-            [positions[1].symbol]: { regularMarketPrice: 10 },
+            [lots[0].symbol]: { regularMarketPrice: 10 },
+            [lots[1].symbol]: { regularMarketPrice: 10 },
           },
         ]);
 
@@ -620,32 +611,32 @@ describe('Subscription.positions ', () => {
         await TradeRecordModel.create({
           id: mockTradeIds[2],
           ownerId: mockUserId1,
-          symbol: positions[0].symbol,
+          symbol: lots[0].symbol,
           performedAt: '2024-01-01T00:00:02.000Z',
           quantity: -2,
           price: 1.2,
         });
 
-        await PositionModel.update(
+        await LotModel.update(
           {
-            remainingQuantity: positions[0].remainingQuantity - 2,
+            remainingQuantity: lots[0].remainingQuantity - 2,
           },
           {
-            where: { id: positions[0].id },
+            where: { id: lots[0].id },
           }
         );
 
         await publishUserHoldingChangedRedisEvent({
           ownerId: mockUserId1,
           portfolioStats: { set: [{ forCurrency: 'USD' }] },
-          holdingStats: { set: [positions[0].symbol] },
-          positions: { set: [positions[0].id] },
+          holdingStats: { set: [lots[0].symbol] },
+          lots: { set: [lots[0].id] },
         });
 
         // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
 
         await mockMarketDataControl.onConnectionSend([
-          { [positions[1].symbol]: { regularMarketPrice: 11 } },
+          { [lots[1].symbol]: { regularMarketPrice: 11 } },
         ]);
 
         emissions.push((await subscription.next()).value);
@@ -653,10 +644,10 @@ describe('Subscription.positions ', () => {
         expect(emissions).toStrictEqual([
           {
             data: {
-              positions: [
+              lots: [
                 {
                   data: {
-                    id: positions[1].id,
+                    id: lots[1].id,
                     priceData: {
                       regularMarketPrice: 10,
                     },
@@ -664,7 +655,7 @@ describe('Subscription.positions ', () => {
                 },
                 {
                   data: {
-                    id: positions[0].id,
+                    id: lots[0].id,
                     priceData: {
                       regularMarketPrice: 10,
                     },
@@ -675,10 +666,10 @@ describe('Subscription.positions ', () => {
           },
           {
             data: {
-              positions: [
+              lots: [
                 {
                   data: {
-                    id: positions[1].id,
+                    id: lots[1].id,
                     priceData: {
                       regularMarketPrice: 11,
                     },
@@ -695,7 +686,7 @@ describe('Subscription.positions ', () => {
   );
 
   describe('With `unrealizedPnl` field', () => {
-    it('Emits updates correctly in conjunction with changes to position symbols market data', async () => {
+    it('Emits updates correctly in conjunction with changes to lot symbols market data', async () => {
       await TradeRecordModel.bulkCreate([
         {
           id: mockTradeIds[0],
@@ -731,7 +722,7 @@ describe('Subscription.positions ', () => {
         },
       ]);
 
-      const positions = await PositionModel.bulkCreate([
+      const lots = await LotModel.bulkCreate([
         {
           id: mockUuidFromNumber(1),
           ownerId: mockUserId1,
@@ -788,13 +779,13 @@ describe('Subscription.positions ', () => {
         gqlWsClient.iterate({
           query: `
             subscription {
-              positions (
+              lots (
                 filters: {
                   ids: [
-                    "${positions[0].id}"
-                    "${positions[1].id}"
-                    "${positions[2].id}"
-                    "${positions[3].id}"
+                    "${lots[0].id}"
+                    "${lots[1].id}"
+                    "${lots[2].id}"
+                    "${lots[3].id}"
                   ]
                 }
               ) {
@@ -815,28 +806,28 @@ describe('Subscription.positions ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[3].id,
+                  id: lots[3].id,
                   unrealizedPnl: { amount: 5, percent: 50 },
                 },
               },
               {
                 data: {
-                  id: positions[2].id,
+                  id: lots[2].id,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   unrealizedPnl: { amount: 5, percent: 50 },
                 },
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
@@ -845,16 +836,16 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   unrealizedPnl: { amount: 10, percent: 100 },
                 },
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -863,16 +854,16 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[3].id,
+                  id: lots[3].id,
                   unrealizedPnl: { amount: 10, percent: 100 },
                 },
               },
               {
                 data: {
-                  id: positions[2].id,
+                  id: lots[2].id,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -882,7 +873,7 @@ describe('Subscription.positions ', () => {
       ]);
     });
 
-    it('Emits updates correctly in conjunction with changes to underlying positions', async () => {
+    it('Emits updates correctly in conjunction with changes to underlying lots', async () => {
       await TradeRecordModel.bulkCreate([
         {
           id: mockTradeIds[0],
@@ -902,7 +893,7 @@ describe('Subscription.positions ', () => {
         },
       ]);
 
-      const positions = await PositionModel.bulkCreate([
+      const lots = await LotModel.bulkCreate([
         {
           id: mockUuidFromNumber(1),
           ownerId: mockUserId1,
@@ -937,11 +928,11 @@ describe('Subscription.positions ', () => {
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -970,22 +961,22 @@ describe('Subscription.positions ', () => {
               price: 2.2,
             });
 
-            await PositionModel.update(
+            await LotModel.update(
               {
                 remainingQuantity: Sequelize.literal(
-                  `"${PositionModel.getAttributes().remainingQuantity.field}" - 2`
+                  `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
                 ),
               },
               {
-                where: { id: positions[0].id },
+                where: { id: lots[0].id },
               }
             );
 
             await publishUserHoldingChangedRedisEvent({
               ownerId: mockUserId1,
               portfolioStats: { set: [{ forCurrency: 'USD' }] },
-              holdingStats: { set: [positions[0].symbol] },
-              positions: { set: [positions[0].id] },
+              holdingStats: { set: [lots[0].symbol] },
+              lots: { set: [lots[0].id] },
             });
           },
 
@@ -999,22 +990,22 @@ describe('Subscription.positions ', () => {
               price: 2.4,
             });
 
-            await PositionModel.update(
+            await LotModel.update(
               {
                 remainingQuantity: Sequelize.literal(
-                  `"${PositionModel.getAttributes().remainingQuantity.field}" - 2`
+                  `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
                 ),
               },
               {
-                where: { id: positions[1].id },
+                where: { id: lots[1].id },
               }
             );
 
             await publishUserHoldingChangedRedisEvent({
               ownerId: mockUserId1,
               portfolioStats: { set: [{ forCurrency: 'USD' }] },
-              holdingStats: { set: [positions[1].symbol] },
-              positions: { set: [positions[1].id] },
+              holdingStats: { set: [lots[1].symbol] },
+              lots: { set: [lots[1].id] },
             });
           },
         ]) {
@@ -1026,16 +1017,16 @@ describe('Subscription.positions ', () => {
         expect(emissions).toStrictEqual([
           {
             data: {
-              positions: [
+              lots: [
                 {
                   data: {
-                    id: positions[1].id,
+                    id: lots[1].id,
                     unrealizedPnl: { amount: 2.5, percent: 25 },
                   },
                 },
                 {
                   data: {
-                    id: positions[0].id,
+                    id: lots[0].id,
                     unrealizedPnl: { amount: 5, percent: 25 },
                   },
                 },
@@ -1044,10 +1035,10 @@ describe('Subscription.positions ', () => {
           },
           {
             data: {
-              positions: [
+              lots: [
                 {
                   data: {
-                    id: positions[0].id,
+                    id: lots[0].id,
                     unrealizedPnl: { amount: 4, percent: 25 },
                   },
                 },
@@ -1056,10 +1047,10 @@ describe('Subscription.positions ', () => {
           },
           {
             data: {
-              positions: [
+              lots: [
                 {
                   data: {
-                    id: positions[1].id,
+                    id: lots[1].id,
                     unrealizedPnl: { amount: 1.5, percent: 25 },
                   },
                 },
@@ -1072,7 +1063,7 @@ describe('Subscription.positions ', () => {
       }
     });
 
-    it('When targeting closed positions, initial zero data is emitted and further changes in market data do not cause any updates to be emitted', async () => {
+    it('When targeting closed lots, initial zero data is emitted and further changes in market data do not cause any updates to be emitted', async () => {
       await TradeRecordModel.bulkCreate([
         {
           id: mockTradeIds[0],
@@ -1100,7 +1091,7 @@ describe('Subscription.positions ', () => {
         },
       ]);
 
-      const positions = await PositionModel.bulkCreate([
+      const lots = await LotModel.bulkCreate([
         {
           id: mockUuidFromNumber(1),
           ownerId: mockUserId1,
@@ -1143,11 +1134,11 @@ describe('Subscription.positions ', () => {
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -1171,16 +1162,16 @@ describe('Subscription.positions ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   unrealizedPnl: { amount: 0, percent: 0 },
                 },
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
@@ -1189,10 +1180,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -1201,10 +1192,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: { amount: 30, percent: 150 },
                 },
               },
@@ -1214,7 +1205,7 @@ describe('Subscription.positions ', () => {
       ]);
     });
 
-    it('Emits updates correctly in conjunction with changes to position symbols whose market data cannot be found', async () => {
+    it('Emits updates correctly in conjunction with changes to lot symbols whose market data cannot be found', async () => {
       await TradeRecordModel.bulkCreate([
         {
           id: mockTradeIds[0],
@@ -1242,7 +1233,7 @@ describe('Subscription.positions ', () => {
         },
       ]);
 
-      const positions = await PositionModel.bulkCreate([
+      const lots = await LotModel.bulkCreate([
         {
           id: mockUuidFromNumber(0),
           ownerId: mockUserId1,
@@ -1289,12 +1280,12 @@ describe('Subscription.positions ', () => {
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
-                  "${positions[2].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
+                  "${lots[2].id}"
                 ]
               }
             ) {
@@ -1327,14 +1318,14 @@ describe('Subscription.positions ', () => {
   });
 
   describe('With `unrealized.currencyAdjusted` field', () => {
-    it('Emits updates correctly in conjunction with changes to position symbols currency-adjusted market data', async () => {
+    it('Emits updates correctly in conjunction with changes to lot symbols currency-adjusted market data', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE', price: 1.1, quantity: 2 },
         { ...reusableTradeDatas[1], symbol: 'AAPL', price: 1.2, quantity: 2 },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE', remainingQuantity: 2 },
-        { ...reusablePositionDatas[1], symbol: 'AAPL', remainingQuantity: 2 },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE', remainingQuantity: 2 },
+        { ...reusableLotDatas[1], symbol: 'AAPL', remainingQuantity: 2 },
       ]);
 
       mockMarketDataControl.onConnectionSend([
@@ -1356,11 +1347,11 @@ describe('Subscription.positions ', () => {
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -1389,10 +1380,10 @@ describe('Subscription.positions ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   unrealizedPnl: {
                     amount: 0.6,
                     percent: 25,
@@ -1406,7 +1397,7 @@ describe('Subscription.positions ', () => {
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: {
                     amount: 0.8,
                     percent: 36.363636363636,
@@ -1423,10 +1414,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   unrealizedPnl: {
                     amount: 1,
                     percent: 45.454545454545,
@@ -1443,10 +1434,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   unrealizedPnl: {
                     amount: 0.8,
                     percent: 33.333333333333,
@@ -1471,19 +1462,19 @@ describe('Subscription.positions ', () => {
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
       ]);
-      const positions = await PositionModel.bulkCreate([
-        { ...reusablePositionDatas[0], symbol: 'ADBE' },
-        { ...reusablePositionDatas[1], symbol: 'AAPL' },
+      const lots = await LotModel.bulkCreate([
+        { ...reusableLotDatas[0], symbol: 'ADBE' },
+        { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
       const subscription = gqlWsClient.iterate({
         query: `
           subscription {
-            positions (
+            lots (
               filters: {
                 ids: [
-                  "${positions[0].id}"
-                  "${positions[1].id}"
+                  "${lots[0].id}"
+                  "${lots[1].id}"
                 ]
               }
             ) {
@@ -1554,10 +1545,10 @@ describe('Subscription.positions ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   priceData: {
                     currency: 'USD',
                     marketState: 'REGULAR',
@@ -1568,7 +1559,7 @@ describe('Subscription.positions ', () => {
               },
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   priceData: {
                     currency: 'USD',
                     marketState: 'REGULAR',
@@ -1582,10 +1573,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[0].id,
+                  id: lots[0].id,
                   priceData: {
                     currency: 'USD',
                     marketState: 'CLOSED',
@@ -1599,10 +1590,10 @@ describe('Subscription.positions ', () => {
         },
         {
           data: {
-            positions: [
+            lots: [
               {
                 data: {
-                  id: positions[1].id,
+                  id: lots[1].id,
                   priceData: {
                     currency: 'USD',
                     marketState: 'PRE',

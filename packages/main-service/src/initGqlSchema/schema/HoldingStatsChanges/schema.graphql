@@ -7,7 +7,7 @@ type HoldingStatsChange {
   relatedTradeId: ID!
   portfolioStatsChangeId: ID!
   symbol: String!
-  totalPositionCount: Int!
+  totalLotCount: Int!
   totalQuantity: Float!
   totalPresentInvestedAmount: Float!
   totalRealizedAmount: Float!
@@ -17,7 +17,7 @@ type HoldingStatsChange {
   # breakEvenPrice: Float!
   changedAt: DateTime!
   # marketData: HoldingStatsMarketData!
-  # unrealizedProfit: PositionProfitInfo!
+  # unrealizedProfit: LotProfitInfo!
   relatedPortfolioStatsChange: PortfolioStatsChange!
 }
 

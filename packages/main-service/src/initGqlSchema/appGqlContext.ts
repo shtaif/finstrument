@@ -8,9 +8,9 @@ import { createPortfolioStatsLoader } from './loaders/createPortfolioStatsLoader
 import { createPortfolioStatsChangesLoader } from './loaders/createPortfolioStatsChangesLoader.js';
 import { createHoldingStatsChangesLoader } from './loaders/createHoldingStatsChangesLoader.js';
 import {
-  createPositionMarketDataLoader,
+  createLotMarketDataLoader,
   type PositionPnlUpdate,
-} from './loaders/createPositionMarketDataLoader.js';
+} from './loaders/createLotMarketDataLoader.js';
 import {
   createInstrumentInfoLoader,
   type InstrumentInfo,
@@ -42,7 +42,7 @@ const appGqlContext = async (injectedInfo: {
   holdingStatsChangesLoader: ReturnType<typeof createHoldingStatsChangesLoader>;
   liveHoldingMarketDataLoader: ReturnType<typeof createLiveHoldingMarketDataLoader>;
   holdingMarketDataLoader: ReturnType<typeof createHoldingMarketDataLoader>;
-  positionMarketDataLoader: ReturnType<typeof createPositionMarketDataLoader>;
+  lotMarketDataLoader: ReturnType<typeof createLotMarketDataLoader>;
   // positionLiveMarketDataLoader: ReturnType<typeof createHoldingMarketDataLoader>;
   instrumentInfoLoader: ReturnType<typeof createInstrumentInfoLoader>;
   instrumentCurrentMarketDataLoader: ReturnType<typeof createInstrumentCurrentMarketDataLoader>;
@@ -55,7 +55,7 @@ const appGqlContext = async (injectedInfo: {
   const holdingStatsChangesLoader = createHoldingStatsChangesLoader();
   const liveHoldingMarketDataLoader = createLiveHoldingMarketDataLoader();
   const holdingMarketDataLoader = createHoldingMarketDataLoader();
-  const positionMarketDataLoader = createPositionMarketDataLoader();
+  const lotMarketDataLoader = createLotMarketDataLoader();
   const instrumentInfoLoader = createInstrumentInfoLoader();
   const instrumentCurrentMarketDataLoader = createInstrumentCurrentMarketDataLoader();
   // const observedStatsObjectsLoader = createObservedStatsObjectsLoader();
@@ -65,7 +65,7 @@ const appGqlContext = async (injectedInfo: {
     portfolioStatsLoader,
     portfolioStatsChangesLoader,
     holdingStatsChangesLoader,
-    positionMarketDataLoader,
+    lotMarketDataLoader,
     liveHoldingMarketDataLoader,
     holdingMarketDataLoader,
     instrumentInfoLoader,

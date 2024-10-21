@@ -1,4 +1,4 @@
-import { retrievePositions, type Position } from './retrievePositions/index.js';
+import { retrieveLots, type Lot } from './retrieveLots/index.js';
 import { retrieveHoldingStats, type HoldingStats } from './retrieveHoldingStats/index.js';
 import {
   retrieveHoldingStatsChanges,
@@ -22,7 +22,7 @@ import { observePortfolioChanges, type ChangedPortfolio } from './observePortfol
 import { type PositionRecord } from './positionRecordSchema.js';
 
 const positionsService = {
-  retrievePositions,
+  retrieveLots,
   retrieveHoldingStats,
   retrieveHoldingStatsChanges,
   retrievePortfolioStatsChanges,
@@ -35,7 +35,7 @@ const positionsService = {
 export {
   positionsService as default, // TODO: Remove this default export project-wide in favor of the named `positionsService` one below
   positionsService,
-  type Position,
+  type Lot,
   type PositionRecord,
   type ChangedPortfolio,
   type HoldingStats,

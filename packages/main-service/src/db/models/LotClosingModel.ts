@@ -1,32 +1,25 @@
 import { type BelongsToOptions, type InferAttributes } from 'sequelize';
 import { Model, DataType, Table, Column, BelongsTo } from 'sequelize-typescript';
 import { TradeRecordModel } from './TradeRecordModel.js';
-import { PositionModel } from './PositionModel.js';
+import { LotModel } from './LotModel.js';
 
-export {
-  PositionClosingModel,
-  type PositionClosingModelAttributes,
-  type PositionClosingModelCreationAttributes,
-};
+export { LotClosingModel, type LotClosingModelAttributes, type LotClosingModelCreationAttributes };
 
 // TODO: Make foreign keys pointing out from this model into CASCADE DELETE?
 @Table({
-  tableName: 'position_closings',
+  tableName: 'lot_closings',
   timestamps: true,
   createdAt: false,
   updatedAt: false,
 })
-class PositionClosingModel extends Model<
-  PositionClosingModelAttributes,
-  PositionClosingModelCreationAttributes
-> {
+class LotClosingModel extends Model<LotClosingModelAttributes, LotClosingModelCreationAttributes> {
   @Column({
-    field: 'position_id',
+    field: 'lot_id',
     type: DataType.UUID,
     allowNull: false,
     primaryKey: true,
   })
-  positionId!: string;
+  lotId!: string;
 
   @Column({
     field: 'closing_trade_id',
@@ -43,12 +36,12 @@ class PositionClosingModel extends Model<
   })
   closedQuantity!: number;
 
-  @BelongsTo(() => PositionModel, {
+  @BelongsTo(() => LotModel, {
     targetKey: 'id',
-    foreignKey: 'positionId',
+    foreignKey: 'lotId',
     onDelete: 'CASCADE',
   } satisfies BelongsToOptions)
-  position!: Self<PositionModel>;
+  lot!: Self<LotModel>;
 
   @BelongsTo(() => TradeRecordModel, {
     targetKey: 'id',
@@ -58,12 +51,12 @@ class PositionClosingModel extends Model<
   associatedTrade!: Self<TradeRecordModel>;
 }
 
-type PositionClosingModelAttributes = InferAttributes<PositionClosingModel>;
+type LotClosingModelAttributes = InferAttributes<LotClosingModel>;
 
-type PositionClosingModelCreationAttributes = {
-  positionId: PositionClosingModel['positionId'];
-  associatedTradeId: PositionClosingModel['associatedTradeId'];
-  closedQuantity: PositionClosingModel['closedQuantity'];
+type LotClosingModelCreationAttributes = {
+  lotId: LotClosingModel['lotId'];
+  associatedTradeId: LotClosingModel['associatedTradeId'];
+  closedQuantity: LotClosingModel['closedQuantity'];
 };
 
 type Self<T> = T;
