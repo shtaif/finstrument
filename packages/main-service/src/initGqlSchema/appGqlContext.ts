@@ -9,7 +9,7 @@ import { createPortfolioStatsChangesLoader } from './loaders/createPortfolioStat
 import { createHoldingStatsChangesLoader } from './loaders/createHoldingStatsChangesLoader.js';
 import {
   createLotMarketDataLoader,
-  type PositionPnlUpdate,
+  type LotPnlUpdate,
 } from './loaders/createLotMarketDataLoader.js';
 import {
   createInstrumentInfoLoader,
@@ -28,7 +28,7 @@ export {
   appGqlContext,
   type AppGqlContextValue,
   type HoldingMarketStats,
-  type PositionPnlUpdate,
+  type LotPnlUpdate,
   type InstrumentInfo,
   type UpdatedSymbolPrice,
 };
