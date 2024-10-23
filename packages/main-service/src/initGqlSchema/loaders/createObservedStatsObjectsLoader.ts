@@ -42,6 +42,7 @@ function createObservedStatsObjectsLoader(): DataLoader<
             regularMarketTime: true,
             regularMarketPrice: true,
           },
+          marketValue: true,
           pnl: {
             amount: true,
             percent: true,
