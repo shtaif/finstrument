@@ -23,7 +23,7 @@ import {
   type UpdatedSymbolPriceMap,
   type UpdatedSymbolPrice,
 } from './getMarketDataByStatsObjectsIter.js';
-import { portfolioStatsCalcPnl } from './portfolioStatsCalcPnl.js';
+import { portfolioStatsCalcMarketStats } from './portfolioStatsCalcMarketStats.js';
 import { calcPnlInTranslateCurrencies } from './calcPnlInTranslateCurrencies.js';
 import { calcHoldingRevenue } from './calcHoldingRevenue.js';
 // import { from, AsyncSink } from '@reactivex/ix-esnext-esm/asynciterable';
@@ -108,22 +108,28 @@ function getLiveMarketData(params: {
     requestedSomeHoldingStatsMarketDataFields,
     requestedSomeLotsMarketDataFields,
   ] = [
-    pipe(paramsNorm.fields.portfolios, ({ pnl }) => [pnl, pnl?.byTranslateCurrencies])
-      .flatMap(fields => values(fields))
-      .some(val => val === true),
-
-    pipe(paramsNorm.fields.holdings, ({ pnl, priceData }) => [
+    pipe(paramsNorm.fields.portfolios, ({ pnl, marketValue }) => [
       pnl,
       pnl?.byTranslateCurrencies,
-      priceData,
+      marketValue,
     ])
       .flatMap(fields => values(fields))
       .some(val => val === true),
 
-    pipe(paramsNorm.fields.lots, ({ pnl, priceData }) => [
+    pipe(paramsNorm.fields.holdings, ({ pnl, priceData, marketValue }) => [
       pnl,
       pnl?.byTranslateCurrencies,
       priceData,
+      marketValue,
+    ])
+      .flatMap(fields => values(fields))
+      .some(val => val === true),
+
+    pipe(paramsNorm.fields.lots, ({ pnl, priceData, marketValue }) => [
+      pnl,
+      pnl?.byTranslateCurrencies,
+      priceData,
+      marketValue,
     ])
       .flatMap(fields => values(fields))
       .some(val => val === true),
@@ -285,29 +291,39 @@ function getLiveMarketData(params: {
               ] as const
             ).flatMap(([{ type }, changed]) =>
               changed.map(pStats => {
-                const pnl = !requestedSomeUnrealizedPnlFields
-                  ? undefined
-                  : (() => {
-                      const { pnlAmount, pnlPercent } = portfolioStatsCalcPnl(
-                        pStats,
-                        allCurrSymbolPriceData
-                      );
+                const { marketValue, pnl } =
+                  !requestedSomeUnrealizedPnlFields && !paramsNorm.fields.portfolios.marketValue
+                    ? {
+                        marketValue: undefined,
+                        pnl: undefined,
+                      }
+                    : (() => {
+                        const { marketValue, pnlAmount, pnlPercent } =
+                          portfolioStatsCalcMarketStats(pStats, allCurrSymbolPriceData);
 
-                      const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
-                        pStats.forCurrency,
-                        paramsNorm.translateToCurrencies,
-                        pnlAmount,
-                        allCurrSymbolPriceData
-                      );
+                        const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
+                          pStats.forCurrency,
+                          paramsNorm.translateToCurrencies,
+                          pnlAmount,
+                          allCurrSymbolPriceData
+                        );
 
-                      return {
-                        amount: normalizeFloatImprecisions(pnlAmount),
-                        percent: normalizeFloatImprecisions(pnlPercent),
-                        byTranslateCurrencies: pnlByTranslateCurrencies,
-                      };
-                    })();
+                        return {
+                          marketValue: normalizeFloatImprecisions(marketValue),
+                          pnl: {
+                            amount: normalizeFloatImprecisions(pnlAmount),
+                            percent: normalizeFloatImprecisions(pnlPercent),
+                            byTranslateCurrencies: pnlByTranslateCurrencies,
+                          },
+                        };
+                      })();
 
-                return { type, portfolio: pStats, pnl };
+                return {
+                  type,
+                  portfolio: pStats,
+                  marketValue,
+                  pnl,
+                };
               })
             );
 
@@ -328,6 +344,15 @@ function getLiveMarketData(params: {
                       regularMarketTime: priceUpdateForSymbol.regularMarketTime,
                       regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
                     };
+
+                const marketValue = (() => {
+                  if (!requestedSomeHoldingStatsMarketDataFields) {
+                    return;
+                  }
+                  return holding.totalQuantity === 0
+                    ? 0
+                    : holding.totalQuantity * priceUpdateForSymbol.regularMarketPrice;
+                })();
 
                 const pnl = !requestedSomeUnrealizedPnlFields
                   ? undefined
@@ -351,7 +376,13 @@ function getLiveMarketData(params: {
                       };
                     })();
 
-                return { type, holding, priceData, pnl };
+                return {
+                  type,
+                  holding,
+                  priceData,
+                  marketValue,
+                  pnl,
+                };
               })
             );
 
@@ -373,6 +404,15 @@ function getLiveMarketData(params: {
                       regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
                     };
 
+                const marketValue = (() => {
+                  if (!requestedSomeLotsMarketDataFields) {
+                    return;
+                  }
+                  return lot.remainingQuantity === 0
+                    ? 0
+                    : lot.remainingQuantity * priceUpdateForSymbol.regularMarketPrice;
+                })();
+
                 const pnl = !requestedSomeUnrealizedPnlFields
                   ? undefined
                   : (() => {
@@ -382,7 +422,6 @@ function getLiveMarketData(params: {
                           : [
                               lot.remainingQuantity *
                                 (priceUpdateForSymbol.regularMarketPrice - lot.openingTrade.price),
-
                               (priceUpdateForSymbol.regularMarketPrice / lot.openingTrade.price -
                                 1) *
                                 100,
@@ -402,7 +441,13 @@ function getLiveMarketData(params: {
                       };
                     })();
 
-                return { type, lot: lot, priceData, pnl };
+                return {
+                  type,
+                  lot,
+                  priceData,
+                  marketValue,
+                  pnl,
+                };
               })
             );
 
@@ -679,6 +724,7 @@ type PortfoliosSelectableFields2 = {
     totalRealizedProfitOrLossRate?: boolean;
     lastChangedAt?: boolean;
   };
+  marketValue?: boolean;
   pnl?: {
     amount?: boolean;
     percent?: boolean;
@@ -714,6 +760,7 @@ type HoldingsSelectableFields2 = TypeExtends<
       regularMarketTime?: boolean;
       regularMarketPrice?: boolean;
     };
+    marketValue?: boolean;
     pnl?: {
       amount?: boolean;
       percent?: boolean;
@@ -746,6 +793,7 @@ type LotsSelectableFields2 = {
     regularMarketTime?: boolean;
     regularMarketPrice?: boolean;
   };
+  marketValue?: boolean;
   pnl?: {
     amount?: boolean;
     percent?: boolean;
@@ -779,6 +827,7 @@ type MarketDataUpdate<TTranslateCurrencies extends string = string> = {
 type PortfolioMarketStatsUpdate<TTranslateCurrencies extends string = string> = {
   type: 'SET' | 'REMOVE';
   portfolio: StatsObjects['portfolioStatsChanges'][string];
+  marketValue: number;
   pnl: PnlInfo<TTranslateCurrencies>; // TODO: Rename this prop into `unrealizedPnl`
 };
 
@@ -786,6 +835,7 @@ type HoldingMarketStatsUpdate<TTranslateCurrencies extends string = string> = {
   type: 'SET' | 'REMOVE';
   holding: HoldingStats;
   priceData: InstrumentMarketPriceInfo;
+  marketValue: number;
   pnl: PnlInfo<TTranslateCurrencies>; // TODO: Rename this prop into `unrealizedPnl`
 };
 
@@ -793,6 +843,7 @@ type LotMarketStatsUpdate<TTranslateCurrencies extends string = string> = {
   type: 'SET' | 'REMOVE';
   lot: Lot;
   priceData: InstrumentMarketPriceInfo;
+  marketValue: number;
   pnl: PnlInfo<TTranslateCurrencies>; // TODO: Rename this prop into `unrealizedPnl`
 };
 

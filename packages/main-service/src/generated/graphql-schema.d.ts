@@ -215,6 +215,7 @@ export type ObservedHoldingStats = {
   currentPortfolioPortion?: Maybe<Scalars['Float']['output']>;
   lastChangedAt: Scalars['DateTime']['output'];
   lastRelatedTradeId: Scalars['ID']['output'];
+  marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
@@ -240,6 +241,7 @@ export type ObservedHoldingStatsUpdateType =
 export type ObservedLot = {
   __typename?: 'ObservedLot';
   id: Scalars['ID']['output'];
+  marketValue: Scalars['Float']['output'];
   openedAt: Scalars['DateTime']['output'];
   openingTradeId: Scalars['ID']['output'];
   originalQuantity: Scalars['Float']['output'];
@@ -267,6 +269,7 @@ export type ObservedPortfolioStats = {
   __typename?: 'ObservedPortfolioStats';
   forCurrency?: Maybe<Scalars['String']['output']>;
   lastChangedAt: Scalars['DateTime']['output'];
+  marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
   relatedTradeId: Scalars['ID']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
@@ -787,6 +790,7 @@ export type ObservedHoldingStatsResolvers<ContextType = AppGqlContextValue, Pare
   currentPortfolioPortion?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
   lastChangedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   lastRelatedTradeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  marketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   ownerId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   priceData?: Resolver<ResolversTypes['InstrumentMarketData'], ParentType, ContextType>;
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
@@ -808,6 +812,7 @@ export type ObservedHoldingStatsUpdateResolvers<ContextType = AppGqlContextValue
 
 export type ObservedLotResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedLot'] = ResolversParentTypes['ObservedLot']> = {
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  marketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   openedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   openingTradeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   originalQuantity?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -831,6 +836,7 @@ export type ObservedLotUpdateResolvers<ContextType = AppGqlContextValue, ParentT
 export type ObservedPortfolioStatsResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedPortfolioStats'] = ResolversParentTypes['ObservedPortfolioStats']> = {
   forCurrency?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   lastChangedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  marketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   ownerId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   relatedTradeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   totalPresentInvestedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;

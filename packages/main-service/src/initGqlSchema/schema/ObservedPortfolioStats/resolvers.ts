@@ -44,6 +44,7 @@ const resolvers = {
                   totalRealizedProfitOrLossRate: !!fields?.totalRealizedProfitOrLossRate,
                   lastChangedAt: !!fields?.lastChangedAt,
                 })),
+                marketValue: !!requestedFields.data?.subFields.marketValue,
                 pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
                   amount: !!fields?.amount,
                   percent: !!fields?.percent,
@@ -57,10 +58,11 @@ const resolvers = {
             },
           }),
           itMap(updates =>
-            updates.portfolios.map(({ type, portfolio, pnl }) => ({
+            updates.portfolios.map(({ type, portfolio, marketValue, pnl }) => ({
               type,
               data: {
                 ...portfolio,
+                marketValue,
                 unrealizedPnl: !pnl
                   ? undefined
                   : {

@@ -49,6 +49,7 @@ const resolvers = {
                   regularMarketTime: !!fields?.regularMarketTime,
                   regularMarketPrice: !!fields?.regularMarketPrice,
                 })),
+                marketValue: !!requestedFields.data?.subFields?.marketValue,
                 pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
                   amount: !!fields?.amount,
                   percent: !!fields?.percent,
@@ -62,11 +63,12 @@ const resolvers = {
             },
           }),
           itMap(updates =>
-            updates.lots.map(({ type, lot, priceData, pnl }) => ({
+            updates.lots.map(({ type, lot, priceData, marketValue, pnl }) => ({
               type,
               data: {
                 ...lot,
                 priceData,
+                marketValue,
                 unrealizedPnl: !pnl
                   ? undefined
                   : {
