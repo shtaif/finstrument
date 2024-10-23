@@ -13,7 +13,6 @@ import { verifySession as supertokensVerifySessionMw } from 'supertokens-node/re
 import { env } from './utils/env.js';
 import { mainRedisClient, subscriberRedisClient } from './utils/redisClients.js';
 import { initDbSchema } from './db/index.js';
-import appApiRoutes from './appApiRoutes/index.js';
 import { initSuperTokens } from './initSuperTokens/index.js';
 import { createGraphqlAppMiddleware } from './graphqlAppMiddleware/index.js';
 import { graphqlWsServer } from './graphqlWsServer/index.js';
@@ -44,8 +43,7 @@ async function startApp(): Promise<() => Promise<void>> {
         })
       )
       .use(expressJson({ limit: '100kb' }))
-      .use(supertokensAuthEndpointsBasePath, supertokensMw())
-      .use('/api', supertokensVerifySessionMw({ sessionRequired: false }), appApiRoutes)
+      .use(`${supertokensAuthEndpointsBasePath}`, supertokensMw())
       .use(
         '/graphql',
         supertokensVerifySessionMw({ sessionRequired: false }),
