@@ -11,14 +11,6 @@ import {
   type PortfolioStatsChange,
 } from './retrievePortfolioStatsChanges/index.js';
 import { setPositions } from './setPositions/index.js';
-import { observePositionChanges } from './observePositionChanges/index.js';
-// import observeHoldingChanges, {
-//   type ChangedHoldings,
-//   type ChangedHoldingItem,
-//   type IndividualHoldingItem,
-// } from './observeHoldingChanges___';
-import { observeHoldingChanges } from './observeHoldingChanges/index.js';
-import { observePortfolioChanges, type ChangedPortfolio } from './observePortfolioChanges/index.js';
 import { type PositionRecord } from './positionRecordSchema.js';
 
 const positionsService = {
@@ -27,9 +19,6 @@ const positionsService = {
   retrieveHoldingStatsChanges,
   retrievePortfolioStatsChanges,
   setPositions,
-  observePositionChanges,
-  observeHoldingChanges,
-  observePortfolioChanges,
 };
 
 export {
@@ -37,7 +26,6 @@ export {
   positionsService,
   type Lot,
   type PositionRecord,
-  type ChangedPortfolio,
   type HoldingStats,
   type RetrieveHoldingStatsChangesParams,
   type HoldingStatsChange,
