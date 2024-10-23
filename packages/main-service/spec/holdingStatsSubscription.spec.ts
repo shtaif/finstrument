@@ -821,7 +821,7 @@ describe('Subscription.holdingStats ', () => {
     }
   );
 
-  describe('With `unrealizedPnl` field', () => {
+  describe('With `marketValue` and `unrealizedPnl` fields', () => {
     it('Emits updates correctly in conjunction with changes to holding symbols market data', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
       await HoldingStatsChangeModel.bulkCreate(
@@ -840,14 +840,10 @@ describe('Subscription.holdingStats ', () => {
               holdingStats {
                 data {
                   symbol
+                  marketValue
                   unrealizedPnl {
                     amount
                     percent
-                    # currencyAdjusted {
-                      # currency
-                      # exchangeRate
-                      # amount
-                    # }
                   }
                 }
               }
@@ -879,12 +875,14 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'AAPL',
+                  marketValue: 37.5,
                   unrealizedPnl: { amount: 7.5, percent: 25 },
                 },
               },
               {
                 data: {
                   symbol: 'ADBE',
+                  marketValue: 37.5,
                   unrealizedPnl: { amount: 7.5, percent: 25 },
                 },
               },
@@ -897,6 +895,7 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'ADBE',
+                  marketValue: 45,
                   unrealizedPnl: { amount: 15, percent: 50 },
                 },
               },
@@ -909,6 +908,7 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'AAPL',
+                  marketValue: 45,
                   unrealizedPnl: { amount: 15, percent: 50 },
                 },
               },
@@ -935,6 +935,7 @@ describe('Subscription.holdingStats ', () => {
             holdingStats {
               data {
                 symbol
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -999,12 +1000,14 @@ describe('Subscription.holdingStats ', () => {
                 {
                   data: {
                     symbol: 'AAPL',
+                    marketValue: 20,
                     unrealizedPnl: { amount: 4, percent: 25 },
                   },
                 },
                 {
                   data: {
                     symbol: 'ADBE',
+                    marketValue: 20,
                     unrealizedPnl: { amount: 4, percent: 25 },
                   },
                 },
@@ -1017,6 +1020,7 @@ describe('Subscription.holdingStats ', () => {
                 {
                   data: {
                     symbol: 'ADBE',
+                    marketValue: 40,
                     unrealizedPnl: { amount: 2, percent: 5.263157894737 },
                   },
                 },
@@ -1029,6 +1033,7 @@ describe('Subscription.holdingStats ', () => {
                 {
                   data: {
                     symbol: 'AAPL',
+                    marketValue: 60,
                     unrealizedPnl: { amount: 2, percent: 3.448275862069 },
                   },
                 },
@@ -1041,129 +1046,125 @@ describe('Subscription.holdingStats ', () => {
       }
     });
 
-    it(
-      'When targeting empty past holdings, emits the initial message with zero amount and percent ' +
-        'and then continues observing for any relevant future changes as in any regular holding',
-      async () => {
-        await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-        await HoldingStatsChangeModel.bulkCreate(
-          reusableHoldingStats.slice(0, 2).map(h => ({
-            ...h,
-            totalLotCount: 0,
-            totalQuantity: 0,
-            totalPresentInvestedAmount: 0,
-          }))
-        );
+    it('When targeting empty past holdings, emits the initial message with zero amount and percent and then continues observing for any relevant future changes as in any regular holding', async () => {
+      await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
+      await HoldingStatsChangeModel.bulkCreate(
+        reusableHoldingStats.slice(0, 2).map(h => ({
+          ...h,
+          totalLotCount: 0,
+          totalQuantity: 0,
+          totalPresentInvestedAmount: 0,
+        }))
+      );
 
-        await using subscription = iterateGqlSubscriptionDisposable({
-          query: `
+      await using subscription = iterateGqlSubscriptionDisposable({
+        query: `
             subscription {
               holdingStats {
                 data {
                   symbol
+                  marketValue
                   unrealizedPnl {
                     amount
                     percent
-                    # currencyAdjusted {
-                      # currency
-                      # exchangeRate
-                      # amount
-                    # }
                   }
                 }
               }
             }`,
-        });
+      });
 
-        const emissions = [(await subscription.next()).value];
+      const emissions = [(await subscription.next()).value];
 
-        for (const applyNextChanges of [
-          async () => {
-            await TradeRecordModel.create(reusableTradeDatas[2]);
-            await HoldingStatsChangeModel.create({
-              ...reusableHoldingStats[2],
-              totalLotCount: 1,
-              totalQuantity: 2,
-              totalPresentInvestedAmount: 16,
-            });
+      for (const applyNextChanges of [
+        async () => {
+          await TradeRecordModel.create(reusableTradeDatas[2]);
+          await HoldingStatsChangeModel.create({
+            ...reusableHoldingStats[2],
+            totalLotCount: 1,
+            totalQuantity: 2,
+            totalPresentInvestedAmount: 16,
+          });
 
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              holdingStats: { set: [reusableHoldingStats[2].symbol] },
-            });
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            holdingStats: { set: [reusableHoldingStats[2].symbol] },
+          });
 
-            await mockMarketDataControl.onConnectionSend([{ ADBE: { regularMarketPrice: 11 } }]);
-          },
+          await mockMarketDataControl.onConnectionSend([{ ADBE: { regularMarketPrice: 11 } }]);
+        },
 
-          async () => {
-            await TradeRecordModel.create(reusableTradeDatas[3]);
-            await HoldingStatsChangeModel.create({
-              ...reusableHoldingStats[3],
-              totalLotCount: 2,
-              totalQuantity: 4,
-              totalPresentInvestedAmount: 36,
-            });
+        async () => {
+          await TradeRecordModel.create(reusableTradeDatas[3]);
+          await HoldingStatsChangeModel.create({
+            ...reusableHoldingStats[3],
+            totalLotCount: 2,
+            totalQuantity: 4,
+            totalPresentInvestedAmount: 36,
+          });
 
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              holdingStats: { set: [reusableHoldingStats[3].symbol] },
-            });
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            holdingStats: { set: [reusableHoldingStats[3].symbol] },
+          });
 
-            await mockMarketDataControl.waitUntilRequestingNewSymbols();
-            await mockMarketDataControl.onConnectionSend([{ AAPL: { regularMarketPrice: 12 } }]);
-          },
-        ]) {
-          await applyNextChanges();
-          const { value } = await subscription.next();
-          emissions.push(value);
-        }
-
-        expect(emissions).toStrictEqual([
-          {
-            data: {
-              holdingStats: [
-                {
-                  data: {
-                    symbol: 'AAPL',
-                    unrealizedPnl: { amount: 0, percent: 0 },
-                  },
-                },
-                {
-                  data: {
-                    symbol: 'ADBE',
-                    unrealizedPnl: { amount: 0, percent: 0 },
-                  },
-                },
-              ],
-            },
-          },
-          {
-            data: {
-              holdingStats: [
-                {
-                  data: {
-                    symbol: 'ADBE',
-                    unrealizedPnl: { amount: 6, percent: 37.5 },
-                  },
-                },
-              ],
-            },
-          },
-          {
-            data: {
-              holdingStats: [
-                {
-                  data: {
-                    symbol: 'AAPL',
-                    unrealizedPnl: { amount: 12, percent: 33.333333333333 },
-                  },
-                },
-              ],
-            },
-          },
-        ]);
+          await mockMarketDataControl.waitUntilRequestingNewSymbols();
+          await mockMarketDataControl.onConnectionSend([{ AAPL: { regularMarketPrice: 12 } }]);
+        },
+      ]) {
+        await applyNextChanges();
+        const { value } = await subscription.next();
+        emissions.push(value);
       }
-    );
+
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            holdingStats: [
+              {
+                data: {
+                  symbol: 'AAPL',
+                  marketValue: 0,
+                  unrealizedPnl: { amount: 0, percent: 0 },
+                },
+              },
+              {
+                data: {
+                  symbol: 'ADBE',
+                  marketValue: 0,
+                  unrealizedPnl: { amount: 0, percent: 0 },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            holdingStats: [
+              {
+                data: {
+                  symbol: 'ADBE',
+                  marketValue: 22,
+                  unrealizedPnl: { amount: 6, percent: 37.5 },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            holdingStats: [
+              {
+                data: {
+                  symbol: 'AAPL',
+                  marketValue: 48,
+                  unrealizedPnl: { amount: 12, percent: 33.333333333333 },
+                },
+              },
+            ],
+          },
+        },
+      ]);
+    });
 
     it('When targeting empty past holdings, changes in market data do not cause any further updates to be emitted', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
@@ -1188,6 +1189,7 @@ describe('Subscription.holdingStats ', () => {
               holdingStats {
                 data {
                   symbol
+                  marketValue
                   unrealizedPnl {
                     amount
                     percent
@@ -1221,12 +1223,14 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'AAPL',
+                  marketValue: 5,
                   unrealizedPnl: { amount: 1, percent: 25 },
                 },
               },
               {
                 data: {
                   symbol: 'ADBE',
+                  marketValue: 0,
                   unrealizedPnl: { amount: 0, percent: 0 },
                 },
               },
@@ -1239,6 +1243,7 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'AAPL',
+                  marketValue: 6,
                   unrealizedPnl: { amount: 2, percent: 50 },
                 },
               },
@@ -1251,6 +1256,7 @@ describe('Subscription.holdingStats ', () => {
               {
                 data: {
                   symbol: 'AAPL',
+                  marketValue: 7,
                   unrealizedPnl: { amount: 3, percent: 75 },
                 },
               },
@@ -1286,6 +1292,7 @@ describe('Subscription.holdingStats ', () => {
             holdingStats {
               data {
                 symbol
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -1311,7 +1318,7 @@ describe('Subscription.holdingStats ', () => {
       });
     });
 
-    describe('With `unrealized.currencyAdjusted` field', () => {
+    describe('With `unrealizedPnl.currencyAdjusted` field', () => {
       it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
         await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
         await HoldingStatsChangeModel.bulkCreate([

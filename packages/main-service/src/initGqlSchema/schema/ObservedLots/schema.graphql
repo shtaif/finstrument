@@ -24,6 +24,7 @@ type ObservedLot {
   recordCreatedAt: DateTime!
   recordUpdatedAt: DateTime!
   priceData: InstrumentMarketData!
+  marketValue: Float!
   unrealizedPnl: PnlInfo!
 }
 

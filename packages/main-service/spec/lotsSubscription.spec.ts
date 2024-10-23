@@ -685,7 +685,7 @@ describe('Subscription.lots ', () => {
     }
   );
 
-  describe('With `unrealizedPnl` field', () => {
+  describe('With `marketValue` and `unrealizedPnl` fields', () => {
     it('Emits updates correctly in conjunction with changes to lot symbols market data', async () => {
       await TradeRecordModel.bulkCreate([
         {
@@ -791,6 +791,7 @@ describe('Subscription.lots ', () => {
               ) {
                 data {
                   id
+                  marketValue
                   unrealizedPnl {
                     amount
                     percent
@@ -810,24 +811,28 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[3].id,
+                  marketValue: 15,
                   unrealizedPnl: { amount: 5, percent: 50 },
                 },
               },
               {
                 data: {
                   id: lots[2].id,
+                  marketValue: 30,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
               {
                 data: {
                   id: lots[1].id,
+                  marketValue: 15,
                   unrealizedPnl: { amount: 5, percent: 50 },
                 },
               },
               {
                 data: {
                   id: lots[0].id,
+                  marketValue: 30,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
@@ -840,12 +845,14 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[1].id,
+                  marketValue: 20,
                   unrealizedPnl: { amount: 10, percent: 100 },
                 },
               },
               {
                 data: {
                   id: lots[0].id,
+                  marketValue: 40,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -858,12 +865,14 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[3].id,
+                  marketValue: 20,
                   unrealizedPnl: { amount: 10, percent: 100 },
                 },
               },
               {
                 data: {
                   id: lots[2].id,
+                  marketValue: 40,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -886,7 +895,7 @@ describe('Subscription.lots ', () => {
         {
           id: mockTradeIds[1],
           ownerId: mockUserId1,
-          symbol: 'ADBE',
+          symbol: 'AAPL',
           performedAt: '2024-01-01T00:00:01.000Z',
           quantity: 10,
           price: 2,
@@ -909,7 +918,7 @@ describe('Subscription.lots ', () => {
           id: mockUuidFromNumber(2),
           ownerId: mockUserId1,
           openingTradeId: mockTradeIds[1],
-          symbol: 'ADBE',
+          symbol: 'AAPL',
           remainingQuantity: 5,
           realizedProfitOrLoss: 10,
           openedAt: new Date('2024-01-01T00:00:01.000Z'),
@@ -938,6 +947,7 @@ describe('Subscription.lots ', () => {
             ) {
               data {
                 id
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -984,7 +994,7 @@ describe('Subscription.lots ', () => {
             await TradeRecordModel.create({
               id: mockTradeIds[3],
               ownerId: mockUserId1,
-              symbol: 'ADBE',
+              symbol: 'AAPL',
               performedAt: '2024-01-01T00:00:03.000Z',
               quantity: -2,
               price: 2.4,
@@ -1021,12 +1031,14 @@ describe('Subscription.lots ', () => {
                 {
                   data: {
                     id: lots[1].id,
+                    marketValue: 12.5,
                     unrealizedPnl: { amount: 2.5, percent: 25 },
                   },
                 },
                 {
                   data: {
                     id: lots[0].id,
+                    marketValue: 25,
                     unrealizedPnl: { amount: 5, percent: 25 },
                   },
                 },
@@ -1039,6 +1051,7 @@ describe('Subscription.lots ', () => {
                 {
                   data: {
                     id: lots[0].id,
+                    marketValue: 20,
                     unrealizedPnl: { amount: 4, percent: 25 },
                   },
                 },
@@ -1051,6 +1064,7 @@ describe('Subscription.lots ', () => {
                 {
                   data: {
                     id: lots[1].id,
+                    marketValue: 7.5,
                     unrealizedPnl: { amount: 1.5, percent: 25 },
                   },
                 },
@@ -1144,6 +1158,7 @@ describe('Subscription.lots ', () => {
             ) {
               data {
                 id
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -1166,12 +1181,14 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[1].id,
+                  marketValue: 0,
                   unrealizedPnl: { amount: 0, percent: 0 },
                 },
               },
               {
                 data: {
                   id: lots[0].id,
+                  marketValue: 30,
                   unrealizedPnl: { amount: 10, percent: 50 },
                 },
               },
@@ -1184,6 +1201,7 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[0].id,
+                  marketValue: 40,
                   unrealizedPnl: { amount: 20, percent: 100 },
                 },
               },
@@ -1196,6 +1214,7 @@ describe('Subscription.lots ', () => {
               {
                 data: {
                   id: lots[0].id,
+                  marketValue: 50,
                   unrealizedPnl: { amount: 30, percent: 150 },
                 },
               },
@@ -1291,6 +1310,7 @@ describe('Subscription.lots ', () => {
             ) {
               data {
                 id
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -1454,158 +1474,158 @@ describe('Subscription.lots ', () => {
         },
       ]);
     });
-  });
 
-  describe('With `priceData` field', () => {
-    it('Emits updates correctly in conjunction with incoming market price data changes', async () => {
-      await TradeRecordModel.bulkCreate([
-        { ...reusableTradeDatas[0], symbol: 'ADBE' },
-        { ...reusableTradeDatas[1], symbol: 'AAPL' },
-      ]);
-      const lots = await LotModel.bulkCreate([
-        { ...reusableLotDatas[0], symbol: 'ADBE' },
-        { ...reusableLotDatas[1], symbol: 'AAPL' },
-      ]);
+    describe('With `priceData` field', () => {
+      it('Emits updates correctly in conjunction with incoming market price data changes', async () => {
+        await TradeRecordModel.bulkCreate([
+          { ...reusableTradeDatas[0], symbol: 'ADBE' },
+          { ...reusableTradeDatas[1], symbol: 'AAPL' },
+        ]);
+        const lots = await LotModel.bulkCreate([
+          { ...reusableLotDatas[0], symbol: 'ADBE' },
+          { ...reusableLotDatas[1], symbol: 'AAPL' },
+        ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
-          subscription {
-            lots (
-              filters: {
-                ids: [
-                  "${lots[0].id}"
-                  "${lots[1].id}"
-                ]
-              }
-            ) {
-              data {
-                id
-                priceData {
-                  currency
-                  marketState
-                  regularMarketTime
-                  regularMarketPrice
+        const subscription = gqlWsClient.iterate({
+          query: `
+            subscription {
+              lots (
+                filters: {
+                  ids: [
+                    "${lots[0].id}"
+                    "${lots[1].id}"
+                  ]
+                }
+              ) {
+                data {
+                  id
+                  priceData {
+                    currency
+                    marketState
+                    regularMarketTime
+                    regularMarketPrice
+                  }
                 }
               }
-            }
-          }`,
+            }`,
+        });
+
+        await using _ = {
+          [Symbol.asyncDispose]: async () => void (await subscription.return!()),
+        };
+
+        const emissions: any[] = [];
+
+        for (const next of [
+          () =>
+            mockMarketDataControl.onConnectionSend([
+              {
+                ADBE: {
+                  currency: 'USD',
+                  marketState: 'REGULAR',
+                  regularMarketPrice: 10,
+                  regularMarketTime: '2024-01-01T00:00:00.000Z',
+                },
+                AAPL: {
+                  currency: 'USD',
+                  marketState: 'REGULAR',
+                  regularMarketPrice: 10,
+                  regularMarketTime: '2024-01-01T00:00:00.000Z',
+                },
+              },
+            ]),
+          () =>
+            mockMarketDataControl.onConnectionSend([
+              {
+                ADBE: {
+                  currency: 'USD',
+                  marketState: 'CLOSED',
+                  regularMarketPrice: 11,
+                  regularMarketTime: '2024-01-01T00:00:01.000Z',
+                },
+              },
+            ]),
+          () =>
+            mockMarketDataControl.onConnectionSend([
+              {
+                AAPL: {
+                  currency: 'USD',
+                  marketState: 'PRE',
+                  regularMarketPrice: 12,
+                  regularMarketTime: '2024-01-01T00:00:02.000Z',
+                },
+              },
+            ]),
+        ]) {
+          await next();
+          emissions.push((await subscription.next()).value);
+        }
+
+        expect(emissions).toStrictEqual([
+          {
+            data: {
+              lots: [
+                {
+                  data: {
+                    id: lots[1].id,
+                    priceData: {
+                      currency: 'USD',
+                      marketState: 'REGULAR',
+                      regularMarketPrice: 10,
+                      regularMarketTime: '2024-01-01T00:00:00.000Z',
+                    },
+                  },
+                },
+                {
+                  data: {
+                    id: lots[0].id,
+                    priceData: {
+                      currency: 'USD',
+                      marketState: 'REGULAR',
+                      regularMarketPrice: 10,
+                      regularMarketTime: '2024-01-01T00:00:00.000Z',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              lots: [
+                {
+                  data: {
+                    id: lots[0].id,
+                    priceData: {
+                      currency: 'USD',
+                      marketState: 'CLOSED',
+                      regularMarketPrice: 11,
+                      regularMarketTime: '2024-01-01T00:00:01.000Z',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+          {
+            data: {
+              lots: [
+                {
+                  data: {
+                    id: lots[1].id,
+                    priceData: {
+                      currency: 'USD',
+                      marketState: 'PRE',
+                      regularMarketPrice: 12,
+                      regularMarketTime: '2024-01-01T00:00:02.000Z',
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        ]);
       });
-
-      await using _ = {
-        [Symbol.asyncDispose]: async () => void (await subscription.return!()),
-      };
-
-      const emissions: any[] = [];
-
-      for (const next of [
-        () =>
-          mockMarketDataControl.onConnectionSend([
-            {
-              ADBE: {
-                currency: 'USD',
-                marketState: 'REGULAR',
-                regularMarketPrice: 10,
-                regularMarketTime: '2024-01-01T00:00:00.000Z',
-              },
-              AAPL: {
-                currency: 'USD',
-                marketState: 'REGULAR',
-                regularMarketPrice: 10,
-                regularMarketTime: '2024-01-01T00:00:00.000Z',
-              },
-            },
-          ]),
-        () =>
-          mockMarketDataControl.onConnectionSend([
-            {
-              ADBE: {
-                currency: 'USD',
-                marketState: 'CLOSED',
-                regularMarketPrice: 11,
-                regularMarketTime: '2024-01-01T00:00:01.000Z',
-              },
-            },
-          ]),
-        () =>
-          mockMarketDataControl.onConnectionSend([
-            {
-              AAPL: {
-                currency: 'USD',
-                marketState: 'PRE',
-                regularMarketPrice: 12,
-                regularMarketTime: '2024-01-01T00:00:02.000Z',
-              },
-            },
-          ]),
-      ]) {
-        await next();
-        emissions.push((await subscription.next()).value);
-      }
-
-      expect(emissions).toStrictEqual([
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[1].id,
-                  priceData: {
-                    currency: 'USD',
-                    marketState: 'REGULAR',
-                    regularMarketPrice: 10,
-                    regularMarketTime: '2024-01-01T00:00:00.000Z',
-                  },
-                },
-              },
-              {
-                data: {
-                  id: lots[0].id,
-                  priceData: {
-                    currency: 'USD',
-                    marketState: 'REGULAR',
-                    regularMarketPrice: 10,
-                    regularMarketTime: '2024-01-01T00:00:00.000Z',
-                  },
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[0].id,
-                  priceData: {
-                    currency: 'USD',
-                    marketState: 'CLOSED',
-                    regularMarketPrice: 11,
-                    regularMarketTime: '2024-01-01T00:00:01.000Z',
-                  },
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[1].id,
-                  priceData: {
-                    currency: 'USD',
-                    marketState: 'PRE',
-                    regularMarketPrice: 12,
-                    regularMarketTime: '2024-01-01T00:00:02.000Z',
-                  },
-                },
-              },
-            ],
-          },
-        },
-      ]);
     });
   });
 });

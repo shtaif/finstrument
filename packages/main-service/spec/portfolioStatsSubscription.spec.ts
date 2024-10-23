@@ -592,78 +592,76 @@ describe('Subscription.portfolioStats ', () => {
     }
   );
 
-  describe('With `unrealizedPnl` field', () => {
-    it(
-      'Emits updates correctly in conjunction with changes to market data of the ' +
-        "portfolio stats' underlying holdings",
-      async () => {
-        await TradeRecordModel.bulkCreate([
-          { ...reusableTradeDatas[0], symbol: 'VUAG' },
-          { ...reusableTradeDatas[1], symbol: 'ADBE' },
-          { ...reusableTradeDatas[2], symbol: 'AAPL' },
-        ]);
-        await HoldingStatsChangeModel.bulkCreate([
-          { ...reusableHoldingStats[0], symbol: 'VUAG' },
-          { ...reusableHoldingStats[1], symbol: 'ADBE' },
-          { ...reusableHoldingStats[2], symbol: 'AAPL' },
-        ]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            relatedTradeId: reusableTradeDatas[0].id,
-            ownerId: mockUserId1,
-            forCurrency: 'GBP',
-            changedAt: reusableTradeDatas[0].performedAt,
-            totalPresentInvestedAmount: 100,
-            totalRealizedAmount: 100,
-            totalRealizedProfitOrLossAmount: 20,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-          {
-            relatedTradeId: reusableTradeDatas[1].id,
-            ownerId: mockUserId1,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[1].performedAt,
-            totalPresentInvestedAmount: 200,
-            totalRealizedAmount: 200,
-            totalRealizedProfitOrLossAmount: 40,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-          {
-            relatedTradeId: reusableTradeDatas[2].id,
-            ownerId: mockUserId1,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[2].performedAt,
-            totalPresentInvestedAmount: 185,
-            totalRealizedAmount: 220,
-            totalRealizedProfitOrLossAmount: 60,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-        ]);
+  describe('With `marketValue` and `unrealizedPnl` fields', () => {
+    it("Emits updates correctly in conjunction with changes to market data of the portfolio stats' underlying holdings", async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[0], symbol: 'VUAG' },
+        { ...reusableTradeDatas[1], symbol: 'ADBE' },
+        { ...reusableTradeDatas[2], symbol: 'AAPL' },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        { ...reusableHoldingStats[0], symbol: 'VUAG' },
+        { ...reusableHoldingStats[1], symbol: 'ADBE' },
+        { ...reusableHoldingStats[2], symbol: 'AAPL' },
+      ]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[0].id,
+          ownerId: mockUserId1,
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[0].performedAt,
+          totalPresentInvestedAmount: 100,
+          totalRealizedAmount: 100,
+          totalRealizedProfitOrLossAmount: 20,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[1].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[1].performedAt,
+          totalPresentInvestedAmount: 200,
+          totalRealizedAmount: 200,
+          totalRealizedProfitOrLossAmount: 40,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[2].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[2].performedAt,
+          totalPresentInvestedAmount: 185,
+          totalRealizedAmount: 220,
+          totalRealizedProfitOrLossAmount: 60,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+      ]);
 
-        mockMarketDataControl.onConnectionSend([
-          {
-            VUAG: { regularMarketPrice: 50 },
-            ADBE: { regularMarketPrice: 50 },
-            AAPL: { regularMarketPrice: 50 },
-          },
-          {
-            VUAG: { regularMarketPrice: 62 },
-          },
-          {
-            ADBE: { regularMarketPrice: 62 },
-          },
-          {
-            AAPL: { regularMarketPrice: 65 },
-          },
-        ]);
+      mockMarketDataControl.onConnectionSend([
+        {
+          VUAG: { regularMarketPrice: 50 },
+          ADBE: { regularMarketPrice: 50 },
+          AAPL: { regularMarketPrice: 50 },
+        },
+        {
+          VUAG: { regularMarketPrice: 62 },
+        },
+        {
+          ADBE: { regularMarketPrice: 62 },
+        },
+        {
+          AAPL: { regularMarketPrice: 65 },
+        },
+      ]);
 
-        const emissions = await asyncPipe(
-          gqlWsClient.iterate({
-            query: `
+      const emissions = await asyncPipe(
+        gqlWsClient.iterate({
+          query: `
               subscription {
                 portfolioStats {
                   data {
                     forCurrency
+                    marketValue
                     unrealizedPnl {
                       amount
                       percent
@@ -671,69 +669,73 @@ describe('Subscription.portfolioStats ', () => {
                   }
                 }
               }`,
-          }),
-          itTake(4),
-          itCollect
-        );
+        }),
+        itTake(4),
+        itCollect
+      );
 
-        expect(emissions).toStrictEqual([
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    unrealizedPnl: { amount: 0, percent: 0 },
-                  },
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 200,
+                  unrealizedPnl: { amount: 0, percent: 0 },
                 },
-                {
-                  data: {
-                    forCurrency: 'GBP',
-                    unrealizedPnl: { amount: 0, percent: 0 },
-                  },
+              },
+              {
+                data: {
+                  forCurrency: 'GBP',
+                  marketValue: 100,
+                  unrealizedPnl: { amount: 0, percent: 0 },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'GBP',
-                    unrealizedPnl: { amount: 24, percent: 24 },
-                  },
+        },
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'GBP',
+                  marketValue: 124,
+                  unrealizedPnl: { amount: 24, percent: 24 },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    unrealizedPnl: { amount: 24, percent: 12.972972972973 },
-                  },
+        },
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 224,
+                  unrealizedPnl: { amount: 24, percent: 12.972972972973 },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    unrealizedPnl: { amount: 54, percent: 29.189189189189 },
-                  },
+        },
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 254,
+                  unrealizedPnl: { amount: 54, percent: 29.189189189189 },
                 },
-              ],
-            },
+              },
+            ],
           },
-        ]);
-      }
-    );
+        },
+      ]);
+    });
 
     it('Emits updates correctly in conjunction with changes to underlying holdings', async () => {
       await TradeRecordModel.bulkCreate([
@@ -802,6 +804,7 @@ describe('Subscription.portfolioStats ', () => {
             portfolioStats {
               data {
                 forCurrency
+                marketValue
                 unrealizedPnl {
                   amount
                   percent
@@ -902,12 +905,14 @@ describe('Subscription.portfolioStats ', () => {
               {
                 data: {
                   forCurrency: 'USD',
+                  marketValue: 300,
                   unrealizedPnl: { amount: 0, percent: 0 },
                 },
               },
               {
                 data: {
                   forCurrency: 'GBP',
+                  marketValue: 150,
                   unrealizedPnl: { amount: 0, percent: 0 },
                 },
               },
@@ -920,12 +925,14 @@ describe('Subscription.portfolioStats ', () => {
               {
                 data: {
                   forCurrency: 'USD',
+                  marketValue: 250,
                   unrealizedPnl: { amount: 10, percent: 4.166666666667 },
                 },
               },
               {
                 data: {
                   forCurrency: 'GBP',
+                  marketValue: 100,
                   unrealizedPnl: { amount: 10, percent: 11.111111111111 },
                 },
               },
@@ -938,6 +945,7 @@ describe('Subscription.portfolioStats ', () => {
               {
                 data: {
                   forCurrency: 'USD',
+                  marketValue: 150,
                   unrealizedPnl: { amount: 20, percent: 10.526315789474 },
                 },
               },
@@ -1009,6 +1017,7 @@ describe('Subscription.portfolioStats ', () => {
               portfolioStats {
                 data {
                   forCurrency
+                  marketValue
                   unrealizedPnl {
                     amount
                     percent
@@ -1027,12 +1036,14 @@ describe('Subscription.portfolioStats ', () => {
                 {
                   data: {
                     forCurrency: 'USD',
+                    marketValue: 102,
                     unrealizedPnl: { amount: 2, percent: 2 },
                   },
                 },
                 {
                   data: {
                     forCurrency: 'GBP',
+                    marketValue: 0,
                     unrealizedPnl: { amount: 0, percent: 0 },
                   },
                 },
@@ -1045,6 +1056,7 @@ describe('Subscription.portfolioStats ', () => {
                 {
                   data: {
                     forCurrency: 'USD',
+                    marketValue: 104,
                     unrealizedPnl: { amount: 4, percent: 4 },
                   },
                 },
@@ -1057,6 +1069,7 @@ describe('Subscription.portfolioStats ', () => {
                 {
                   data: {
                     forCurrency: 'USD',
+                    marketValue: 106,
                     unrealizedPnl: { amount: 6, percent: 6 },
                   },
                 },
@@ -1134,6 +1147,7 @@ describe('Subscription.portfolioStats ', () => {
             portfolioStats {
               data {
                 forCurrency
+                marketValue
                 unrealizedPnl {
                   amount
                   percent

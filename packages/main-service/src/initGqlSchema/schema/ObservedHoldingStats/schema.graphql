@@ -30,5 +30,6 @@ type ObservedHoldingStats {
   currentPortfolioPortion: Float
   breakEvenPrice: Float
   priceData: InstrumentMarketData!
+  marketValue: Float!
   unrealizedPnl: PnlInfo!
 }

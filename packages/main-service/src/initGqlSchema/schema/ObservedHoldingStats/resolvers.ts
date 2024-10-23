@@ -37,10 +37,6 @@ const resolvers = {
             translateToCurrencies: compact([translateCurrency]),
             fields: {
               holdings: {
-                // type: !!requestedFields.type,
-                // holding: mapValues(requestedFields.data?.subFields, Boolean),
-                // priceData: mapValues(requestedFields.data?.subFields.priceData?.subFields, Boolean),
-                // pnl: mapValues(requestedFields.data?.subFields.unrealizedPnl?.subFields, Boolean),
                 type: !!requestedFields.type,
                 holding: pipe(requestedFields.data?.subFields, fields => ({
                   symbol: !!fields?.symbol,
@@ -62,6 +58,7 @@ const resolvers = {
                   regularMarketTime: !!fields?.regularMarketTime,
                   regularMarketPrice: !!fields?.regularMarketPrice,
                 })),
+                marketValue: !!requestedFields.data?.subFields.marketValue,
                 pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
                   amount: !!fields?.amount,
                   percent: !!fields?.percent,
@@ -75,11 +72,12 @@ const resolvers = {
             },
           }),
           itMap(updates =>
-            updates.holdings.map(({ type, holding, priceData, pnl }) => ({
+            updates.holdings.map(({ type, holding, priceData, marketValue, pnl }) => ({
               type,
               data: {
                 ...holding,
                 priceData,
+                marketValue,
                 unrealizedPnl: !pnl
                   ? undefined
                   : {

@@ -21,6 +21,7 @@ type ObservedPortfolioStats {
   totalRealizedAmount: Float!
   totalRealizedProfitOrLossAmount: Float!
   totalRealizedProfitOrLossRate: Float!
+  marketValue: Float!
   unrealizedPnl: PnlInfo!
   # composition: [SymbolPortfolioPortion!]!
   # relatedHoldingStats: HoldingStats!
