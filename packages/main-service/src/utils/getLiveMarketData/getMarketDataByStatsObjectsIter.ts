@@ -59,11 +59,11 @@ function getMarketDataByStatsObjectsIter(params: {
           ...lotChanges.map(p => p.symbolInfo.currency),
         ],
         compact,
-        v =>
-          v.flatMap(lotCurrency =>
-            paramsNorm.translateToCurrencies.map(
-              translateCurrency => `${lotCurrency}${translateCurrency}=X`
-            )
+        $ =>
+          $.flatMap(originCurrency =>
+            paramsNorm.translateToCurrencies
+              .filter(transCurrency => transCurrency !== originCurrency)
+              .map(transCurrency => `${originCurrency}${transCurrency}=X`)
           )
       );
 
