@@ -1,19 +1,13 @@
-import { assign, filter, isEqual, values, isObjectLike } from 'lodash-es';
+import { assign, filter, isEqual, values } from 'lodash-es';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
-import {
-  type DeepNonNullable,
-  type DeepPartial,
-  type SetIntersection,
-  type OmitByValue,
-} from 'utility-types';
-import { type O } from 'ts-toolbelt';
+import { type DeepNonNullable, type DeepPartial } from 'utility-types';
 import { pipe } from 'shared-utils';
 import { itMap, itFilter, itMerge, itLazyDefer, itShare, itTakeFirst } from 'iterable-operators';
 import {
   observeStatsObjectChanges,
   type StatsObjectSpecifier,
   type StatsObjects,
-  type StatsObjectChanges2,
+  type StatsObjectChanges,
 } from '../observeStatsObjectChanges/index.js';
 import { type HoldingStats, type Lot } from '../positionsService/index.js';
 import { normalizeFloatImprecisions } from '../normalizeFloatImprecisions.js';
@@ -23,11 +17,11 @@ import {
   type UpdatedSymbolPriceMap,
   type UpdatedSymbolPrice,
 } from './getMarketDataByStatsObjectsIter.js';
+// import { type AllLeafPropsIntoBools } from './AllLeafPropsIntoBools.js';
 import { portfolioStatsCalcMarketStats } from './portfolioStatsCalcMarketStats.js';
 import { calcPnlInTranslateCurrencies } from './calcPnlInTranslateCurrencies.js';
 import { calcHoldingRevenue } from './calcHoldingRevenue.js';
-// import { from, AsyncSink } from '@reactivex/ix-esnext-esm/asynciterable';
-// import { switchMap } from '@reactivex/ix-esnext-esm/asynciterable/operators/switchmap';
+import { deepObjectPickFields, type DeepObjectFieldsPicked } from './deepObjectPickFields.js';
 
 export {
   getLiveMarketData,
@@ -44,43 +38,14 @@ export {
 
 // TODO: `combineLatest` from '@reactivex/ix-esnext-esm/asynciterable' becomes stuck indefinitely whenever any of its input iterables finishes empty of values - contribute to working this out through the public repo?
 
-// const _____ = getLiveMarketData({
-//   specifiers: [],
-//   translateToCurrencies: ['CAD'],
-//   fields: {
-//     lots: {
-//       lot: {
-//         id: true,
-//         originalQuantity: true,
-//         remainingQuantity: true,
-//       },
-//       priceData: {
-//         regularMarketPrice: true as boolean,
-//         marketState: true,
-//       },
-//       pnl: {
-//         amount: true as boolean,
-//         percent: false,
-//         byTranslateCurrencies: {
-//           amount: false as boolean,
-//           currency: false as boolean,
-//           exchangeRate: false,
-//         },
-//       },
-//     },
-//   },
-// });
-
 function getLiveMarketData<
   TTranslateCurrencies extends string,
-  TSelectableFields extends SelectableFields,
+  TSelectedFields extends SelectableFields,
 >(params: {
   specifiers: StatsObjectSpecifier[];
   translateToCurrencies?: TTranslateCurrencies[];
-  fields: TSelectableFields;
-}): AsyncIterable<
-  DeepObjectFieldsPicked<MarketDataUpdate<TTranslateCurrencies>, TSelectableFields>
->;
+  fields: TSelectedFields;
+}): AsyncIterable<DeepObjectFieldsPicked<MarketDataUpdate<TTranslateCurrencies>, TSelectedFields>>;
 
 function getLiveMarketData(params: {
   specifiers: StatsObjectSpecifier[];
@@ -134,6 +99,11 @@ function getLiveMarketData(params: {
       .flatMap(fields => values(fields))
       .some(val => val === true),
   ];
+
+  const requestedSomeMarketDataFields =
+    requestedSomePortfolioStatsMarketDataFields ||
+    requestedSomeHoldingStatsMarketDataFields ||
+    requestedSomeLotsMarketDataFields;
 
   const requestedSomePriceDataFields = [
     paramsNorm.fields.holdings.priceData,
@@ -198,22 +168,13 @@ function getLiveMarketData(params: {
         }))
       )
     ),
-    // myIterableCleanupPatcher(async function* (statsOrPriceDataChangeIter) {
-    //   const initialLoadOfSymbolPricesPromise = (async () => {
-    //     const changedSymbols = await pipe(symbolPriceDataIter, itTakeFirst());
-    //     return changedSymbols;
-    //   })();
-    //   for await (const nextValue of statsOrPriceDataChangeIter) {
-    //     yield nextValue;
-    //   }
-    // }),
     statsOrPriceDataChangeIter =>
       itLazyDefer(() => {
         let allCurrStats = {
           portfolioStats: objectCreateNullProto(),
           holdingStats: objectCreateNullProto(),
           lots: objectCreateNullProto(),
-        } as StatsObjectChanges2['current'];
+        } as StatsObjectChanges['current'];
 
         const allCurrSymbolPriceData =
           objectCreateNullProto<DeepNonNullable<UpdatedSymbolPriceMap>>();
@@ -226,60 +187,60 @@ function getLiveMarketData(params: {
         return pipe(
           statsOrPriceDataChangeIter,
           itMap(async ({ currentStats, changedStats, changedSymbols }) => {
-            if (changedSymbols) {
+            if (changedStats) {
+              await initialLoadOfSymbolPricesPromise;
+              allCurrStats = currentStats;
+            } else {
               assign(allCurrSymbolPriceData, changedSymbols);
+            }
 
+            if (changedStats) {
+              if (!requestedSomeMarketDataFields) {
+                return changedStats;
+              }
               return {
                 portfolioStats: {
-                  remove: [],
-                  set: filter(allCurrStats.portfolioStats, ({ resolvedHoldings }) =>
-                    resolvedHoldings.some(h => h.totalLotCount > 0 && !!changedSymbols[h.symbol])
+                  remove: changedStats.portfolioStats.remove,
+                  set: changedStats.portfolioStats.set.filter(p =>
+                    p.resolvedHoldings.every(
+                      h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
+                    )
                   ),
                 },
                 holdingStats: {
-                  remove: [],
-                  set: filter(allCurrStats.holdingStats, h => !!changedSymbols[h.symbol]),
+                  remove: changedStats.holdingStats.remove,
+                  set: changedStats.holdingStats.set.filter(
+                    requestedSomePriceDataFields
+                      ? h => h.symbol in allCurrSymbolPriceData
+                      : h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
+                  ),
                 },
                 lots: {
-                  remove: [],
-                  set: filter(allCurrStats.lots, p => !!changedSymbols[p.symbol]),
+                  remove: changedStats.lots.remove,
+                  set: changedStats.lots.set.filter(
+                    requestedSomePriceDataFields
+                      ? lot => lot.symbol in allCurrSymbolPriceData
+                      : lot => lot.remainingQuantity === 0 || lot.symbol in allCurrSymbolPriceData
+                  ),
                 },
               };
-            } else {
-              await initialLoadOfSymbolPricesPromise;
-
-              allCurrStats = currentStats;
-
-              return !requestedSomeUnrealizedPnlFields && !requestedSomePriceDataFields
-                ? changedStats
-                : {
-                    portfolioStats: {
-                      remove: changedStats.portfolioStats.remove,
-                      set: changedStats.portfolioStats.set.filter(p =>
-                        p.resolvedHoldings.every(
-                          h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
-                        )
-                      ),
-                    },
-                    holdingStats: {
-                      remove: changedStats.holdingStats.remove,
-                      set: changedStats.holdingStats.set.filter(
-                        requestedSomePriceDataFields
-                          ? h => h.symbol in allCurrSymbolPriceData
-                          : h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
-                      ),
-                    },
-                    lots: {
-                      remove: changedStats.lots.remove,
-                      set: changedStats.lots.set.filter(
-                        requestedSomePriceDataFields
-                          ? lot => lot.symbol in allCurrSymbolPriceData
-                          : lot =>
-                              lot.remainingQuantity === 0 || lot.symbol in allCurrSymbolPriceData
-                      ),
-                    },
-                  };
             }
+            return {
+              portfolioStats: {
+                remove: [],
+                set: filter(allCurrStats.portfolioStats, ({ resolvedHoldings }) =>
+                  resolvedHoldings.some(h => h.totalLotCount > 0 && !!changedSymbols[h.symbol])
+                ),
+              },
+              holdingStats: {
+                remove: [],
+                set: filter(allCurrStats.holdingStats, h => !!changedSymbols[h.symbol]),
+              },
+              lots: {
+                remove: [],
+                set: filter(allCurrStats.lots, p => !!changedSymbols[p.symbol]),
+              },
+            };
           }),
           itMap(changes => {
             // TODO: Need to refactor all calculations that follow to be decimal-accurate (with `pnpm add decimal.js-light`)
@@ -559,221 +520,13 @@ function getLiveMarketData(params: {
   );
 }
 
-function deepObjectPickFields<
-  TObj extends object,
-  // TFieldSelectTree extends AllLeafPropsIntoBools<TObj>,
-  TFieldSelectTree extends Record<string, any>,
->(
-  sourceObj: TObj,
-  fieldSelectTree: TFieldSelectTree
-): DeepObjectFieldsPicked<TObj, TFieldSelectTree> {
-  const deepReformattedObjResult = (function recurse(
-    sourceObj: Record<string, any>,
-    selectedFieldsNode: Record<string, any>
-  ) {
-    const resultObj: Record<string, any> = {};
-
-    for (const field in selectedFieldsNode) {
-      const fieldVal = selectedFieldsNode[field];
-      if (fieldVal === true) {
-        resultObj[field] = sourceObj[field];
-      } else if (isObjectLike(fieldVal) && isObjectLike(sourceObj[field])) {
-        if (!Array.isArray(sourceObj[field])) {
-          resultObj[field] = recurse(sourceObj[field], fieldVal);
-        } else {
-          resultObj[field] = sourceObj[field].map(sourceObjItem =>
-            recurse(sourceObjItem, fieldVal)
-          );
-        }
-      }
-    }
-
-    return resultObj;
-  })(sourceObj, fieldSelectTree) as DeepObjectFieldsPicked<TObj, TFieldSelectTree>;
-
-  return deepReformattedObjResult;
-}
-
-const deepObjectPickFieldsTest = deepObjectPickFields(
-  {
-    holdings: [
-      {
-        a: 'aaa',
-        b: 'bbb',
-        c: { a: 'aaa', b: 'bbb' },
-      } as const,
-      {
-        a: 'aaa',
-        b: 'bbb',
-        c: { a: 'aaa', b: 'bbb' },
-      } as const,
-    ],
-  },
-  {
-    holdings: {
-      a: true,
-      b: true,
-      c: { a: false, b: true },
-    },
-  }
-);
-deepObjectPickFieldsTest.holdings[0].c.a;
-
-type DeepObjectFieldsPicked<
-  TObj extends object,
-  TFieldSelection /* extends AllLeafPropsIntoBools<TObj>*/,
-> = {
-  [K in SetIntersection<
-    keyof TObj,
-    keyof OmitByValue<TFieldSelection, undefined | false>
-  >]: TFieldSelection[K] extends true
-    ? TObj[K]
-    : TObj[K] extends object[]
-      ? DeepObjectFieldsPicked<TObj[K][number], NonNullable<TFieldSelection[K]>>[]
-      : TObj[K] extends object
-        ? TFieldSelection[K] extends object
-          ? DeepObjectFieldsPicked<TObj[K], TFieldSelection[K]>
-          : never
-        : never;
-};
-
-const myTestObjPicked = {
-  d: {
-    a: 'aaa',
-    b: {
-      a: 'aaa',
-      b: [{ a: 'aaa' }],
-    },
-  },
-} as TestingType;
-
-type TestingType = DeepObjectFieldsPicked<
-  {
-    a: 'aaa';
-    b: 'bbb';
-    c: false;
-    d: {
-      a: 'aaa';
-      b: {
-        a: 'aaa';
-        b: { a: 'aaa' }[];
-      };
-    };
-  },
-  {
-    a: true;
-    b: true;
-    c: false;
-    d: {
-      a: true;
-      b: {
-        a: true;
-        b: { a: true };
-      };
-    };
-  }
->;
-
-type AllLeafPropsIntoBools<T> = AllLeafPropsIntoBoolsInnerTraverser<DeepFlattenNestedArrays<T>>;
-
-type AllLeafPropsIntoBoolsInnerTraverser<T> = {
-  [K in keyof T]?: T[K] extends { [k: string]: unknown }
-    ? AllLeafPropsIntoBoolsInnerTraverser<T[K]>
-    : boolean;
-};
-
-type DeepFlattenNestedArrays<T> = T extends unknown[]
-  ? DeepFlattenNestedArrays<T[number]>
-  : T extends { [k: string]: unknown }
-    ? {
-        [K in keyof T]: DeepFlattenNestedArrays<T[K]>;
-      }
-    : T;
-
-type TypeExtends<T extends TExtendTarget, TExtendTarget> = T;
-
-type ObjectHasValue<TObj, TVal> = TObj extends {}
-  ? O.Includes<TObj, TVal, 'contains->'> extends 1
-    ? true
-    : false
-  : false;
-
-type IfNever<T, TFallback> = [T] extends [never] ? TFallback : T;
-
 type SelectableFields = {
-  lots?: LotsSelectableFields2;
-  holdings?: HoldingsSelectableFields2;
-  portfolios?: PortfoliosSelectableFields2;
+  lots?: LotsSelectableFields;
+  holdings?: HoldingsSelectableFields;
+  portfolios?: PortfoliosSelectableFields;
 };
 
-type PortfoliosSelectableFields = AllLeafPropsIntoBools<PortfolioMarketStatsUpdate>;
-type HoldingsSelectableFields = AllLeafPropsIntoBools<HoldingMarketStatsUpdate>;
-type LotsSelectableFields = AllLeafPropsIntoBools<LotMarketStatsUpdate>;
-// type SelectableFields = AllLeafPropsIntoBools<MarketDataUpdate<true, true>>;
-
-type PortfoliosSelectableFields_old = PortfoliosSelectableFields;
-type PortfoliosSelectableFields2 = {
-  type?: boolean;
-  portfolio?: {
-    relatedTradeId?: boolean;
-    ownerId?: boolean;
-    forCurrency?: boolean;
-    totalPresentInvestedAmount?: boolean;
-    totalRealizedAmount?: boolean;
-    totalRealizedProfitOrLossAmount?: boolean;
-    totalRealizedProfitOrLossRate?: boolean;
-    lastChangedAt?: boolean;
-  };
-  marketValue?: boolean;
-  pnl?: {
-    amount?: boolean;
-    percent?: boolean;
-    byTranslateCurrencies?: {
-      amount?: boolean;
-      currency?: boolean;
-      exchangeRate?: boolean;
-    };
-  };
-};
-
-type HoldingsSelectableFields2 = TypeExtends<
-  HoldingsSelectableFields,
-  {
-    type?: boolean;
-    holding?: {
-      symbol?: boolean;
-      ownerId?: boolean;
-      lastRelatedTradeId?: boolean;
-      totalLotCount?: boolean;
-      totalQuantity?: boolean;
-      totalPresentInvestedAmount?: boolean;
-      totalRealizedAmount?: boolean;
-      totalRealizedProfitOrLossAmount?: boolean;
-      totalRealizedProfitOrLossRate?: boolean;
-      currentPortfolioPortion?: boolean;
-      breakEvenPrice?: boolean;
-      lastChangedAt?: boolean;
-    };
-    priceData?: {
-      currency?: boolean;
-      marketState?: boolean;
-      regularMarketTime?: boolean;
-      regularMarketPrice?: boolean;
-    };
-    marketValue?: boolean;
-    pnl?: {
-      amount?: boolean;
-      percent?: boolean;
-      byTranslateCurrencies?: {
-        amount?: boolean;
-        currency?: boolean;
-        exchangeRate?: boolean;
-      };
-    };
-  }
->;
-
-type LotsSelectableFields2 = {
+type LotsSelectableFields = {
   type?: boolean;
   lot?: {
     id?: boolean;
@@ -805,18 +558,63 @@ type LotsSelectableFields2 = {
   };
 };
 
-type _____ = AllLeafPropsIntoBools<{
-  a: 'aaa';
-  b: 'bbb';
-  c: false;
-  d: {
-    a: 'aaa';
-    b: {
-      a: 'aaa';
-      b: [{ a: 'aaa' }, { a: 'aaa' }];
+type HoldingsSelectableFields = {
+  type?: boolean;
+  holding?: {
+    symbol?: boolean;
+    ownerId?: boolean;
+    lastRelatedTradeId?: boolean;
+    totalLotCount?: boolean;
+    totalQuantity?: boolean;
+    totalPresentInvestedAmount?: boolean;
+    totalRealizedAmount?: boolean;
+    totalRealizedProfitOrLossAmount?: boolean;
+    totalRealizedProfitOrLossRate?: boolean;
+    currentPortfolioPortion?: boolean;
+    breakEvenPrice?: boolean;
+    lastChangedAt?: boolean;
+  };
+  priceData?: {
+    currency?: boolean;
+    marketState?: boolean;
+    regularMarketTime?: boolean;
+    regularMarketPrice?: boolean;
+  };
+  marketValue?: boolean;
+  pnl?: {
+    amount?: boolean;
+    percent?: boolean;
+    byTranslateCurrencies?: {
+      amount?: boolean;
+      currency?: boolean;
+      exchangeRate?: boolean;
     };
   };
-}>;
+};
+
+type PortfoliosSelectableFields = {
+  type?: boolean;
+  portfolio?: {
+    relatedTradeId?: boolean;
+    ownerId?: boolean;
+    forCurrency?: boolean;
+    totalPresentInvestedAmount?: boolean;
+    totalRealizedAmount?: boolean;
+    totalRealizedProfitOrLossAmount?: boolean;
+    totalRealizedProfitOrLossRate?: boolean;
+    lastChangedAt?: boolean;
+  };
+  marketValue?: boolean;
+  pnl?: {
+    amount?: boolean;
+    percent?: boolean;
+    byTranslateCurrencies?: {
+      amount?: boolean;
+      currency?: boolean;
+      exchangeRate?: boolean;
+    };
+  };
+};
 
 type MarketDataUpdate<TTranslateCurrencies extends string = string> = {
   portfolios: PortfolioMarketStatsUpdate<TTranslateCurrencies>[];
@@ -846,58 +644,6 @@ type LotMarketStatsUpdate<TTranslateCurrencies extends string = string> = {
   marketValue: number;
   pnl: PnlInfo<TTranslateCurrencies>; // TODO: Rename this prop into `unrealizedPnl`
 };
-
-// type MarketDataUpdate<
-//   TWithPriceData extends boolean = false,
-//   TWithPnl extends boolean = false,
-//   TTranslateCurrencies extends string = string,
-// > = {
-//   portfolios: PortfolioMarketStatsUpdate<
-//     TWithPnl extends true ? true : false,
-//     TTranslateCurrencies
-//   >[];
-//   holdings: HoldingMarketStatsUpdate<
-//     TWithPriceData extends true ? true : false,
-//     TWithPnl extends true ? true : false,
-//     TTranslateCurrencies
-//   >[];
-//   lots: LotMarketStatsUpdate<
-//     TWithPriceData extends true ? true : false,
-//     TWithPnl extends true ? true : false,
-//     TTranslateCurrencies
-//   >[];
-// };
-
-// type PortfolioMarketStatsUpdate<
-//   TWithPnl extends boolean = false,
-//   TTranslateCurrencies extends string = string,
-// > = {
-//   type: 'SET' | 'REMOVE';
-//   portfolio: StatsObjects['portfolioStatsChanges'][string];
-//   pnl: TWithPnl extends true ? PnlInfo<TTranslateCurrencies> : undefined; // TODO: Rename this prop into `unrealizedPnl`
-// };
-
-// type HoldingMarketStatsUpdate<
-//   TWithPriceData extends boolean = false,
-//   TWithPnl extends boolean = false,
-//   TTranslateCurrencies extends string = string,
-// > = {
-//   type: 'SET' | 'REMOVE';
-//   holding: HoldingStats;
-//   priceData: TWithPriceData extends true ? InstrumentMarketPriceInfo : undefined;
-//   pnl: TWithPnl extends true ? PnlInfo<TTranslateCurrencies> : undefined; // TODO: Rename this prop into `unrealizedPnl`
-// };
-
-// type LotMarketStatsUpdate<
-//   TWithPriceData extends boolean = false,
-//   TWithPnl extends boolean = false,
-//   TTranslateCurrencies extends string = string,
-// > = {
-//   type: 'SET' | 'REMOVE';
-//   lot: Lot;
-//   priceData: TWithPriceData extends true ? InstrumentMarketPriceInfo : undefined;
-//   pnl: TWithPnl extends true ? PnlInfo<TTranslateCurrencies> : undefined; // TODO: Rename this prop into `unrealizedPnl`
-// };
 
 type InstrumentMarketPriceInfo = Pick<
   NonNullable<UpdatedSymbolPrice>,
