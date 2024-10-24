@@ -7,12 +7,12 @@ import {
   type UpdatedSymbolPriceMap,
   type UpdatedSymbolPrice,
 } from '../marketDataService/index.js';
-import { type StatsObjectChanges2 } from '../observeStatsObjectChanges/index.js';
+import { type StatsObjectChanges } from '../observeStatsObjectChanges/index.js';
 
 export { getMarketDataByStatsObjectsIter, type UpdatedSymbolPriceMap, type UpdatedSymbolPrice };
 
 function getMarketDataByStatsObjectsIter(params: {
-  statsObjects: AsyncIterable<StatsObjectChanges2['current']>;
+  statsObjects: AsyncIterable<StatsObjectChanges['current']>;
   translateToCurrencies?: string[];
   ignoreClosedObjectStats?: boolean;
 }): AsyncIterable<UpdatedSymbolPriceMap<string>> {

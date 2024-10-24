@@ -12,13 +12,13 @@ export {
   type HoldingObjectSpecifier,
   type PortfolioObjectSpecifier,
   type StatsObjects,
-  type StatsObjectChanges2,
+  type StatsObjectChanges,
 };
 
 function observeStatsObjectChanges(params: {
   specifiers: StatsObjectSpecifier[];
   discardOverlapping?: boolean;
-}): AsyncIterable<StatsObjectChanges2> {
+}): AsyncIterable<StatsObjectChanges> {
   const paramsNorm = {
     specifiers: params.specifiers,
     discardOverlapping: !!params.discardOverlapping,
@@ -65,7 +65,7 @@ function observeStatsObjectChanges(params: {
             portfolioStats: { set: requestedPortfolioStats, remove: [] },
             holdingStats: { set: requestedHoldings, remove: [] },
             lots: { set: requestedLots, remove: [] },
-          }) satisfies AsyncIterable<StatsObjectChangesInner>,
+          } satisfies StatsObjectChanges['changes']),
 
           pipe(
             watchStatsObjectChangesPerSpecifiers({
@@ -146,16 +146,24 @@ function observeStatsObjectChanges(params: {
   );
 }
 
-type StatsObjectSpecifier =
-  | { type: 'LOT'; lotId: string }
-  | { type: 'HOLDING'; holdingPortfolioOwnerId: string; holdingSymbol?: string | undefined }
-  | { type: 'PORTFOLIO'; portfolioOwnerId: string; statsCurrency: string | null | undefined };
+type StatsObjectSpecifier = LotObjectSpecifier | HoldingObjectSpecifier | PortfolioObjectSpecifier;
 
-type LotObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'LOT' }>;
-type HoldingObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'HOLDING' }>;
-type PortfolioObjectSpecifier = Extract<StatsObjectSpecifier, { type: 'PORTFOLIO' }>;
+type LotObjectSpecifier = {
+  type: 'LOT';
+  lotId: string;
+};
+type HoldingObjectSpecifier = {
+  type: 'HOLDING';
+  holdingPortfolioOwnerId: string;
+  holdingSymbol?: string | undefined;
+};
+type PortfolioObjectSpecifier = {
+  type: 'PORTFOLIO';
+  portfolioOwnerId: string;
+  statsCurrency: string | null | undefined;
+};
 
-type StatsObjectChanges2 = {
+type StatsObjectChanges = {
   readonly current: {
     readonly portfolioStats: {
       [ownerIdAndCurrency: string]: StatsObjects['portfolioStatsChanges'][string];
@@ -182,5 +190,3 @@ type StatsObjectChanges2 = {
     };
   };
 };
-
-type StatsObjectChangesInner = StatsObjectChanges2['changes'];
