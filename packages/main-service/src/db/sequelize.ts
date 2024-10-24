@@ -37,10 +37,12 @@ async function initDbSchema(): Promise<void> {
     `);
   }
 
-  await sequelize.sync({
-    alter: true,
-    force: false,
-  });
+  if (env.SYNC_SEQUELIZE_MODELS) {
+    await sequelize.sync({
+      alter: true,
+      force: false,
+    });
+  }
 
   if (pgSchemaName !== 'public') {
     /*
