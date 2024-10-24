@@ -29,6 +29,7 @@ export default {
       SUPERTOKENS_CORE_URL: 'http://supertokens-core-mock',
       LIVE_MARKET_PRICES_SERVICE_URL: 'http://localhost:4002',
       LIVE_MARKET_PRICES_SERVICE_WS_URL: 'ws://localhost:4002',
+      SYNC_SEQUELIZE_MODELS: 'false',
     },
   },
 } as const satisfies UserConfig;

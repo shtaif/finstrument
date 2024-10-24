@@ -17,6 +17,7 @@ const envShapeDef = {
   DB_LOGGING: z.coerce.boolean().default(false),
   ENABLE_NGROK_TUNNEL: z.coerce.boolean().default(false),
   NGROK_TUNNEL_AUTH_TOKEN: z.string().optional(),
+  SYNC_SEQUELIZE_MODELS: z.coerce.boolean().default(true),
 };
 
 /**
