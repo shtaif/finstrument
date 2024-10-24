@@ -6,7 +6,7 @@ export { calcPnlInTranslateCurrencies };
 function calcPnlInTranslateCurrencies<TTranslateCurrencies extends string = string>(
   originCurrency: string | null | undefined,
   translateCurrencies: TTranslateCurrencies[],
-  pnlAmountOriginCurrency: number,
+  pnlAmountInOriginCurrency: number,
   symbolPriceDatas: {
     [symbol: string]: null | { regularMarketPrice: number };
   }
@@ -15,24 +15,27 @@ function calcPnlInTranslateCurrencies<TTranslateCurrencies extends string = stri
   exchangeRate: number;
   amount: number;
 }[] {
+  if (!originCurrency) {
+    return [];
+  }
+
   return pipe(
     translateCurrencies.map(translateCurrency => {
-      if (!originCurrency) {
-        return;
-      }
+      const exchangeRate =
+        originCurrency === translateCurrency
+          ? 1
+          : pipe(
+              `${originCurrency}${translateCurrency}=X`,
+              $ => symbolPriceDatas[$]?.regularMarketPrice
+            );
 
-      const exchangeSymbol = `${originCurrency}${translateCurrency}=X`;
-      const exchangeRate = symbolPriceDatas[exchangeSymbol]?.regularMarketPrice;
-
-      if (!exchangeRate) {
-        return;
-      }
-
-      return {
-        currency: translateCurrency,
-        exchangeRate: exchangeRate,
-        amount: pnlAmountOriginCurrency * exchangeRate,
-      };
+      return !exchangeRate
+        ? undefined
+        : {
+            currency: translateCurrency,
+            exchangeRate,
+            amount: pnlAmountInOriginCurrency * exchangeRate,
+          };
     }),
     compact
   );
