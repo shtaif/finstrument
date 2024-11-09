@@ -19,17 +19,18 @@ function itTake<T>(count: number): (src: AsyncIterable<T>) => AsyncIterable<T> {
 
           iterator ??= sourceIter[Symbol.asyncIterator]();
 
+          if (remainingCount === 0) {
+            closed = true;
+            await iterator.return?.();
+            return { done: true, value: undefined };
+          }
+
           remainingCount--;
           const next = await iterator.next();
 
           if (next.done) {
             closed = true;
             return { done: true, value: undefined };
-          }
-
-          if (remainingCount === 0) {
-            closed = true;
-            await iterator.return?.();
           }
 
           return next;

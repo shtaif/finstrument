@@ -9,233 +9,169 @@ import {
   itLazyDefer,
   itMap,
   itSwitchMap,
-  itTakeFirst,
   itTakeUntil,
 } from 'iterable-operators';
 import { iterifiedUnwrapped } from 'iterified';
 import { itOnNodeEvent } from './itOnNodeEvent.js';
 
-export { mockMarketDataService, mockMarketDataControl, type SymbolMarketData };
+export { startMockMarketDataService, mockMarketDataControl, type SymbolMarketData };
 
-const mockMarketDataService = new WebSocketServer({
-  port: parseInt(new URL(process.env.LIVE_MARKET_PRICES_SERVICE_WS_URL!).port),
-});
+async function startMockMarketDataService(): Promise<{ close: () => Promise<void> }> {
+  const mockMarketDataServiceWsServer = new WebSocketServer({
+    port: parseInt(new URL(process.env.LIVE_MARKET_PRICES_SERVICE_WS_URL!).port),
+  });
 
-// let debugId = 0;
+  // mockMarketDataServiceWsServer.on('close', () => {});
 
-// const mockMarketDataFnsAlreadyUsed = new Set<any>();
+  // let debugId = 0;
 
-mockMarketDataService.on('connection', async ws => {
-  // let currAskedSymbols: string[] = [];
+  // const mockMarketDataFnsAlreadyUsed = new Set<any>();
 
-  // setTimeout(() => console.log('___currAskedSymbols___', currAskedSymbols), 1000);
+  (async () => {
+    for await (const [ws] of itOnNodeEvent<[WebSocket]>(
+      mockMarketDataServiceWsServer,
+      'connection'
+    )) {
+      await (async () => {
+        // let currAskedSymbols: string[] = [];
 
-  // ws.on('error', err => {
-  //   console.error(err);
-  // });
+        // setTimeout(() => console.log('___currAskedSymbols___', currAskedSymbols), 1000);
 
-  // const currDebugId = ++debugId;
+        // ws.on('error', err => {
+        //   console.error(err);
+        // });
 
-  // ws.on('close', () => {
-  //   console.log('END', currDebugId);
-  // });
+        // const currDebugId = ++debugId;
 
-  // console.log('START', currDebugId);
+        // ws.on('close', () => {
+        //   console.log('END', currDebugId);
+        // });
 
-  const outgoingUpdates = pipe(
-    itOnNodeEvent<[WebSocket.RawData]>(ws, 'message'),
-    itSwitchMap(([messageData]) => {
-      const parsed = JSON.parse(messageData.toString());
-      const currAskedSymbols: string[] = parsed.symbols;
+        // console.log('START', currDebugId);
 
-      return pipe(
-        currAskedSymbols.length === 0
-          ? of({})
-          : pipe(
-              itLazyDefer(() => {
-                mockMarketDataControl.newSymbolsRequestedIterified.next(currAskedSymbols);
-                whenSymbolsAreRequested.resolve();
-                return mockMarketDataActivatedIterable;
+        const outgoingUpdates = pipe(
+          itOnNodeEvent<[WebSocket.RawData]>(ws, 'message'),
+          itTakeUntil(once(ws, 'close')),
+          itFinally(() => {
+            mockMarketDataControl.whenMarketDataRequestedPWithResolvers = Promise.withResolvers();
+            // mockMarketDataControl.whenNextMarketDataSymbolsRequestedChannel.next(false);
+          }),
+          itSwitchMap(([messageData]) => {
+            const currAskedSymbols: string[] = pipe(
+              messageData,
+              $ => $.toString(),
+              $ => JSON.parse($),
+              $ => $.symbols
+            );
+
+            return pipe(
+              currAskedSymbols.length === 0
+                ? of({})
+                : itLazyDefer(() => {
+                    mockMarketDataControl.whenMarketDataRequestedPWithResolvers.resolve(
+                      currAskedSymbols
+                    );
+                    mockMarketDataControl.whenNextMarketDataSymbolsRequestedChannel.next(
+                      currAskedSymbols
+                    );
+                    return mockMarketDataControl.data;
+                  }),
+              itMap(nextMockMarketData => {
+                return pick(nextMockMarketData, currAskedSymbols);
               }),
-              itFinally(() => {
-                whenSymbolsAreRequested = Promise.withResolvers<void>();
-              }),
-              itMap(nextMockMarketData => pick(nextMockMarketData, currAskedSymbols)),
-              itFilter(nextMockMarketDataFiltered => !isEmpty(nextMockMarketDataFiltered))
-            )
-      );
-    }),
-    itMap(nextMockMarketData => ({
-      success: true as const,
-      data: mapValues(nextMockMarketData, symbolData =>
-        symbolData === null
-          ? null
-          : {
-              currency: 'USD',
-              marketState: 'REGULAR',
-              regularMarketTime: '2024-01-01T00:00:00.000Z',
-              quoteSourceName: undefined,
-              ...symbolData,
-            }
-      ),
-    })),
-    itTakeUntil(once(ws, 'close'))
-  );
+              itFilter(
+                (nextMockMarketDataFiltered, i) => i === 0 || !isEmpty(nextMockMarketDataFiltered)
+              )
+            );
+          }),
+          itMap(nextMockMarketData => ({
+            success: true as const,
+            data: mapValues(nextMockMarketData, symbolData =>
+              symbolData === null
+                ? null
+                : {
+                    currency: 'USD',
+                    marketState: 'REGULAR',
+                    regularMarketTime: '2024-01-01T00:00:00.000Z',
+                    quoteSourceName: undefined,
+                    ...symbolData,
+                  }
+            ),
+          }))
+        );
 
-  for await (const payload of outgoingUpdates) {
-    const serialized = JSON.stringify(payload);
-    await new Promise<void>((resolve, reject) =>
-      ws.send(serialized, {}, err => (err ? reject(err) : resolve()))
-    );
-    mockMarketDataControl.messageHandleFeedbackChannel.next();
-  }
+        for await (const payload of outgoingUpdates) {
+          const serialized = JSON.stringify(payload);
+          await new Promise<void>((resolve, reject) =>
+            ws.send(serialized, {}, err => (err ? reject(err) : resolve()))
+          );
+          mockMarketDataControl!.messageHandleFeedbackChannel.next();
+        }
+      })();
+    }
+  })();
 
-  // return;
+  await once(mockMarketDataServiceWsServer, 'listening');
 
-  // ws.on('message', async data => {
-  //   const parsed = JSON.parse(data.toString());
-
-  //   // currAskedSymbols = parsed.symbols;
-  //   const currAskedSymbols: string[] = parsed.symbols;
-  //   // currAskedSymbols.splice(0);
-  //   // currAskedSymbols.push(...parsed.symbols);
-
-  //   console.log('STARTED NEW!', { currAskedSymbols, currDebugId });
-
-  //   const currAskedSymbols2 = parsed.symbols;
-
-  //   // mockMarketDataControl.newSymbolsRequestedIterified.next(currAskedSymbols);
-
-  //   // console.log('MESSAGE IN', currDebugId, parsed);
-
-  //   const outgoingUpdates = pipe(
-  //     currAskedSymbols.length === 0
-  //       ? of({})
-  //       : pipe(
-  //           mockMarketDataActivatedIterable,
-  //           source => {
-  //             return {
-  //               [Symbol.asyncIterator]: () => {
-  //                 let iterator: AsyncIterator<ExtractAsyncIterableValue<typeof source>>;
-  //                 return {
-  //                   next: async () => {
-  //                     if (!iterator) {
-  //                       iterator = source[Symbol.asyncIterator]();
-  //                       mockMarketDataControl.newSymbolsRequestedIterified.next(currAskedSymbols);
-  //                     }
-  //                     console.log('NEXT CALLED!', { currDebugId });
-  //                     return iterator.next().then(value => {
-  //                       console.log('NEXT CALLED - VALUE:', value, { currDebugId });
-  //                       return value;
-  //                     });
-  //                   },
-  //                   return: async () => {
-  //                     const returnResult = iterator.return?.() ?? {
-  //                       done: true as const,
-  //                       value: undefined,
-  //                     };
-  //                     // mockMarketDataControl.reset();
-  //                     console.log('TERMINATED!', { currDebugId });
-  //                     return returnResult;
-  //                   },
-  //                 };
-  //               },
-  //             };
-  //           },
-  //           itMap(nextMockMarketDataBeforePick => {
-  //             console.log({
-  //               nextMockMarketDataBeforePick,
-  //               currAskedSymbols,
-  //               ___: currAskedSymbols2 === currAskedSymbols,
-  //               currDebugId,
-  //             });
-  //             setTimeout(() => console.log('parsed.symbols', parsed.symbols), 200);
-  //             return nextMockMarketDataBeforePick;
-  //           }),
-  //           itMap(nextMockMarketData => pick(nextMockMarketData, currAskedSymbols)),
-  //           itMap(nextMockMarketDataAfterPick => {
-  //             console.log({
-  //               nextMockMarketDataAfterPick,
-  //               currAskedSymbols,
-  //               ___: currAskedSymbols2 === currAskedSymbols,
-  //               currDebugId,
-  //             });
-  //             return nextMockMarketDataAfterPick;
-  //           }),
-  //           itFilter(nextMockMarketDataFiltered => !isEmpty(nextMockMarketDataFiltered))
-  //         ),
-  //     itTakeUntil(
-  //       Promise.race([
-  //         once(ws, 'close').then(() => console.log('GOT "close" EVENT')),
-  //         once(ws, 'message').then(() => console.log('GOT "message" EVENT')),
-  //       ])
-  //     ),
-  //     // itFinally(() => {
-  //     //   console.log('TERMINATED!');
-  //     // }),
-  //     itMap(nextMockMarketData3 => {
-  //       console.log('nextMockMarketData3', nextMockMarketData3);
-  //       return nextMockMarketData3;
-  //     }),
-  //     itMap(nextMockMarketData => ({
-  //       success: true as const,
-  //       data: mapValues(nextMockMarketData, symbolData => ({
-  //         currency: 'USD',
-  //         marketState: 'REGULAR',
-  //         regularMarketTime: '2024-01-01T00:00:00.000Z',
-  //         quoteSourceName: undefined,
-  //         ...symbolData,
-  //       })),
-  //     }))
-  //   );
-
-  //   for await (const payload of outgoingUpdates) {
-  //     // console.log('MESSAGE OUT', currDebugId, payload);
-  //     const serialized = JSON.stringify(payload);
-  //     await new Promise<void>((resolve, reject) =>
-  //       ws.send(serialized, err => (err ? reject(err) : resolve()))
-  //     );
-  //     mockMarketDataControl.messageHandleFeedbackChannel.next();
-  //   }
-  // });
-});
-
-// await new Promise<void>((resolve, reject) =>
-//   mockMarketDataService.close(err => (err ? reject(err) : resolve()))
-// );
-
-// let mockMarketDataActivatedIterable: AsyncIterable<{
-//   nextData: { [symbol: string]: null | Partial<SymbolMarketData> };
-//   notifyMessageHandledCb: () => void;
-// }>;
-let mockMarketDataActivatedIterable: AsyncIterable<{
-  [symbol: string]: null | Partial<SymbolMarketData>;
-}>;
-
-let messageHandleFeedbackActivatedIterator: AsyncIterator<void>;
-
-let whenSymbolsAreRequested = Promise.withResolvers<void>();
+  return {
+    close: async () => {
+      return new Promise<void>((resolve, reject) => {
+        mockMarketDataServiceWsServer.close(err => (err ? reject(err) : resolve()));
+      });
+    },
+  };
+}
 
 const mockMarketDataControl = new (class {
   #mockMarketDataChannel = iterifiedUnwrapped<{
     [symbol: string]: null | Partial<SymbolMarketData>;
   }>();
+
+  whenMarketDataRequestedPWithResolvers = Promise.withResolvers<string[]>();
+  whenNextMarketDataSymbolsRequestedChannel = iterifiedUnwrapped<string[]>();
+  // whenNextMarketDataSymbolsRequestedActiveIterator =
+  //   this.whenNextMarketDataSymbolsRequestedChannel.iterable[Symbol.asyncIterator]();
   messageHandleFeedbackChannel = iterifiedUnwrapped<void>();
-  newSymbolsRequestedIterified = iterifiedUnwrapped<string[]>();
+  messageHandleFeedbackActiveIterator =
+    this.messageHandleFeedbackChannel.iterable[Symbol.asyncIterator]();
+
+  get data(): AsyncIterable<{ [symbol: string]: null | Partial<SymbolMarketData> }> {
+    return this.#mockMarketDataChannel.iterable;
+  }
 
   async waitUntilRequestingNewSymbols(): Promise<string[]> {
-    return (await pipe(this.newSymbolsRequestedIterified.iterable, itTakeFirst()))!;
+    return await this.whenMarketDataRequested();
+  }
+  async whenMarketDataRequested(): Promise<string[]> {
+    return this.whenMarketDataRequestedPWithResolvers.promise;
   }
 
-  onNewSymbolsRequested() {
-    return this.newSymbolsRequestedIterified.iterable;
-  }
+  async whenNextMarketDataSymbolsRequested(specificSymbols?: string[]): Promise<void> {
+    // await pipe(
+    //   { [Symbol.asyncIterator]: () => this.whenNextMarketDataSymbolsRequestedActiveIterator },
+    //   itFilter(Boolean),
+    //   itTakeFirst()
+    // );
 
-  async next(nextMarketUpdate: {
-    [symbol: string]: null | Partial<SymbolMarketData>;
-  }): Promise<void> {
-    this.#mockMarketDataChannel.next(nextMarketUpdate);
-    await messageHandleFeedbackActivatedIterator.next();
+    for await (const nextReqSymbols of this.whenNextMarketDataSymbolsRequestedChannel.iterable) {
+      // console.log('nextReqSymbols_______________', nextReqSymbols);
+      if (!specificSymbols || specificSymbols.every(s => nextReqSymbols.includes(s))) {
+        break;
+      }
+    }
+
+    // await pipe(this.whenNextMarketDataSymbolsRequestedChannel.iterable, itTakeFirst());
+
+    // ('');
+
+    // if (hasCurrentlyRequestedSymbols) {
+    //   await pipe(
+    //     { [Symbol.asyncIterator]: () => this.whenNextMarketDataSymbolsRequestedActiveIterator },
+    //     itFilter(hasCurrentlyRequestedSymbols => !hasCurrentlyRequestedSymbols),
+    //     itTakeFirst()
+    //   );
+    // }
+    // return this.whenMarketDataRequestedPWithResolvers.promise;
   }
 
   async onConnectionSend(
@@ -245,38 +181,36 @@ const mockMarketDataControl = new (class {
       | (() => AsyncIterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>)
       | (() => Iterable<{ [symbol: string]: null | Partial<SymbolMarketData> }>)
   ): Promise<void> {
-    await whenSymbolsAreRequested.promise;
+    // console.log('HERE 1', '^'.repeat(200));
+    await this.whenMarketDataRequestedPWithResolvers.promise;
+    // await Promise.race([
+    //   this.whenMarketDataRequestedPWithResolvers.promise,
+    //   this.whenNextMarketDataSymbolsRequested(),
+    // ]);
+    // console.log('HERE 2', '^'.repeat(200));
     const iter = typeof marketUpdatesIter === 'function' ? marketUpdatesIter() : marketUpdatesIter;
     for await (const nextMarketUpdate of iter) {
+      (this.#mockMarketDataChannel.iterable as any).lastSent = nextMarketUpdate;
       this.#mockMarketDataChannel.next(nextMarketUpdate);
-      await messageHandleFeedbackActivatedIterator.next();
+      await this.messageHandleFeedbackActiveIterator.next();
     }
   }
 
   reset(): void {
     this.#mockMarketDataChannel.done();
     this.messageHandleFeedbackChannel.done();
+    this.whenNextMarketDataSymbolsRequestedChannel.done();
 
     this.#mockMarketDataChannel = iterifiedUnwrapped();
+    this.whenMarketDataRequestedPWithResolvers = Promise.withResolvers();
+
     this.messageHandleFeedbackChannel = iterifiedUnwrapped();
-    this.newSymbolsRequestedIterified = iterifiedUnwrapped();
-
-    // mockMarketDataActivatedIterable = pipe(
-    //   this.#mockMarketDataChannel.iterable[Symbol.asyncIterator](),
-    //   iterator => ({
-    //     [Symbol.asyncIterator]: () => ({
-    //       next: () => iterator.next(),
-    //       return: () => {
-    //         // this.reset();
-    //         return iterator.return();
-    //       },
-    //     }),
-    //   })
-    // );
-    mockMarketDataActivatedIterable = pipe(this.#mockMarketDataChannel.iterable);
-
-    messageHandleFeedbackActivatedIterator =
+    this.messageHandleFeedbackActiveIterator =
       this.messageHandleFeedbackChannel.iterable[Symbol.asyncIterator]();
+
+    this.whenNextMarketDataSymbolsRequestedChannel = iterifiedUnwrapped();
+    // this.whenNextMarketDataSymbolsRequestedActiveIterator =
+    //   this.whenNextMarketDataSymbolsRequestedChannel.iterable[Symbol.asyncIterator]();
   }
 })();
 

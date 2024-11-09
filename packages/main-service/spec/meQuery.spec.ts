@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
+import { afterAll, beforeAll, expect, it, describe } from 'vitest';
 import { UserModel } from '../src/db/index.js';
 import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
@@ -20,20 +20,18 @@ beforeAll(async () => {
   ]);
 });
 
-beforeEach(async () => {});
-
 afterAll(async () => {
   await Promise.all([UserModel.destroy({ where: {} })]);
   unmockGqlContext();
 });
 
 describe('Query.me ', () => {
-  mockGqlContext(ctx => ({
-    ...ctx,
-    getSession: async () => ({ activeUserId: undefined }),
-  }));
+  it('For a non-authenticated caller returns a `null` `user` field', async () => {
+    mockGqlContext(ctx => ({
+      ...ctx,
+      getSession: async () => ({ activeUserId: undefined }),
+    }));
 
-  it('For a non-authenticated caller returns a `null` `user` field ', async () => {
     const resp = await axiosGqlClient({
       data: {
         query: /* GraphQL */ `

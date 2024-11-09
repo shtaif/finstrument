@@ -7,9 +7,7 @@ function calcPnlInTranslateCurrencies<TTranslateCurrencies extends string = stri
   originCurrency: string | null | undefined,
   translateCurrencies: TTranslateCurrencies[],
   pnlAmountInOriginCurrency: number,
-  symbolPriceDatas: {
-    [symbol: string]: null | { regularMarketPrice: number };
-  }
+  symbolPriceDatas: { [symbol: string]: null | { regularMarketPrice: number } }
 ): {
   currency: TTranslateCurrencies;
   exchangeRate: number;

@@ -4,21 +4,24 @@ import * as appGqlContextMod from '../../src/initGqlSchema/appGqlContext.js';
 
 export { mockGqlContext, unmockGqlContext };
 
-const origAppGqlContext = appGqlContextMod.appGqlContext;
-
-let appGqlContextSpy: MockInstance<typeof appGqlContextMod.appGqlContext> | undefined;
-
 function mockGqlContext(
   ctxOverrideFn: (
     origAppCtx: appGqlContextMod.AppGqlContextValue
   ) => appGqlContextMod.AppGqlContextValue
 ): void {
-  appGqlContextSpy = vi.spyOn(appGqlContextMod, 'appGqlContext');
-  appGqlContextSpy.mockImplementation(async originalAppCtxInjectedArg => {
-    return await asyncPipe(originalAppCtxInjectedArg, origAppGqlContext, ctxOverrideFn);
-  });
+  appGqlContextSpy?.mockReset();
+  appGqlContextSpy = vi
+    .spyOn(appGqlContextMod, 'appGqlContext')
+    .mockImplementation(async originalAppCtxInjectedArg => {
+      return await asyncPipe(originalAppCtxInjectedArg, origAppGqlContextBuildFn, ctxOverrideFn);
+    });
 }
 
 function unmockGqlContext(): void {
   appGqlContextSpy?.mockRestore();
+  appGqlContextSpy = undefined;
 }
+
+const origAppGqlContextBuildFn = appGqlContextMod.appGqlContext;
+
+let appGqlContextSpy: undefined | MockInstance<typeof origAppGqlContextBuildFn>;

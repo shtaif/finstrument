@@ -647,179 +647,179 @@ describe('Subscription.holdingStats ', () => {
     }
   });
 
-  it(
-    'When targeting only certain stats fields, only holding changes that have any of these ' +
-      'fields modified will cause updates to be emitted',
-    async () => {
-      await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-      await HoldingStatsChangeModel.bulkCreate(reusableHoldingStats.slice(0, 2));
+  it('When targeting only certain stats fields, only holding changes that have any of these fields modified will cause updates to be emitted', async () => {
+    await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
+    await HoldingStatsChangeModel.bulkCreate(reusableHoldingStats.slice(0, 2));
 
-      const subscriptionEmissionsPromise = asyncPipe(
-        gqlWsClient.iterate({
-          query: `
-          subscription {
-            holdingStats {
-              data {
-                ownerId
-                symbol
-                totalQuantity
-                totalRealizedAmount
-              }
+    await using subscription = iterateGqlSubscriptionDisposable({
+      query: `
+        subscription {
+          holdingStats {
+            data {
+              ownerId
+              symbol
+              totalQuantity
+              totalRealizedAmount
             }
-          }`,
-        }),
-        itTake(5),
-        itCollect
-      );
+          }
+        }`,
+    });
 
-      let currTradeData = reusableTradeDatas.at(-1)!;
-      let currHoldingStatsData = reusableHoldingStats.at(-1)!;
+    const emissions = [(await subscription.next()).value];
 
-      for (const [i, nextDataChanges] of (
-        [
-          {
-            symbol: 'ADBE',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 2,
-              totalRealizedAmount: 100,
-            },
+    let currTradeData = reusableTradeDatas.at(-1)!;
+    let currHoldingStatsData = reusableHoldingStats.at(-1)!;
+
+    for (const [i, nextDataChanges] of (
+      [
+        {
+          containsChangesInFieldsThatWereObserved: false,
+          symbol: 'ADBE',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 2,
+            totalRealizedAmount: 100,
           },
-          {
-            symbol: 'ADBE',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 3,
-              totalRealizedAmount: 100,
-            },
+        },
+        {
+          containsChangesInFieldsThatWereObserved: true,
+          symbol: 'ADBE',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 3,
+            totalRealizedAmount: 100,
           },
-          {
-            symbol: 'ADBE',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 3,
-              totalRealizedAmount: 120,
-            },
+        },
+        {
+          containsChangesInFieldsThatWereObserved: true,
+          symbol: 'ADBE',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 3,
+            totalRealizedAmount: 120,
           },
-          {
-            symbol: 'AAPL',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 2,
-              totalRealizedAmount: 100,
-            },
+        },
+        {
+          containsChangesInFieldsThatWereObserved: false,
+          symbol: 'AAPL',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 2,
+            totalRealizedAmount: 100,
           },
-          {
-            symbol: 'AAPL',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 3,
-              totalRealizedAmount: 100,
-            },
+        },
+        {
+          containsChangesInFieldsThatWereObserved: true,
+          symbol: 'AAPL',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 3,
+            totalRealizedAmount: 100,
           },
-          {
-            symbol: 'AAPL',
-            holdingStatsChange: {
-              totalPresentInvestedAmount: 120,
-              totalQuantity: 3,
-              totalRealizedAmount: 120,
-            },
+        },
+        {
+          containsChangesInFieldsThatWereObserved: true,
+          symbol: 'AAPL',
+          holdingStatsChange: {
+            totalPresentInvestedAmount: 120,
+            totalQuantity: 3,
+            totalRealizedAmount: 120,
           },
-        ] as const
-      ).entries()) {
-        const nextTradeId = mockTradeIds[i + 2];
-        const nextSymbol = nextDataChanges.symbol;
-        const nextDate = new Date(+currTradeData.performedAt + 1000 * 60 * 60 * 24);
+        },
+      ] as const
+    ).entries()) {
+      const nextTradeId = mockTradeIds[i + 2];
+      const nextSymbol = nextDataChanges.symbol;
+      const nextDate = new Date(+currTradeData.performedAt + 1000 * 60 * 60 * 24);
 
-        currTradeData = {
-          ...currTradeData,
-          id: nextTradeId,
-          performedAt: nextDate,
-          symbol: nextSymbol,
-        };
+      currTradeData = {
+        ...currTradeData,
+        id: nextTradeId,
+        performedAt: nextDate,
+        symbol: nextSymbol,
+      };
 
-        currHoldingStatsData = {
-          ...currHoldingStatsData,
-          ...nextDataChanges.holdingStatsChange,
-          symbol: nextSymbol,
-          changedAt: nextDate,
-          relatedTradeId: nextTradeId,
-        };
+      currHoldingStatsData = {
+        ...currHoldingStatsData,
+        ...nextDataChanges.holdingStatsChange,
+        symbol: nextSymbol,
+        changedAt: nextDate,
+        relatedTradeId: nextTradeId,
+      };
 
-        await TradeRecordModel.create(currTradeData);
-        await HoldingStatsChangeModel.create(currHoldingStatsData);
+      await TradeRecordModel.create(currTradeData);
+      await HoldingStatsChangeModel.create(currHoldingStatsData);
 
-        await publishUserHoldingChangedRedisEvent({
-          ownerId: mockUserId1,
-          holdingStats: { set: [nextSymbol] },
-        });
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId1,
+        holdingStats: { set: [nextSymbol] },
+      });
 
-        await setTimeout(0); // a non-ideal workaround to let app a chance to finish reacting and processing the current change before we overwhelm it with the one that follows up next
+      if (nextDataChanges.containsChangesInFieldsThatWereObserved) {
+        await asyncPipe(subscription.next(), ({ value }) => emissions.push(value));
       }
-
-      const emissions = await subscriptionEmissionsPromise;
-
-      expect(emissions).toStrictEqual([
-        expect.anything(), // (initial full state emission)
-        {
-          data: {
-            holdingStats: [
-              {
-                data: {
-                  ownerId: mockUserId1,
-                  symbol: 'ADBE',
-                  totalQuantity: 3,
-                  totalRealizedAmount: 100,
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            holdingStats: [
-              {
-                data: {
-                  ownerId: mockUserId1,
-                  symbol: 'ADBE',
-                  totalQuantity: 3,
-                  totalRealizedAmount: 120,
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            holdingStats: [
-              {
-                data: {
-                  ownerId: mockUserId1,
-                  symbol: 'AAPL',
-                  totalQuantity: 3,
-                  totalRealizedAmount: 100,
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            holdingStats: [
-              {
-                data: {
-                  ownerId: mockUserId1,
-                  symbol: 'AAPL',
-                  totalQuantity: 3,
-                  totalRealizedAmount: 120,
-                },
-              },
-            ],
-          },
-        },
-      ]);
     }
-  );
+
+    expect(emissions).toStrictEqual([
+      expect.anything(), // (initial full state emission)
+      {
+        data: {
+          holdingStats: [
+            {
+              data: {
+                ownerId: mockUserId1,
+                symbol: 'ADBE',
+                totalQuantity: 3,
+                totalRealizedAmount: 100,
+              },
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          holdingStats: [
+            {
+              data: {
+                ownerId: mockUserId1,
+                symbol: 'ADBE',
+                totalQuantity: 3,
+                totalRealizedAmount: 120,
+              },
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          holdingStats: [
+            {
+              data: {
+                ownerId: mockUserId1,
+                symbol: 'AAPL',
+                totalQuantity: 3,
+                totalRealizedAmount: 100,
+              },
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          holdingStats: [
+            {
+              data: {
+                ownerId: mockUserId1,
+                symbol: 'AAPL',
+                totalQuantity: 3,
+                totalRealizedAmount: 120,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  });
 
   describe('With `marketValue` and `unrealizedPnl` fields', () => {
     it('Emits updates correctly in conjunction with changes to holding symbols market data', async () => {
@@ -1059,18 +1059,18 @@ describe('Subscription.holdingStats ', () => {
 
       await using subscription = iterateGqlSubscriptionDisposable({
         query: `
-            subscription {
-              holdingStats {
-                data {
-                  symbol
-                  marketValue
-                  unrealizedPnl {
-                    amount
-                    percent
-                  }
+          subscription {
+            holdingStats {
+              data {
+                symbol
+                marketValue
+                unrealizedPnl {
+                  amount
+                  percent
                 }
               }
-            }`,
+            }
+          }`,
       });
 
       const emissions = [(await subscription.next()).value];
@@ -1091,6 +1091,9 @@ describe('Subscription.holdingStats ', () => {
           });
 
           await mockMarketDataControl.onConnectionSend([{ ADBE: { regularMarketPrice: 11 } }]);
+
+          // const { value } = await subscription.next();
+          // emissions.push(value);
         },
 
         async () => {
@@ -1107,8 +1110,16 @@ describe('Subscription.holdingStats ', () => {
             holdingStats: { set: [reusableHoldingStats[3].symbol] },
           });
 
-          await mockMarketDataControl.waitUntilRequestingNewSymbols();
+          // await setTimeout(50);
+
+          // await setTimeout(100);
+          // console.log('LOL LOL 1');
+          await mockMarketDataControl.whenNextMarketDataSymbolsRequested();
+          // await setTimeout(100);
+          // console.log('LOL LOL 2');
           await mockMarketDataControl.onConnectionSend([{ AAPL: { regularMarketPrice: 12 } }]);
+          // await setTimeout(100);
+          // console.log('LOL LOL 3');
         },
       ]) {
         await applyNextChanges();
@@ -1308,10 +1319,10 @@ describe('Subscription.holdingStats ', () => {
         data: null,
         errors: [
           {
-            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
+            message: 'Couldn\'t find market data for some symbols: "NVDA", "AAPL"',
             extensions: {
               type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
-              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
+              details: { symbolsNotFound: ['NVDA', 'AAPL'] },
             },
           },
         ],

@@ -160,7 +160,7 @@ type HoldingObjectSpecifier = {
 type PortfolioObjectSpecifier = {
   type: 'PORTFOLIO';
   portfolioOwnerId: string;
-  statsCurrency: string | null | undefined;
+  statsCurrency?: string | null | undefined;
 };
 
 type StatsObjectChanges = {

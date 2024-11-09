@@ -148,66 +148,67 @@ afterAll(async () => {
 });
 
 describe('Subscription.portfolioStats ', () => {
-  it(
-    'Upon subscription immediately emits an initial message with the state of all ' +
-      'targeted portfolio stats',
-    async () => {
-      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
-      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);
-      await PortfolioStatsChangeModel.bulkCreate([
-        {
-          relatedTradeId: reusableTradeDatas[0].id,
-          ownerId: mockUserId1,
-          forCurrency: 'USD',
-          changedAt: reusableTradeDatas[0].performedAt,
-          totalPresentInvestedAmount: 200,
-          totalRealizedAmount: 200,
-          totalRealizedProfitOrLossAmount: 40,
-          totalRealizedProfitOrLossRate: 0.25,
-        },
-      ]);
+  it('Upon subscription immediately emits an initial message with the state of all targeted portfolio stats', async () => {
+    await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
+    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);
+    await PortfolioStatsChangeModel.bulkCreate([
+      {
+        relatedTradeId: reusableTradeDatas[0].id,
+        ownerId: mockUserId1,
+        forCurrency: 'USD',
+        changedAt: reusableTradeDatas[0].performedAt,
+        totalPresentInvestedAmount: 200,
+        totalRealizedAmount: 200,
+        totalRealizedProfitOrLossAmount: 40,
+        totalRealizedProfitOrLossRate: 0.25,
+      },
+    ]);
 
-      const firstItem = await pipe(
-        gqlWsClient.iterate({
-          query: `
-            subscription {
-              portfolioStats {
-                data {
-                  ownerId
-                  relatedTradeId
-                  forCurrency
-                  lastChangedAt
-                  totalPresentInvestedAmount
-                  totalRealizedAmount
-                  totalRealizedProfitOrLossAmount
-                  totalRealizedProfitOrLossRate
-                }
+    (global as any).debuggedTestIsRunningNow = true;
+    await using _ = {
+      [Symbol.asyncDispose]: async () => void ((global as any).debuggedTestIsRunningNow = false),
+    };
+
+    const firstItem = await pipe(
+      gqlWsClient.iterate({
+        query: `
+          subscription {
+            portfolioStats {
+              data {
+                ownerId
+                relatedTradeId
+                forCurrency
+                lastChangedAt
+                totalPresentInvestedAmount
+                totalRealizedAmount
+                totalRealizedProfitOrLossAmount
+                totalRealizedProfitOrLossRate
               }
-            }`,
-        }),
-        itTakeFirst()
-      );
+            }
+          }`,
+      }),
+      itTakeFirst()
+    );
 
-      expect(firstItem).toStrictEqual({
-        data: {
-          portfolioStats: [
-            {
-              data: {
-                relatedTradeId: reusableTradeDatas[0].id,
-                ownerId: mockUserId1,
-                forCurrency: 'USD',
-                lastChangedAt: reusableTradeDatas[0].performedAt,
-                totalPresentInvestedAmount: 200,
-                totalRealizedAmount: 200,
-                totalRealizedProfitOrLossAmount: 40,
-                totalRealizedProfitOrLossRate: 0.25,
-              },
+    expect(firstItem).toStrictEqual({
+      data: {
+        portfolioStats: [
+          {
+            data: {
+              relatedTradeId: reusableTradeDatas[0].id,
+              ownerId: mockUserId1,
+              forCurrency: 'USD',
+              lastChangedAt: reusableTradeDatas[0].performedAt,
+              totalPresentInvestedAmount: 200,
+              totalRealizedAmount: 200,
+              totalRealizedProfitOrLossAmount: 40,
+              totalRealizedProfitOrLossRate: 0.25,
             },
-          ],
-        },
-      });
-    }
-  );
+          },
+        ],
+      },
+    });
+  });
 
   it('Emits updates for only the most recent portfolio stats record per currency', async () => {
     await TradeRecordModel.bulkCreate([

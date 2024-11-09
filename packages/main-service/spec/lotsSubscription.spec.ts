@@ -635,6 +635,7 @@ describe('Subscription.lots ', () => {
 
         // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
 
+        await mockMarketDataControl.waitUntilRequestingNewSymbols();
         await mockMarketDataControl.onConnectionSend([
           { [lots[1].symbol]: { regularMarketPrice: 11 } },
         ]);
@@ -768,6 +769,14 @@ describe('Subscription.lots ', () => {
           recordUpdatedAt: new Date('2024-01-01T00:00:03.000Z'),
         },
       ]);
+
+      // (global as any).globalRequestedSymbols.clear();
+      // console.log('global.globalRequestedSymbols', (global as any).globalRequestedSymbols);
+
+      // (global as any).debuggedTestIsRunningNow = true;
+      // await using _ = {
+      //   [Symbol.asyncDispose]: async () => void ((global as any).debuggedTestIsRunningNow = false),
+      // };
 
       mockMarketDataControl.onConnectionSend([
         { ADBE: { regularMarketPrice: 3 }, AAPL: { regularMarketPrice: 3 } },
@@ -1326,10 +1335,10 @@ describe('Subscription.lots ', () => {
         data: null,
         errors: [
           {
-            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
+            message: 'Couldn\'t find market data for some symbols: "NVDA", "AAPL"',
             extensions: {
               type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
-              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
+              details: { symbolsNotFound: ['NVDA', 'AAPL'] },
             },
           },
         ],

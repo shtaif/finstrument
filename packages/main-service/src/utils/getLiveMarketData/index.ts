@@ -1,22 +1,17 @@
-import { assign, filter, isEqual, values } from 'lodash-es';
+import { isEqual, values, compact } from 'lodash-es';
 import { empty } from '@reactivex/ix-esnext-esm/asynciterable';
-import { type DeepNonNullable, type DeepPartial } from 'utility-types';
+import { type DeepPartial } from 'utility-types';
 import { pipe } from 'shared-utils';
-import { itMap, itFilter, itMerge, itLazyDefer, itShare, itTakeFirst } from 'iterable-operators';
+import { itMap, itFilter, itLazyDefer, itShare } from 'iterable-operators';
 import {
-  observeStatsObjectChanges,
   type StatsObjectSpecifier,
   type StatsObjects,
-  type StatsObjectChanges,
 } from '../observeStatsObjectChanges/index.js';
 import { type HoldingStats, type Lot } from '../positionsService/index.js';
 import { normalizeFloatImprecisions } from '../normalizeFloatImprecisions.js';
 import { objectCreateNullProto } from '../objectCreateNullProto.js';
-import {
-  getMarketDataByStatsObjectsIter,
-  type UpdatedSymbolPriceMap,
-  type UpdatedSymbolPrice,
-} from './getMarketDataByStatsObjectsIter.js';
+import { observeStatsWithMarketDataHelper } from './observeStatsWithMarketDataHelper.js';
+import { type UpdatedSymbolPrice } from '../marketDataService/index.js';
 // import { type AllLeafPropsIntoBools } from './AllLeafPropsIntoBools.js';
 import { portfolioStatsCalcMarketStats } from './portfolioStatsCalcMarketStats.js';
 import { calcPnlInTranslateCurrencies } from './calcPnlInTranslateCurrencies.js';
@@ -129,396 +124,303 @@ function getLiveMarketData(params: {
       pnl?.byTranslateCurrencies?.exchangeRate
   );
 
-  const observedStatsObjectsIter = observeStatsObjectChanges({ specifiers: paramsNorm.specifiers });
-
-  const symbolPriceDataIter =
-    !requestedSomePortfolioStatsMarketDataFields &&
-    !requestedSomeHoldingStatsMarketDataFields &&
-    !requestedSomeLotsMarketDataFields
-      ? (async function* () {})()
-      : getMarketDataByStatsObjectsIter({
-          translateToCurrencies: paramsNorm.translateToCurrencies,
-          ignoreClosedObjectStats: !requestedSomePriceDataFields,
-          statsObjects: pipe(
-            observedStatsObjectsIter,
-            itMap(({ current: c }) => ({
-              portfolioStats: !requestedSomePortfolioStatsMarketDataFields ? {} : c.portfolioStats,
-              holdingStats: !requestedSomeHoldingStatsMarketDataFields ? {} : c.holdingStats,
-              lots: !requestedSomeLotsMarketDataFields ? {} : c.lots,
-            }))
-          ),
-        });
+  const statsWithMarketDataIter = observeStatsWithMarketDataHelper({
+    forStatsObjects: paramsNorm.specifiers,
+    symbolExtractor: {
+      ignoreClosedObjectStats: !requestedSomePriceDataFields,
+      includeMarketDataFor: {
+        portfolios: requestedSomePortfolioStatsMarketDataFields,
+        holdings: requestedSomeHoldingStatsMarketDataFields,
+        lots: requestedSomeLotsMarketDataFields,
+      },
+      translateToCurrencies: compact([
+        ...paramsNorm.translateToCurrencies,
+        !paramsNorm.fields.holdings.holding?.currentPortfolioPortion
+          ? undefined
+          : unifiedCurrencyForPortfolioTotalValueCalcs,
+      ]),
+    },
+  });
 
   return pipe(
-    itMerge(
-      pipe(
-        observedStatsObjectsIter,
-        itMap(({ current, changes }) => ({
-          currentStats: current,
-          changedStats: changes,
-          changedSymbols: undefined,
-        }))
-      ),
-      pipe(
-        symbolPriceDataIter,
-        itMap(changedSymbols => ({
-          currentStats: undefined,
-          changedStats: undefined,
-          changedSymbols,
-        }))
-      )
-    ),
-    statsOrPriceDataChangeIter =>
-      itLazyDefer(() => {
-        let allCurrStats = {
-          portfolioStats: objectCreateNullProto(),
-          holdingStats: objectCreateNullProto(),
-          lots: objectCreateNullProto(),
-        } as StatsObjectChanges['current'];
+    statsWithMarketDataIter,
+    itMap(({ changedStats, currentMarketData }) => {
+      // TODO: Need to refactor all calculations that follow to be decimal-accurate (with `pnpm add decimal.js-light`)
 
-        const allCurrSymbolPriceData =
-          objectCreateNullProto<DeepNonNullable<UpdatedSymbolPriceMap>>();
+      const portfolioUpdates = (
+        [
+          [{ type: 'SET' }, changedStats.portfolioStats.set],
+          [{ type: 'REMOVE' }, changedStats.portfolioStats.remove],
+        ] as const
+      ).flatMap(([{ type }, changed]) =>
+        changed.map(pStats => {
+          const { marketValue, pnl } =
+            !requestedSomeUnrealizedPnlFields && !paramsNorm.fields.portfolios.marketValue
+              ? {
+                  marketValue: undefined,
+                  pnl: undefined,
+                }
+              : (() => {
+                  const { marketValue, pnlAmount, pnlPercent } = portfolioStatsCalcMarketStats(
+                    pStats,
+                    currentMarketData
+                  );
 
-        const initialLoadOfSymbolPricesPromise = (async () => {
-          const changedSymbols = await pipe(symbolPriceDataIter, itTakeFirst());
-          assign(allCurrSymbolPriceData, changedSymbols);
-        })();
-
-        return pipe(
-          statsOrPriceDataChangeIter,
-          itMap(async ({ currentStats, changedStats, changedSymbols }) => {
-            if (changedStats) {
-              await initialLoadOfSymbolPricesPromise;
-              allCurrStats = currentStats;
-            } else {
-              assign(allCurrSymbolPriceData, changedSymbols);
-            }
-
-            if (changedStats) {
-              if (!requestedSomeMarketDataFields) {
-                return changedStats;
-              }
-              return {
-                portfolioStats: {
-                  remove: changedStats.portfolioStats.remove,
-                  set: changedStats.portfolioStats.set.filter(p =>
-                    p.resolvedHoldings.every(
-                      h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
-                    )
-                  ),
-                },
-                holdingStats: {
-                  remove: changedStats.holdingStats.remove,
-                  set: changedStats.holdingStats.set.filter(
-                    requestedSomePriceDataFields
-                      ? h => h.symbol in allCurrSymbolPriceData
-                      : h => h.totalLotCount === 0 || h.symbol in allCurrSymbolPriceData
-                  ),
-                },
-                lots: {
-                  remove: changedStats.lots.remove,
-                  set: changedStats.lots.set.filter(
-                    requestedSomePriceDataFields
-                      ? lot => lot.symbol in allCurrSymbolPriceData
-                      : lot => lot.remainingQuantity === 0 || lot.symbol in allCurrSymbolPriceData
-                  ),
-                },
-              };
-            }
-            return {
-              portfolioStats: {
-                remove: [],
-                set: filter(allCurrStats.portfolioStats, ({ resolvedHoldings }) =>
-                  resolvedHoldings.some(h => h.totalLotCount > 0 && !!changedSymbols[h.symbol])
-                ),
-              },
-              holdingStats: {
-                remove: [],
-                set: filter(allCurrStats.holdingStats, h => !!changedSymbols[h.symbol]),
-              },
-              lots: {
-                remove: [],
-                set: filter(allCurrStats.lots, p => !!changedSymbols[p.symbol]),
-              },
-            };
-          }),
-          itMap(changes => {
-            // TODO: Need to refactor all calculations that follow to be decimal-accurate (with `pnpm add decimal.js-light`)
-
-            const portfolioUpdates = (
-              [
-                [{ type: 'SET' }, changes.portfolioStats.set],
-                [{ type: 'REMOVE' }, changes.portfolioStats.remove],
-              ] as const
-            ).flatMap(([{ type }, changed]) =>
-              changed.map(pStats => {
-                const { marketValue, pnl } =
-                  !requestedSomeUnrealizedPnlFields && !paramsNorm.fields.portfolios.marketValue
-                    ? {
-                        marketValue: undefined,
-                        pnl: undefined,
-                      }
-                    : (() => {
-                        const { marketValue, pnlAmount, pnlPercent } =
-                          portfolioStatsCalcMarketStats(pStats, allCurrSymbolPriceData);
-
-                        const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
-                          pStats.forCurrency,
-                          paramsNorm.translateToCurrencies,
-                          pnlAmount,
-                          allCurrSymbolPriceData
-                        );
-
-                        return {
-                          marketValue: normalizeFloatImprecisions(marketValue),
-                          pnl: {
-                            amount: normalizeFloatImprecisions(pnlAmount),
-                            percent: normalizeFloatImprecisions(pnlPercent),
-                            byTranslateCurrencies: pnlByTranslateCurrencies,
-                          },
-                        };
-                      })();
-
-                return {
-                  type,
-                  portfolio: pStats,
-                  marketValue,
-                  pnl,
-                };
-              })
-            );
-
-            const holdingUpdates = (
-              [
-                [{ type: 'SET' }, changes.holdingStats.set],
-                [{ type: 'REMOVE' }, changes.holdingStats.remove],
-              ] as const
-            ).flatMap(([{ type }, changed]) =>
-              changed.map(holding => {
-                const priceUpdateForSymbol = allCurrSymbolPriceData[holding.symbol];
-
-                const priceData = !requestedSomePriceDataFields
-                  ? undefined
-                  : {
-                      marketState: priceUpdateForSymbol.marketState,
-                      currency: priceUpdateForSymbol.currency,
-                      regularMarketTime: priceUpdateForSymbol.regularMarketTime,
-                      regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
-                    };
-
-                const marketValue = (() => {
-                  if (!requestedSomeHoldingStatsMarketDataFields) {
-                    return;
-                  }
-                  return holding.totalQuantity === 0
-                    ? 0
-                    : holding.totalQuantity * priceUpdateForSymbol.regularMarketPrice;
-                })();
-
-                const pnl = !requestedSomeUnrealizedPnlFields
-                  ? undefined
-                  : (() => {
-                      const { amount: pnlAmount, percent: pnlPercent } = calcHoldingRevenue({
-                        holding,
-                        priceInfo: priceUpdateForSymbol,
-                      });
-
-                      const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
-                        holding.symbolInfo.currency,
-                        paramsNorm.translateToCurrencies,
-                        pnlAmount,
-                        allCurrSymbolPriceData
-                      );
-
-                      return {
-                        amount: normalizeFloatImprecisions(pnlAmount),
-                        percent: normalizeFloatImprecisions(pnlPercent),
-                        byTranslateCurrencies: pnlByTranslateCurrencies,
-                      };
-                    })();
-
-                return {
-                  type,
-                  holding,
-                  priceData,
-                  marketValue,
-                  pnl,
-                };
-              })
-            );
-
-            const lotUpdates = (
-              [
-                [{ type: 'SET' }, changes.lots.set],
-                [{ type: 'REMOVE' }, changes.lots.remove],
-              ] as const
-            ).flatMap(([{ type }, changed]) =>
-              changed.map(lot => {
-                const priceUpdateForSymbol = allCurrSymbolPriceData[lot.symbol];
-
-                const priceData = !requestedSomePriceDataFields
-                  ? undefined
-                  : {
-                      currency: priceUpdateForSymbol.currency,
-                      marketState: priceUpdateForSymbol.marketState,
-                      regularMarketTime: priceUpdateForSymbol.regularMarketTime,
-                      regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
-                    };
-
-                const marketValue = (() => {
-                  if (!requestedSomeLotsMarketDataFields) {
-                    return;
-                  }
-                  return lot.remainingQuantity === 0
-                    ? 0
-                    : lot.remainingQuantity * priceUpdateForSymbol.regularMarketPrice;
-                })();
-
-                const pnl = !requestedSomeUnrealizedPnlFields
-                  ? undefined
-                  : (() => {
-                      const [pnlAmount, pnlPercent] =
-                        lot.remainingQuantity === 0
-                          ? [0, 0]
-                          : [
-                              lot.remainingQuantity *
-                                (priceUpdateForSymbol.regularMarketPrice - lot.openingTrade.price),
-                              (priceUpdateForSymbol.regularMarketPrice / lot.openingTrade.price -
-                                1) *
-                                100,
-                            ];
-
-                      const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
-                        lot.symbolInfo.currency,
-                        paramsNorm.translateToCurrencies,
-                        pnlAmount,
-                        allCurrSymbolPriceData
-                      );
-
-                      return {
-                        amount: normalizeFloatImprecisions(pnlAmount),
-                        percent: normalizeFloatImprecisions(pnlPercent),
-                        byTranslateCurrencies: pnlByTranslateCurrencies,
-                      };
-                    })();
-
-                return {
-                  type,
-                  lot,
-                  priceData,
-                  marketValue,
-                  pnl,
-                };
-              })
-            );
-
-            return {
-              portfolios: portfolioUpdates,
-              holdings: holdingUpdates,
-              lots: lotUpdates,
-            };
-          }),
-          source =>
-            itLazyDefer(() => {
-              const [allCurrPortfolioUpdates, allCurrHoldingUpdates, allCurrLotUpdates] = [
-                objectCreateNullProto<{
-                  [ownerIdAndSymbol: string]: DeepPartial<PortfolioMarketStatsUpdate<string>>;
-                }>(),
-                objectCreateNullProto<{
-                  [ownerIdAndSymbol: string]: DeepPartial<HoldingMarketStatsUpdate<string>>;
-                }>(),
-                objectCreateNullProto<{
-                  [ownerIdAndSymbol: string]: DeepPartial<LotMarketStatsUpdate<string>>;
-                }>(),
-              ];
-
-              return pipe(
-                source,
-                itMap(({ portfolios, holdings, lots }) => {
-                  const [
-                    portfolioUpdatesRelevantToRequestor,
-                    holdingUpdatesRelevantToRequestor,
-                    lotUpdatesRelevantToRequestor,
-                  ] = [
-                    portfolios
-                      .map(update => ({
-                        orig: update,
-                        formatted: deepObjectPickFields(update, paramsNorm.fields.portfolios),
-                      }))
-                      .filter(({ orig, formatted }) => {
-                        const ownerIdAndCurrency = `${orig.portfolio.ownerId}_${orig.portfolio.forCurrency ?? ''}`;
-                        return (
-                          orig.type === 'REMOVE' ||
-                          !isEqual(allCurrPortfolioUpdates[ownerIdAndCurrency], formatted)
-                        );
-                      }),
-
-                    holdings
-                      .map(update => ({
-                        orig: update,
-                        formatted: deepObjectPickFields(update, paramsNorm.fields.holdings),
-                      }))
-                      .filter(({ orig, formatted }) => {
-                        const ownerIdAndSymbol = `${orig.holding.ownerId}_${orig.holding.symbol}`;
-                        return (
-                          orig.type === 'REMOVE' ||
-                          !isEqual(allCurrHoldingUpdates[ownerIdAndSymbol], formatted)
-                        );
-                      }),
-
-                    lots
-                      .map(update => ({
-                        orig: update,
-                        formatted: deepObjectPickFields(update, paramsNorm.fields.lots),
-                      }))
-                      .filter(
-                        ({ orig, formatted }) =>
-                          orig.type === 'REMOVE' ||
-                          !isEqual(allCurrLotUpdates[orig.lot.id], formatted)
-                      ),
-                  ];
-
-                  for (const { orig, formatted } of portfolioUpdatesRelevantToRequestor) {
-                    const key = `${orig.portfolio.ownerId}_${orig.portfolio.forCurrency ?? ''}`;
-                    ({
-                      ['SET']: () => (allCurrPortfolioUpdates[key] = formatted),
-                      ['REMOVE']: () => delete allCurrPortfolioUpdates[key],
-                    })[orig.type]();
-                  }
-
-                  for (const { orig, formatted } of holdingUpdatesRelevantToRequestor) {
-                    const key = `${orig.holding.ownerId}_${orig.holding.symbol}`;
-                    ({
-                      ['SET']: () => (allCurrHoldingUpdates[key] = formatted),
-                      ['REMOVE']: () => delete allCurrHoldingUpdates[key],
-                    })[orig.type]();
-                  }
-
-                  for (const { orig, formatted } of lotUpdatesRelevantToRequestor) {
-                    const key = orig.lot.id;
-                    ({
-                      ['SET']: () => (allCurrLotUpdates[key] = formatted),
-                      ['REMOVE']: () => delete allCurrLotUpdates[key],
-                    })[orig.type]();
-                  }
+                  const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
+                    pStats.forCurrency,
+                    paramsNorm.translateToCurrencies,
+                    pnlAmount,
+                    currentMarketData
+                  );
 
                   return {
-                    portfolios: portfolioUpdatesRelevantToRequestor.map(u => u.formatted),
-                    holdings: holdingUpdatesRelevantToRequestor.map(u => u.formatted),
-                    lots: lotUpdatesRelevantToRequestor.map(u => u.formatted),
+                    marketValue: normalizeFloatImprecisions(marketValue),
+                    pnl: {
+                      amount: normalizeFloatImprecisions(pnlAmount),
+                      percent: normalizeFloatImprecisions(pnlPercent),
+                      byTranslateCurrencies: pnlByTranslateCurrencies,
+                    },
                   };
-                })
-              );
-            }),
-          itFilter(
-            ({ portfolios, holdings, lots }, i) =>
-              i === 0 || portfolios.length + holdings.length + lots.length > 0
-          )
+                })();
+
+          return {
+            type,
+            portfolio: pStats,
+            marketValue,
+            pnl,
+          };
+        })
+      );
+
+      const holdingUpdates = (
+        [
+          [{ type: 'SET' }, changedStats.holdingStats.set],
+          [{ type: 'REMOVE' }, changedStats.holdingStats.remove],
+        ] as const
+      ).flatMap(([{ type }, changed]) =>
+        changed.map(holding => {
+          const priceUpdateForSymbol = currentMarketData[holding.symbol];
+
+          const priceData = !requestedSomePriceDataFields
+            ? undefined
+            : {
+                marketState: priceUpdateForSymbol.marketState,
+                currency: priceUpdateForSymbol.currency,
+                regularMarketTime: priceUpdateForSymbol.regularMarketTime,
+                regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
+              };
+
+          const marketValue = (() => {
+            if (!requestedSomeHoldingStatsMarketDataFields) {
+              return;
+            }
+            return holding.totalQuantity === 0
+              ? 0
+              : holding.totalQuantity * priceUpdateForSymbol.regularMarketPrice;
+          })();
+
+          const pnl = !requestedSomeUnrealizedPnlFields
+            ? undefined
+            : (() => {
+                const { amount: pnlAmount, percent: pnlPercent } = calcHoldingRevenue({
+                  holding,
+                  priceInfo: priceUpdateForSymbol,
+                });
+
+                const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
+                  holding.symbolInfo.currency,
+                  paramsNorm.translateToCurrencies,
+                  pnlAmount,
+                  currentMarketData
+                );
+
+                return {
+                  amount: normalizeFloatImprecisions(pnlAmount),
+                  percent: normalizeFloatImprecisions(pnlPercent),
+                  byTranslateCurrencies: pnlByTranslateCurrencies,
+                };
+              })();
+
+          return {
+            type,
+            holding,
+            priceData,
+            marketValue,
+            pnl,
+          };
+        })
+      );
+
+      const lotUpdates = (
+        [
+          [{ type: 'SET' }, changedStats.lots.set],
+          [{ type: 'REMOVE' }, changedStats.lots.remove],
+        ] as const
+      ).flatMap(([{ type }, changed]) =>
+        changed.map(lot => {
+          const priceUpdateForSymbol = currentMarketData[lot.symbol];
+
+          const priceData = !requestedSomePriceDataFields
+            ? undefined
+            : {
+                currency: priceUpdateForSymbol.currency,
+                marketState: priceUpdateForSymbol.marketState,
+                regularMarketTime: priceUpdateForSymbol.regularMarketTime,
+                regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
+              };
+
+          const marketValue = (() => {
+            if (!requestedSomeLotsMarketDataFields) {
+              return;
+            }
+            return lot.remainingQuantity === 0
+              ? 0
+              : lot.remainingQuantity * priceUpdateForSymbol.regularMarketPrice;
+          })();
+
+          const pnl = !requestedSomeUnrealizedPnlFields
+            ? undefined
+            : (() => {
+                const [pnlAmount, pnlPercent] =
+                  lot.remainingQuantity === 0
+                    ? [0, 0]
+                    : [
+                        lot.remainingQuantity *
+                          (priceUpdateForSymbol.regularMarketPrice - lot.openingTrade.price),
+                        (priceUpdateForSymbol.regularMarketPrice / lot.openingTrade.price - 1) *
+                          100,
+                      ];
+
+                const pnlByTranslateCurrencies = calcPnlInTranslateCurrencies(
+                  lot.symbolInfo.currency,
+                  paramsNorm.translateToCurrencies,
+                  pnlAmount,
+                  currentMarketData
+                );
+
+                return {
+                  amount: normalizeFloatImprecisions(pnlAmount),
+                  percent: normalizeFloatImprecisions(pnlPercent),
+                  byTranslateCurrencies: pnlByTranslateCurrencies,
+                };
+              })();
+
+          return {
+            type,
+            lot,
+            priceData,
+            marketValue,
+            pnl,
+          };
+        })
+      );
+
+      return {
+        portfolios: portfolioUpdates,
+        holdings: holdingUpdates,
+        lots: lotUpdates,
+      };
+    }),
+    source =>
+      itLazyDefer(() => {
+        const [allCurrPortfolioUpdates, allCurrHoldingUpdates, allCurrLotUpdates] = [
+          objectCreateNullProto<{
+            [ownerIdAndCurrency: string]: DeepPartial<PortfolioMarketStatsUpdate>;
+          }>(),
+          objectCreateNullProto<{
+            [ownerIdAndSymbol: string]: DeepPartial<HoldingMarketStatsUpdate>;
+          }>(),
+          objectCreateNullProto<{
+            [lotId: string]: DeepPartial<LotMarketStatsUpdate>;
+          }>(),
+        ];
+
+        return pipe(
+          source,
+          itMap(({ portfolios, holdings, lots }) => {
+            const [
+              portfolioUpdatesRelevantToRequestor,
+              holdingUpdatesRelevantToRequestor,
+              lotUpdatesRelevantToRequestor,
+            ] = [
+              portfolios
+                .map(update => ({
+                  orig: update,
+                  formatted: deepObjectPickFields(update, paramsNorm.fields.portfolios),
+                }))
+                .filter(({ orig, formatted }) => {
+                  const ownerIdAndCurrency = `${orig.portfolio.ownerId}_${orig.portfolio.forCurrency ?? ''}`;
+                  return (
+                    orig.type === 'REMOVE' ||
+                    !isEqual(allCurrPortfolioUpdates[ownerIdAndCurrency], formatted)
+                  );
+                }),
+
+              holdings
+                .map(update => ({
+                  orig: update,
+                  formatted: deepObjectPickFields(update, paramsNorm.fields.holdings),
+                }))
+                .filter(({ orig, formatted }) => {
+                  const ownerIdAndSymbol = `${orig.holding.ownerId}_${orig.holding.symbol}`;
+                  return (
+                    orig.type === 'REMOVE' ||
+                    !isEqual(allCurrHoldingUpdates[ownerIdAndSymbol], formatted)
+                  );
+                }),
+
+              lots
+                .map(update => ({
+                  orig: update,
+                  formatted: deepObjectPickFields(update, paramsNorm.fields.lots),
+                }))
+                .filter(
+                  ({ orig, formatted }) =>
+                    orig.type === 'REMOVE' || !isEqual(allCurrLotUpdates[orig.lot.id], formatted)
+                ),
+            ];
+
+            for (const { orig, formatted } of portfolioUpdatesRelevantToRequestor) {
+              const key = `${orig.portfolio.ownerId}_${orig.portfolio.forCurrency ?? ''}`;
+              ({
+                ['SET']: () => (allCurrPortfolioUpdates[key] = formatted),
+                ['REMOVE']: () => delete allCurrPortfolioUpdates[key],
+              })[orig.type]();
+            }
+
+            for (const { orig, formatted } of holdingUpdatesRelevantToRequestor) {
+              const key = `${orig.holding.ownerId}_${orig.holding.symbol}`;
+              ({
+                ['SET']: () => (allCurrHoldingUpdates[key] = formatted),
+                ['REMOVE']: () => delete allCurrHoldingUpdates[key],
+              })[orig.type]();
+            }
+
+            for (const { orig, formatted } of lotUpdatesRelevantToRequestor) {
+              const key = orig.lot.id;
+              ({
+                ['SET']: () => (allCurrLotUpdates[key] = formatted),
+                ['REMOVE']: () => delete allCurrLotUpdates[key],
+              })[orig.type]();
+            }
+
+            return {
+              portfolios: portfolioUpdatesRelevantToRequestor.map(u => u.formatted),
+              holdings: holdingUpdatesRelevantToRequestor.map(u => u.formatted),
+              lots: lotUpdatesRelevantToRequestor.map(u => u.formatted),
+            };
+          })
         );
       }),
+    itFilter(
+      ({ portfolios, holdings, lots }, i) =>
+        i === 0 || portfolios.length + holdings.length + lots.length > 0
+    ),
     itShare()
   );
 }
+
+const unifiedCurrencyForPortfolioTotalValueCalcs = 'USD';
 
 type SelectableFields = {
   lots?: LotsSelectableFields;
