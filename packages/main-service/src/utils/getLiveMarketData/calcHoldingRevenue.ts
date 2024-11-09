@@ -1,5 +1,5 @@
 import { type HoldingStats } from '../positionsService/index.js';
-import { type UpdatedSymbolPrice } from './getMarketDataByStatsObjectsIter.js';
+import { type UpdatedSymbolPrice } from '../marketDataService/index.js';
 
 export { calcHoldingRevenue };
 

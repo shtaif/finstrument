@@ -3,6 +3,7 @@ import {
   createHoldingMarketDataLoader,
   type HoldingMarketStats,
 } from './loaders/createHoldingMarketDataLoader.js';
+import { type OptionallyPromise } from '../utils/OptionallyPromise.js';
 import { createLiveHoldingMarketDataLoader } from './loaders/createLiveHoldingMarketDataLoader.js';
 import { createPortfolioStatsLoader } from './loaders/createPortfolioStatsLoader.js';
 import { createPortfolioStatsChangesLoader } from './loaders/createPortfolioStatsChangesLoader.js';
@@ -34,9 +35,9 @@ export {
 };
 
 const appGqlContext = async (injectedInfo: {
-  getSession: () => Promise<{ activeUserId: string | undefined }>;
+  getSession: () => OptionallyPromise<{ activeUserId: string | undefined }>;
 }): Promise<{
-  getSession: () => Promise<{ activeUserId: string | undefined }>;
+  getSession: () => OptionallyPromise<{ activeUserId: string | undefined }>;
   portfolioStatsLoader: ReturnType<typeof createPortfolioStatsLoader>;
   portfolioStatsChangesLoader: ReturnType<typeof createPortfolioStatsChangesLoader>;
   holdingStatsChangesLoader: ReturnType<typeof createHoldingStatsChangesLoader>;

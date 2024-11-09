@@ -1,5 +1,5 @@
 import { sumBy } from 'lodash-es';
-import { type UpdatedSymbolPrice } from './getMarketDataByStatsObjectsIter.js';
+import { type UpdatedSymbolPrice } from '../marketDataService/index.js';
 
 export { portfolioStatsCalcMarketStats };
 

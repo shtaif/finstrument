@@ -14,11 +14,16 @@ function itLazyDefer<T>(
           if (isClosed) {
             return { done: true, value: undefined };
           }
-          if (!deferredIterableInitPromise) {
-            deferredIterableInitPromise = Promise.resolve(iterableFactory());
-            deferredIterator = (await deferredIterableInitPromise)[Symbol.asyncIterator]();
+          try {
+            if (!deferredIterableInitPromise) {
+              deferredIterableInitPromise = Promise.resolve(iterableFactory());
+              deferredIterator = (await deferredIterableInitPromise)[Symbol.asyncIterator]();
+            }
+            return await deferredIterator.next();
+          } catch (err) {
+            isClosed = true;
+            throw err;
           }
-          return deferredIterator.next();
         },
 
         async return() {

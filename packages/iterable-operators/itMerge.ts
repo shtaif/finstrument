@@ -46,8 +46,14 @@ function itMerge<T>(...sources: AsyncIterable<T>[]): AsyncIterable<T> {
       const combinedIterator = combinedIterable[Symbol.asyncIterator]();
 
       return {
-        next: () => {
-          return combinedIterator.next();
+        next: async () => {
+          try {
+            return await combinedIterator.next();
+          } catch (err) {
+            await Promise.all(innerIterators.map(it => it.return?.()));
+            await combinedIterator.return!();
+            throw err;
+          }
         },
         return: async () => {
           await Promise.all(innerIterators.map(it => it.return?.()));

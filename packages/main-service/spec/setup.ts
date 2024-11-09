@@ -1,29 +1,34 @@
-import { setTimeout } from 'node:timers/promises';
 import { afterAll, beforeAll } from 'vitest';
 import { startApp } from '../src/app.js';
 import { testRedisPublisher } from './utils/testRedisPublisher.js';
 import { testRedisSubscriber } from './utils/testRedisSubscriber.js';
-// import { mockMarketDataService } from './utils/mockMarketDataService.js';
+import { startMockMarketDataService } from './utils/mockMarketDataService.js';
 
-// const mockMarketDataServiceListeningPromise = once(mockMarketDataService, 'listening');
+const globalObj = global as any;
+
+globalObj.isAppStarted ??= false;
 
 beforeAll(async () => {
-  appTeardown = await startApp();
-  await Promise.all([testRedisPublisher.connect(), testRedisSubscriber.connect()]);
-  // await once(mockMarketDataService, 'listening');
-  // console.log('!!!');
-  // console.log('START');
-  // await mockMarketDataServiceListeningPromise;
-  // console.log('END');
+  if (!globalObj.isAppStarted) {
+    globalObj.isAppStarted = true;
+    const [_appTeardown, _mockMarketDataService] = await Promise.all([
+      startApp(),
+      startMockMarketDataService(),
+      testRedisPublisher.connect(),
+      testRedisSubscriber.connect(),
+    ]);
+  }
 });
 
-afterAll(async () => {
-  await setTimeout(0); // TODO: Explain what happens at the end of tested GQL subscriptions without this patch delay...
-  await appTeardown?.();
-  await Promise.all([testRedisPublisher.disconnect(), testRedisSubscriber.disconnect()]);
-  // await new Promise<void>((resolve, reject) =>
-  //   mockMarketDataService.close(err => (err ? reject(err) : resolve()))
-  // );
-});
+afterAll(async () => {});
 
-let appTeardown: undefined | (() => Promise<void>);
+(() => {
+  {
+    beforeAll(async () => {
+      console.log('RUNNING GENERAL BEFORE_ALL HOOK');
+    });
+    beforeAll(async () => {
+      console.log('RUNNING GENERAL AFTER_ALL HOOK');
+    });
+  }
+})();
