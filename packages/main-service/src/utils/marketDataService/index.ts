@@ -1,6 +1,6 @@
 import { uniq, pick, isEqual } from 'lodash-es';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';
-import { pipe } from 'shared-utils';
+import { pipe, asyncPipe } from 'shared-utils';
 import {
   itFilter,
   itMap,
@@ -9,13 +9,13 @@ import {
   itStartWith,
   itPairwise,
   itLazyDefer,
-  itMerge,
-  itFinally,
   myIterableCleanupPatcher,
+  itFinally,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
 import { iterifiedUnwrapped, type IterifiedUnwrapped } from 'iterified';
 import { isNotEmpty } from '../isNotEmpty.js';
+import { getDisposableIterator } from '../getDisposableIterator.js';
 import {
   iterateMarketDataServiceDataStream,
   type UpdatedSymbolPriceMap,
@@ -45,56 +45,70 @@ function observePricesDataMultiplexed<TSymbols extends string = string>(params: 
   );
 
   return pipe(
-    itLazyDefer(() => {
-      let currAskedSymbols: TSymbols[] = [];
+    sharedMarketDataUnderlyingSource,
+    myIterableCleanupPatcher(async function* (source) {
+      await using askedSymbolsIterator = getDisposableIterator(askedSymbolsIter);
 
-      return pipe(
-        itMerge(
-          sharedMarketDataUnderlyingSource,
-          pipe(
-            askedSymbolsIter,
-            itTap(async nextAskedSymbols => {
-              await outgoingSymbolCtrl.sendNext({
-                remove: currAskedSymbols,
-                add: nextAskedSymbols,
-              });
-              currAskedSymbols = nextAskedSymbols;
-            }),
-            itFilter(() => false)
-          ) as AsyncIterable<never>
-        ),
-        myIterableCleanupPatcher(async function* (source) {
-          const it = source[Symbol.asyncIterator]();
-          const gatheredInitialFullData: UpdatedSymbolPriceMap = {};
+      const initialAskedSymbols = await asyncPipe(askedSymbolsIterator.next(), initial =>
+        initial.done ? undefined : initial.value
+      );
 
-          for await (const nextUpdates of {
-            [Symbol.asyncIterator]: () => ({ next: () => it.next() }),
-          }) {
-            let initialFullDataFinishedGathering = true;
+      if (!initialAskedSymbols) {
+        return;
+      }
 
-            for (const symbol of currAskedSymbols) {
-              if (nextUpdates[symbol] !== undefined) {
-                gatheredInitialFullData[symbol] = nextUpdates[symbol];
-              } else if (gatheredInitialFullData[symbol] === undefined) {
-                initialFullDataFinishedGathering = false;
-              }
-            }
+      let currAskedSymbols = initialAskedSymbols;
 
-            if (initialFullDataFinishedGathering) {
-              break;
+      (async () => {
+        await outgoingSymbolCtrl.sendNext({ add: currAskedSymbols });
+
+        try {
+          for await (const nextAskedSymbols of askedSymbolsIterator) {
+            const remove = currAskedSymbols;
+            const add = nextAskedSymbols;
+            currAskedSymbols = nextAskedSymbols;
+            await outgoingSymbolCtrl.sendNext({ remove, add });
+          }
+        } finally {
+          const remove = currAskedSymbols;
+          currAskedSymbols = [];
+          await outgoingSymbolCtrl.sendNext({ remove });
+        }
+      })();
+
+      const incomingMarketDataIterator = source[Symbol.asyncIterator]();
+
+      yield* (await (async () => {
+        const gatheredInitialFullData: UpdatedSymbolPriceMap = {};
+
+        for await (const nextUpdates of {
+          [Symbol.asyncIterator]: () => ({ next: () => incomingMarketDataIterator.next() }),
+        }) {
+          let initialFullDataFinishedGathering = true;
+
+          for (const symbol of currAskedSymbols) {
+            if (nextUpdates[symbol] !== undefined) {
+              gatheredInitialFullData[symbol] = nextUpdates[symbol];
+            } else if (gatheredInitialFullData[symbol] === undefined) {
+              initialFullDataFinishedGathering = false;
             }
           }
 
-          yield pick(
-            gatheredInitialFullData as Pick<UpdatedSymbolPriceMap, TSymbols>,
-            currAskedSymbols
-          );
-          yield* pipe(
-            { [Symbol.asyncIterator]: () => it },
-            itMap(marketDataUpdates => pick(marketDataUpdates, currAskedSymbols)),
-            itFilter(marketDataUpdates => isNotEmpty(marketDataUpdates))
-          );
-        })
+          if (initialFullDataFinishedGathering) {
+            const narrowedExactRequestedFullData = pick(
+              gatheredInitialFullData,
+              currAskedSymbols
+            ) as Pick<UpdatedSymbolPriceMap, TSymbols>;
+
+            return [narrowedExactRequestedFullData];
+          }
+        }
+      })()) ?? [];
+
+      yield* pipe(
+        { [Symbol.asyncIterator]: () => incomingMarketDataIterator },
+        itMap(marketDataUpdates => pick(marketDataUpdates, currAskedSymbols)),
+        itFilter(marketDataUpdates => isNotEmpty(marketDataUpdates))
       );
     }),
     itShare()
@@ -112,12 +126,9 @@ const outgoingSymbolCtrl = {
   },
 };
 
-const sharedMarketDataUnderlyingSource = itLazyDefer(() => {
+const sharedMarketDataUnderlyingSource = (() => {
   const requestedSymbols = new Map<string, { timesRequested: number }>();
-
   const symbolRecentDataCache: { [symbol: string]: UpdatedSymbolPrice } = Object.create(null);
-
-  (global as any).globalRequestedSymbols = requestedSymbols;
 
   return pipe(
     iterateMarketDataServiceDataStream({
@@ -141,8 +152,10 @@ const sharedMarketDataUnderlyingSource = itLazyDefer(() => {
           }
         }),
         itFinally(() => {
-          // (global as any).globalRequestedSymbols = undefined;
-          requestedSymbols.clear(); // TODO: Is this necessary since we the `requestedSymbols` here would be recreated on every resubscription?
+          requestedSymbols.clear();
+          for (const k in symbolRecentDataCache) {
+            delete symbolRecentDataCache[k];
+          }
         }),
         itMap(request => {
           if (request.add) {
@@ -188,4 +201,4 @@ const sharedMarketDataUnderlyingSource = itLazyDefer(() => {
       yield* source;
     })
   );
-});
+})();
