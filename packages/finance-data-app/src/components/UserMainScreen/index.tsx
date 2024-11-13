@@ -69,8 +69,8 @@ function UserMainScreen() {
       />
 
       <Iterate
-        value={visibilityConditionedHoldingStatsIters}
         initialValue={!document.hidden ? holdingStatsIter : (async function* () {})()}
+        value={visibilityConditionedHoldingStatsIters}
       >
         {({ value: holdingStatsIter }) => (
           <>
@@ -90,7 +90,14 @@ function UserMainScreen() {
                     loading={next.pendingFirst}
                     loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
                     holdings={next.value?.holdingStats?.map(
-                      ({ symbol, totalQuantity, breakEvenPrice, priceData, unrealizedPnl }) => ({
+                      ({
+                        symbol,
+                        totalQuantity,
+                        breakEvenPrice,
+                        marketValue,
+                        priceData,
+                        unrealizedPnl,
+                      }) => ({
                         symbol,
                         currency: priceData.currency ?? undefined,
                         quantity: totalQuantity,
@@ -98,6 +105,7 @@ function UserMainScreen() {
                         marketPrice: priceData.regularMarketPrice,
                         timeOfPrice: priceData.regularMarketTime,
                         marketState: priceData.marketState,
+                        marketValue,
                         unrealizedPnl: {
                           amount: unrealizedPnl.amount,
                           percent: unrealizedPnl.percent,
@@ -194,6 +202,7 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
         symbol
         totalQuantity
         breakEvenPrice
+        marketValue
         priceData {
           marketState
           regularMarketTime

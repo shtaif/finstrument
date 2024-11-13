@@ -1,0 +1,14 @@
+.cmp-holding-stats-real-time-activity-status {
+  .indicator {
+    width: 10px;
+    margin-right: 5px;
+
+    &.pending-state {
+      --indicator-color: #787878;
+    }
+
+    &.connected-state {
+      --indicator-color: #169c16;
+    }
+  }
+}

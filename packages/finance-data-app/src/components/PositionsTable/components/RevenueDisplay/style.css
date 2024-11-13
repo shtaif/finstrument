@@ -1,0 +1,7 @@
+.cmp-revenue-display {
+  white-space: nowrap;
+
+  .pnl-amount-part {
+    font-size: 11.5px;
+  }
+}

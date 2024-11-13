@@ -7,17 +7,9 @@
 
   .current-price-cell {
     width: 21%;
-
-    .cell-content {
-      display: flex;
-
-      > :not(:first-child) {
-        margin-left: 6px;
-      }
-    }
   }
 
   .symbol-cell {
-    width: 9%;
+    width: 150px;
   }
 }

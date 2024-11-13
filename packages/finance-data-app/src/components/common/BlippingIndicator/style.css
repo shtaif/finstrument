@@ -1,0 +1,31 @@
+.cmp-blipping-indicator {
+  --indicator-color: #1668dc;
+  --indicator-anime-grow-proportion: 1.1;
+
+  display: inline-block;
+  aspect-ratio: 1 / 1;
+  width: 6px;
+  margin: 0 2px 3px 0;
+  vertical-align: middle;
+  border-radius: 50%;
+  background-color: var(--indicator-color);
+
+  &.indicator-blipping {
+    animation: 2s ease 0s infinite normal none running blipping-indicator-blip;
+  }
+}
+
+@keyframes blipping-indicator-blip {
+  0% {
+    transform: scale(1);
+    box-shadow: rgb(from var(--indicator-color) r g b / 0.7) 0px 0px 0px 0px;
+  }
+  70% {
+    transform: scale(var(--indicator-anime-grow-proportion));
+    box-shadow: transparent 0px 0px 0px 10px;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: transparent 0px 0px 0px 0px;
+  }
+}

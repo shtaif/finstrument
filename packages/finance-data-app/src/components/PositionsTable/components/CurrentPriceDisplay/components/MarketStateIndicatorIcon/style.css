@@ -1,0 +1,11 @@
+.cmp-market-state-indicator-icon {
+  margin-right: 5px;
+
+  &.indicator-inactive {
+    --indicator-color: var(--ant-color-text-quaternary);
+  }
+
+  &.indicator-active {
+    --indicator-color: var(--ant-color-primary);
+  }
+}
