@@ -143,13 +143,12 @@ beforeAll(async () => {
 
   mockGqlContext(ctx => ({
     ...ctx,
-    getSession: async () => ({ activeUserId: mockUserId1 }),
+    getSession: () => ({ activeUserId: mockUserId1 }),
   }));
 });
 
 beforeEach(async () => {
   await Promise.all([LotModel.destroy({ where: {} }), TradeRecordModel.destroy({ where: {} })]);
-  mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
@@ -492,7 +491,7 @@ describe('Query.lots', () => {
         { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           ADBE: { regularMarketPrice: 11 },
           AAPL: { regularMarketPrice: 12 },
@@ -551,7 +550,7 @@ describe('Query.lots', () => {
         { ...reusableLotDatas[1], symbol: 'AAPL' },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           ADBE: {
             currency: 'USD',
