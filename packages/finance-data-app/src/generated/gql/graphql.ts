@@ -32,7 +32,7 @@ export type AggregatePnlHoldingSpecifier = {
   symbol: Scalars['ID']['input'];
 };
 
-export type AggregatePnlPositionSpecifier = {
+export type AggregatePnlLotSpecifier = {
   lotId: Scalars['ID']['input'];
 };
 
@@ -154,6 +154,37 @@ export type InstrumentMarketData = {
   regularMarketTime: Scalars['DateTime']['output'];
 };
 
+export type Lot = {
+  __typename?: 'Lot';
+  id: Scalars['ID']['output'];
+  instrument: InstrumentInfo;
+  openedAt: Scalars['DateTime']['output'];
+  openingTradeId: Scalars['ID']['output'];
+  ownerId: Scalars['ID']['output'];
+  priceData: InstrumentMarketData;
+  realizedProfitOrLoss: Scalars['Float']['output'];
+  recordCreatedAt: Scalars['DateTime']['output'];
+  recordUpdatedAt: Scalars['DateTime']['output'];
+  remainingQuantity: Scalars['Float']['output'];
+  symbol: Scalars['ID']['output'];
+  unrealizedPnl: PnlInfo;
+};
+
+export type LotProfitInfo = {
+  __typename?: 'LotProfitInfo';
+  amount: Scalars['Float']['output'];
+  percent: Scalars['Float']['output'];
+};
+
+export type LotsFilters = {
+  ids?: InputMaybe<Array<Scalars['ID']['input']>>;
+  symbols?: InputMaybe<Array<Scalars['ID']['input']>>;
+};
+
+export type LotsSubscriptionFilters = {
+  ids: Array<Scalars['ID']['input']>;
+};
+
 export type MeInfo = {
   __typename?: 'MeInfo';
   user?: Maybe<User>;
@@ -180,9 +211,11 @@ export type ObservePricesDataInput = {
 export type ObservedHoldingStats = {
   __typename?: 'ObservedHoldingStats';
   breakEvenPrice?: Maybe<Scalars['Float']['output']>;
-  currentPortfolioPortion?: Maybe<Scalars['Float']['output']>;
+  currentPortfolioCurrencyPortion: Scalars['Float']['output'];
+  currentPortfolioPortion: Scalars['Float']['output'];
   lastChangedAt: Scalars['DateTime']['output'];
   lastRelatedTradeId: Scalars['ID']['output'];
+  marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
@@ -206,10 +239,40 @@ export enum ObservedHoldingStatsUpdateType {
   Set = 'SET'
 }
 
+export type ObservedLot = {
+  __typename?: 'ObservedLot';
+  id: Scalars['ID']['output'];
+  marketValue: Scalars['Float']['output'];
+  openedAt: Scalars['DateTime']['output'];
+  openingTradeId: Scalars['ID']['output'];
+  originalQuantity: Scalars['Float']['output'];
+  ownerId: Scalars['ID']['output'];
+  priceData: InstrumentMarketData;
+  realizedProfitOrLoss: Scalars['Float']['output'];
+  recordCreatedAt: Scalars['DateTime']['output'];
+  recordUpdatedAt: Scalars['DateTime']['output'];
+  remainingQuantity: Scalars['Float']['output'];
+  symbol: Scalars['ID']['output'];
+  unrealizedPnl: PnlInfo;
+};
+
+export type ObservedLotUpdate = {
+  __typename?: 'ObservedLotUpdate';
+  data: ObservedLot;
+  type: ObservedLotUpdateType;
+};
+
+export enum ObservedLotUpdateType {
+  Remove = 'REMOVE',
+  Set = 'SET'
+}
+
 export type ObservedPortfolioStats = {
   __typename?: 'ObservedPortfolioStats';
+  currentPortfolioPortion: Scalars['Float']['output'];
   forCurrency?: Maybe<Scalars['String']['output']>;
   lastChangedAt: Scalars['DateTime']['output'];
+  marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
   relatedTradeId: Scalars['ID']['output'];
   totalPresentInvestedAmount: Scalars['Float']['output'];
@@ -226,33 +289,6 @@ export type ObservedPortfolioStatsUpdate = {
 };
 
 export enum ObservedPortfolioStatsUpdateType {
-  Remove = 'REMOVE',
-  Set = 'SET'
-}
-
-export type ObservedPosition = {
-  __typename?: 'ObservedPosition';
-  id: Scalars['ID']['output'];
-  openedAt: Scalars['DateTime']['output'];
-  openingTradeId: Scalars['ID']['output'];
-  originalQuantity: Scalars['Float']['output'];
-  ownerId: Scalars['ID']['output'];
-  priceData: InstrumentMarketData;
-  realizedProfitOrLoss: Scalars['Float']['output'];
-  recordCreatedAt: Scalars['DateTime']['output'];
-  recordUpdatedAt: Scalars['DateTime']['output'];
-  remainingQuantity: Scalars['Float']['output'];
-  symbol: Scalars['ID']['output'];
-  unrealizedPnl: PnlInfo;
-};
-
-export type ObservedPositionUpdate = {
-  __typename?: 'ObservedPositionUpdate';
-  data: ObservedPosition;
-  type: ObservedPositionUpdateType;
-};
-
-export enum ObservedPositionUpdateType {
   Remove = 'REMOVE',
   Set = 'SET'
 }
@@ -298,37 +334,6 @@ export type PortfolioStatsChange = {
   totalRealizedProfitOrLossRate: Scalars['Float']['output'];
 };
 
-export type Position = {
-  __typename?: 'Position';
-  id: Scalars['ID']['output'];
-  instrument: InstrumentInfo;
-  openedAt: Scalars['DateTime']['output'];
-  openingTradeId: Scalars['ID']['output'];
-  ownerId: Scalars['ID']['output'];
-  priceData: InstrumentMarketData;
-  realizedProfitOrLoss: Scalars['Float']['output'];
-  recordCreatedAt: Scalars['DateTime']['output'];
-  recordUpdatedAt: Scalars['DateTime']['output'];
-  remainingQuantity: Scalars['Float']['output'];
-  symbol: Scalars['ID']['output'];
-  unrealizedPnl: PnlInfo;
-};
-
-export type PositionProfitInfo = {
-  __typename?: 'PositionProfitInfo';
-  amount: Scalars['Float']['output'];
-  percent: Scalars['Float']['output'];
-};
-
-export type PositionsFilters = {
-  ids?: InputMaybe<Array<Scalars['ID']['input']>>;
-  symbols?: InputMaybe<Array<Scalars['ID']['input']>>;
-};
-
-export type PositionsSubscriptionFilters = {
-  ids: Array<Scalars['ID']['input']>;
-};
-
 export type PriceDataChangeNotification = {
   __typename?: 'PriceDataChangeNotification';
   priceUpdates: Array<SymbolPriceData>;
@@ -341,10 +346,10 @@ export type Query = {
   hello: Scalars['String']['output'];
   holdingStats: Array<HoldingStats>;
   holdingStatsChanges: Array<HoldingStatsChange>;
+  lots: Array<Lot>;
   me: MeInfo;
   portfolioStats: PortfolioStats;
   portfolioStatsChanges: Array<PortfolioStatsChange>;
-  positions: Array<Position>;
 };
 
 
@@ -358,8 +363,8 @@ export type QueryHoldingStatsChangesArgs = {
 };
 
 
-export type QueryPositionsArgs = {
-  filters?: InputMaybe<PositionsFilters>;
+export type QueryLotsArgs = {
+  filters?: InputMaybe<LotsFilters>;
 };
 
 export type RevenueInfo = {
@@ -393,21 +398,26 @@ export type Subscription = {
   __typename?: 'Subscription';
   aggregatePnl: AggregatePnlChangeResult;
   holdingStats: Array<ObservedHoldingStatsUpdate>;
+  lots: Array<ObservedLotUpdate>;
   observeHoldingRevenue: HoldingRevenueChangeNotification;
   observePricesData: PriceDataChangeNotification;
   portfolioStats: Array<ObservedPortfolioStatsUpdate>;
-  positions: Array<ObservedPositionUpdate>;
 };
 
 
 export type SubscriptionAggregatePnlArgs = {
   holdings?: InputMaybe<Array<AggregatePnlHoldingSpecifier>>;
-  positions?: InputMaybe<Array<AggregatePnlPositionSpecifier>>;
+  lots?: InputMaybe<Array<AggregatePnlLotSpecifier>>;
 };
 
 
 export type SubscriptionHoldingStatsArgs = {
   filters?: InputMaybe<HoldingStatsSubscriptionFilters>;
+};
+
+
+export type SubscriptionLotsArgs = {
+  filters: LotsSubscriptionFilters;
 };
 
 
@@ -420,34 +430,29 @@ export type SubscriptionObservePricesDataArgs = {
   input: ObservePricesDataInput;
 };
 
-
-export type SubscriptionPositionsArgs = {
-  filters: PositionsSubscriptionFilters;
-};
-
 export type SymbolHolding = {
   __typename?: 'SymbolHolding';
   breakEvenPrice: Scalars['Float']['output'];
-  positions: Array<SymbolPosition>;
+  lots: Array<SymbolLot>;
   symbol: Scalars['ID']['output'];
   totalQuantity: Scalars['Float']['output'];
-  unrealizedProfit: PositionProfitInfo;
+  unrealizedProfit: LotProfitInfo;
   userAlias: Scalars['ID']['output'];
+};
+
+export type SymbolLot = {
+  __typename?: 'SymbolLot';
+  createdAt: Scalars['DateTime']['output'];
+  isRealized: Scalars['Boolean']['output'];
+  price: Scalars['Float']['output'];
+  quantity: Scalars['Int']['output'];
+  realizedQuantity: Scalars['Int']['output'];
 };
 
 export type SymbolPortfolioPortion = {
   __typename?: 'SymbolPortfolioPortion';
   portion: Scalars['Float']['output'];
   symbol: Scalars['ID']['output'];
-};
-
-export type SymbolPosition = {
-  __typename?: 'SymbolPosition';
-  createdAt: Scalars['DateTime']['output'];
-  isRealized: Scalars['Boolean']['output'];
-  price: Scalars['Float']['output'];
-  quantity: Scalars['Int']['output'];
-  realizedQuantity: Scalars['Int']['output'];
 };
 
 export type SymbolPriceData = {
@@ -473,24 +478,24 @@ export type SetTradesMutationMutation = { __typename?: 'Mutation', setTrades: { 
 export type HoldingStatsDataSubscriptionSubscriptionVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
+export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, marketValue: number, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
 
-export type PositionsQueryQueryVariables = Exact<{
+export type LotsQueryQueryVariables = Exact<{
   symbol: Scalars['ID']['input'];
 }>;
 
 
-export type PositionsQueryQuery = { __typename?: 'Query', positions: Array<{ __typename?: 'Position', id: string }> };
+export type LotsQueryQuery = { __typename?: 'Query', lots: Array<{ __typename?: 'Lot', id: string }> };
 
-export type PositionDataSubscriptionSubscriptionVariables = Exact<{
+export type LotDataSubscriptionSubscriptionVariables = Exact<{
   ids: Array<Scalars['ID']['input']> | Scalars['ID']['input'];
 }>;
 
 
-export type PositionDataSubscriptionSubscription = { __typename?: 'Subscription', positions: Array<{ __typename?: 'ObservedPositionUpdate', type: ObservedPositionUpdateType, data: { __typename?: 'ObservedPosition', id: string, openedAt: any, originalQuantity: number, remainingQuantity: number, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
+export type LotDataSubscriptionSubscription = { __typename?: 'Subscription', lots: Array<{ __typename?: 'ObservedLotUpdate', type: ObservedLotUpdateType, data: { __typename?: 'ObservedLot', id: string, openedAt: any, originalQuantity: number, remainingQuantity: number, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
 
 
 export const SetTradesMutationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetTradesMutation"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SetTradesInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setTrades"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"tradesAddedCount"}},{"kind":"Field","name":{"kind":"Name","value":"tradesModifiedCount"}},{"kind":"Field","name":{"kind":"Name","value":"tradesRemovedCount"}}]}}]}}]} as unknown as DocumentNode<SetTradesMutationMutation, SetTradesMutationMutationVariables>;
-export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"HoldingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;
-export const PositionsQueryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"PositionsQuery"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"symbol"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"positions"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"symbols"},"value":{"kind":"ListValue","values":[{"kind":"Variable","name":{"kind":"Name","value":"symbol"}}]}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<PositionsQueryQuery, PositionsQueryQueryVariables>;
-export const PositionDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PositionDataSubscription"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ids"}},"type":{"kind":"NonNullType","type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"positions"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"ids"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ids"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"openedAt"}},{"kind":"Field","name":{"kind":"Name","value":"originalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"remainingQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<PositionDataSubscriptionSubscription, PositionDataSubscriptionSubscriptionVariables>;
+export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"HoldingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"marketValue"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;
+export const LotsQueryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"LotsQuery"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"symbol"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lots"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"symbols"},"value":{"kind":"ListValue","values":[{"kind":"Variable","name":{"kind":"Name","value":"symbol"}}]}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<LotsQueryQuery, LotsQueryQueryVariables>;
+export const LotDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"LotDataSubscription"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ids"}},"type":{"kind":"NonNullType","type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lots"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"ids"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ids"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"openedAt"}},{"kind":"Field","name":{"kind":"Name","value":"originalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"remainingQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<LotDataSubscriptionSubscription, LotDataSubscriptionSubscriptionVariables>;

@@ -1,0 +1,9 @@
+.cmp-current-price-display {
+  .price-display {
+    display: flex;
+
+    > :not(:first-child) {
+      margin-left: 6px;
+    }
+  }
+}

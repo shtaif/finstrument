@@ -14,9 +14,9 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  */
 const documents = {
     "\n  mutation SetTradesMutation($input: SetTradesInput!) {\n    setTrades(input: $input) {\n      tradesAddedCount\n      tradesModifiedCount\n      tradesRemovedCount\n    }\n  }\n": types.SetTradesMutationDocument,
-    "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.HoldingStatsDataSubscriptionDocument,
-    "\n  query PositionsQuery($symbol: ID!) {\n    positions(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n": types.PositionsQueryDocument,
-    "\n  subscription PositionDataSubscription($ids: [ID!]!) {\n    positions(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.PositionDataSubscriptionDocument,
+    "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        marketValue\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.HoldingStatsDataSubscriptionDocument,
+    "\n  query LotsQuery($symbol: ID!) {\n    lots(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n": types.LotsQueryDocument,
+    "\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.LotDataSubscriptionDocument,
 };
 
 /**
@@ -40,15 +40,15 @@ export function graphql(source: "\n  mutation SetTradesMutation($input: SetTrade
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        marketValue\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription HoldingStatsDataSubscription {\n    holdingStats {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        marketValue\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query PositionsQuery($symbol: ID!) {\n    positions(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n"): (typeof documents)["\n  query PositionsQuery($symbol: ID!) {\n    positions(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n"];
+export function graphql(source: "\n  query LotsQuery($symbol: ID!) {\n    lots(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n"): (typeof documents)["\n  query LotsQuery($symbol: ID!) {\n    lots(filters: { symbols: [$symbol] }) {\n      id\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  subscription PositionDataSubscription($ids: [ID!]!) {\n    positions(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription PositionDataSubscription($ids: [ID!]!) {\n    positions(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
+export function graphql(source: "\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        openedAt\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};
