@@ -104,16 +104,13 @@ beforeAll(async () => {
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await HoldingStatsChangeModel.destroy({ where: {} });
-  mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
-  await Promise.all([
-    HoldingStatsChangeModel.destroy({ where: {} }),
-    TradeRecordModel.destroy({ where: {} }),
-    InstrumentInfoModel.destroy({ where: {} }),
-    UserModel.destroy({ where: {} }),
-  ]);
+  await HoldingStatsChangeModel.destroy({ where: {} });
+  await TradeRecordModel.destroy({ where: {} });
+  await InstrumentInfoModel.destroy({ where: {} });
+  await UserModel.destroy({ where: {} });
 
   unmockGqlContext();
 });
@@ -853,7 +850,8 @@ describe('Subscription.holdingStats ', () => {
         itCollect
       );
 
-      await mockMarketDataControl.onConnectionSend([
+      await using mockMarketData = mockMarketDataControl.start();
+      await mockMarketData.next([
         {
           ADBE: { regularMarketPrice: 12.5 },
           AAPL: { regularMarketPrice: 12.5 },
@@ -945,7 +943,8 @@ describe('Subscription.holdingStats ', () => {
           }`,
       });
 
-      await mockMarketDataControl.onConnectionSend([
+      await using mockMarketData = mockMarketDataControl.start();
+      await mockMarketData.next([
         {
           ADBE: { regularMarketPrice: 10 },
           AAPL: { regularMarketPrice: 10 },
@@ -1073,6 +1072,8 @@ describe('Subscription.holdingStats ', () => {
           }`,
       });
 
+      await using mockMarketData = mockMarketDataControl.start();
+
       const emissions = [(await subscription.next()).value];
 
       for (const applyNextChanges of [
@@ -1090,10 +1091,7 @@ describe('Subscription.holdingStats ', () => {
             holdingStats: { set: [reusableHoldingStats[2].symbol] },
           });
 
-          await mockMarketDataControl.onConnectionSend([{ ADBE: { regularMarketPrice: 11 } }]);
-
-          // const { value } = await subscription.next();
-          // emissions.push(value);
+          await mockMarketData.next([{ ADBE: { regularMarketPrice: 11 } }]);
         },
 
         async () => {
@@ -1110,16 +1108,8 @@ describe('Subscription.holdingStats ', () => {
             holdingStats: { set: [reusableHoldingStats[3].symbol] },
           });
 
-          // await setTimeout(50);
-
-          // await setTimeout(100);
-          // console.log('LOL LOL 1');
           await mockMarketDataControl.whenNextMarketDataSymbolsRequested();
-          // await setTimeout(100);
-          // console.log('LOL LOL 2');
-          await mockMarketDataControl.onConnectionSend([{ AAPL: { regularMarketPrice: 12 } }]);
-          // await setTimeout(100);
-          // console.log('LOL LOL 3');
+          await mockMarketData.next([{ AAPL: { regularMarketPrice: 12 } }]);
         },
       ]) {
         await applyNextChanges();
@@ -1210,7 +1200,8 @@ describe('Subscription.holdingStats ', () => {
             }`,
       });
 
-      await mockMarketDataControl.onConnectionSend([
+      await using mockMarketData = mockMarketDataControl.start();
+      await mockMarketData.next([
         {
           ADBE: { regularMarketPrice: 5 },
           AAPL: { regularMarketPrice: 5 },
@@ -1289,7 +1280,7 @@ describe('Subscription.holdingStats ', () => {
         { ...reusableHoldingStats[2], symbol: 'NVDA' },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using __ = mockMarketDataControl.start([
         {
           ADBE: { regularMarketPrice: 10 },
           AAPL: null,
@@ -1319,10 +1310,10 @@ describe('Subscription.holdingStats ', () => {
         data: null,
         errors: [
           {
-            message: 'Couldn\'t find market data for some symbols: "NVDA", "AAPL"',
+            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
             extensions: {
               type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
-              details: { symbolsNotFound: ['NVDA', 'AAPL'] },
+              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
             },
           },
         ],
@@ -1353,7 +1344,7 @@ describe('Subscription.holdingStats ', () => {
           },
         ]);
 
-        mockMarketDataControl.onConnectionSend([
+        await using __ = mockMarketDataControl.start([
           {
             ADBE: { regularMarketPrice: 1.5 },
             AAPL: { regularMarketPrice: 1.5 },
@@ -1635,7 +1626,8 @@ describe('Subscription.holdingStats ', () => {
           }`,
       });
 
-      await mockMarketDataControl.onConnectionSend([
+      await using mockMarketData = mockMarketDataControl.start();
+      await mockMarketData.next([
         {
           ADBE: {
             currency: 'USD',

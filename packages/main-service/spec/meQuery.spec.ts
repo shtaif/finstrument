@@ -29,7 +29,7 @@ describe('Query.me ', () => {
   it('For a non-authenticated caller returns a `null` `user` field', async () => {
     mockGqlContext(ctx => ({
       ...ctx,
-      getSession: async () => ({ activeUserId: undefined }),
+      getSession: () => ({ activeUserId: undefined }),
     }));
 
     const resp = await axiosGqlClient({

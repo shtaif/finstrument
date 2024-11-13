@@ -21,14 +21,3 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {});
-
-(() => {
-  {
-    beforeAll(async () => {
-      console.log('RUNNING GENERAL BEFORE_ALL HOOK');
-    });
-    beforeAll(async () => {
-      console.log('RUNNING GENERAL AFTER_ALL HOOK');
-    });
-  }
-})();

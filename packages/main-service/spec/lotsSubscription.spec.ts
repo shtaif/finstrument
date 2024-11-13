@@ -128,17 +128,14 @@ beforeAll(async () => {
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await Promise.all([LotClosingModel.destroy({ where: {} }), LotModel.destroy({ where: {} })]);
-  mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
-  await Promise.all([
-    LotClosingModel.destroy({ where: {} }),
-    LotModel.destroy({ where: {} }),
-    TradeRecordModel.destroy({ where: {} }),
-    InstrumentInfoModel.destroy({ where: {} }),
-    UserModel.destroy({ where: {} }),
-  ]);
+  await LotClosingModel.destroy({ where: {} });
+  await LotModel.destroy({ where: {} });
+  await TradeRecordModel.destroy({ where: {} });
+  await InstrumentInfoModel.destroy({ where: {} });
+  await UserModel.destroy({ where: {} });
   unmockGqlContext();
 });
 
@@ -527,56 +524,55 @@ describe('Subscription.lots ', () => {
   //   await expect(firstItemPromise).to.rejects.toMatchObject({});
   // });
 
-  it(
-    'When targeting only certain fields, only lot changes that have any of these ' +
-      'fields modified will cause updates to be emitted',
-    async () => {
-      await TradeRecordModel.bulkCreate([
-        {
-          id: mockTradeIds[0],
-          ownerId: mockUserId1,
-          symbol: 'ADBE',
-          performedAt: '2024-01-01T00:00:00.000Z',
-          quantity: 10,
-          price: 1.1,
-        },
-        {
-          id: mockTradeIds[1],
-          ownerId: mockUserId1,
-          symbol: 'AAPL',
-          performedAt: '2024-01-01T00:00:01.000Z',
-          quantity: 10,
-          price: 1.1,
-        },
-      ]);
+  it('When targeting only certain fields, only lot changes that have any of these fields modified will cause updates to be emitted', async () => {
+    await TradeRecordModel.bulkCreate([
+      {
+        id: mockTradeIds[0],
+        ownerId: mockUserId1,
+        symbol: 'ADBE',
+        performedAt: '2024-01-01T00:00:00.000Z',
+        quantity: 10,
+        price: 1.1,
+      },
+      {
+        id: mockTradeIds[1],
+        ownerId: mockUserId1,
+        symbol: 'AAPL',
+        performedAt: '2024-01-01T00:00:01.000Z',
+        quantity: 10,
+        price: 1.1,
+      },
+    ]);
 
-      const lots = await LotModel.bulkCreate([
-        {
-          id: mockUuidFromNumber(1),
-          ownerId: mockUserId1,
-          openingTradeId: mockTradeIds[0],
-          symbol: 'ADBE',
-          remainingQuantity: 10,
-          realizedProfitOrLoss: 0.2,
-          openedAt: new Date('2024-01-01T00:00:00.000Z'),
-          recordCreatedAt: new Date('2024-01-01T00:00:00.000Z'),
-          recordUpdatedAt: new Date('2024-01-01T00:00:00.000Z'),
-        },
-        {
-          id: mockUuidFromNumber(2),
-          ownerId: mockUserId1,
-          openingTradeId: mockTradeIds[1],
-          symbol: 'AAPL',
-          remainingQuantity: 10,
-          realizedProfitOrLoss: 0,
-          openedAt: new Date('2024-01-01T00:00:01.000Z'),
-          recordCreatedAt: new Date('2024-01-01T00:00:01.000Z'),
-          recordUpdatedAt: new Date('2024-01-01T00:00:01.000Z'),
-        },
-      ]);
+    const lots = await LotModel.bulkCreate([
+      {
+        id: mockUuidFromNumber(1),
+        ownerId: mockUserId1,
+        openingTradeId: mockTradeIds[0],
+        symbol: 'ADBE',
+        remainingQuantity: 10,
+        realizedProfitOrLoss: 0.2,
+        openedAt: new Date('2024-01-01T00:00:00.000Z'),
+        recordCreatedAt: new Date('2024-01-01T00:00:00.000Z'),
+        recordUpdatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      },
+      {
+        id: mockUuidFromNumber(2),
+        ownerId: mockUserId1,
+        openingTradeId: mockTradeIds[1],
+        symbol: 'AAPL',
+        remainingQuantity: 10,
+        realizedProfitOrLoss: 0,
+        openedAt: new Date('2024-01-01T00:00:01.000Z'),
+        recordCreatedAt: new Date('2024-01-01T00:00:01.000Z'),
+        recordUpdatedAt: new Date('2024-01-01T00:00:01.000Z'),
+      },
+    ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+    await using mockMarketData = mockMarketDataControl.start();
+
+    const subscription = gqlWsClient.iterate({
+      query: `
           subscription {
             lots (
               filters: {
@@ -594,97 +590,93 @@ describe('Subscription.lots ', () => {
               }
             }
           }`,
+    });
+
+    try {
+      const emissions: any[] = [];
+
+      mockMarketData.next({
+        [lots[0].symbol]: { regularMarketPrice: 10 },
+        [lots[1].symbol]: { regularMarketPrice: 10 },
       });
 
-      try {
-        const emissions: any[] = [];
+      emissions.push((await subscription.next()).value);
 
-        await mockMarketDataControl.onConnectionSend([
-          {
-            [lots[0].symbol]: { regularMarketPrice: 10 },
-            [lots[1].symbol]: { regularMarketPrice: 10 },
-          },
-        ]);
+      await TradeRecordModel.create({
+        id: mockTradeIds[2],
+        ownerId: mockUserId1,
+        symbol: lots[0].symbol,
+        performedAt: '2024-01-01T00:00:02.000Z',
+        quantity: -2,
+        price: 1.2,
+      });
 
-        emissions.push((await subscription.next()).value);
+      await LotModel.update(
+        {
+          remainingQuantity: lots[0].remainingQuantity - 2,
+        },
+        {
+          where: { id: lots[0].id },
+        }
+      );
 
-        await TradeRecordModel.create({
-          id: mockTradeIds[2],
-          ownerId: mockUserId1,
-          symbol: lots[0].symbol,
-          performedAt: '2024-01-01T00:00:02.000Z',
-          quantity: -2,
-          price: 1.2,
-        });
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId1,
+        portfolioStats: { set: [{ forCurrency: 'USD' }] },
+        holdingStats: { set: [lots[0].symbol] },
+        lots: { set: [lots[0].id] },
+      });
 
-        await LotModel.update(
-          {
-            remainingQuantity: lots[0].remainingQuantity - 2,
-          },
-          {
-            where: { id: lots[0].id },
-          }
-        );
+      // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
 
-        await publishUserHoldingChangedRedisEvent({
-          ownerId: mockUserId1,
-          portfolioStats: { set: [{ forCurrency: 'USD' }] },
-          holdingStats: { set: [lots[0].symbol] },
-          lots: { set: [lots[0].id] },
-        });
+      mockMarketData.next({
+        [lots[1].symbol]: { regularMarketPrice: 11 },
+      });
 
-        // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
+      emissions.push((await subscription.next()).value);
 
-        await mockMarketDataControl.waitUntilRequestingNewSymbols();
-        await mockMarketDataControl.onConnectionSend([
-          { [lots[1].symbol]: { regularMarketPrice: 11 } },
-        ]);
-
-        emissions.push((await subscription.next()).value);
-
-        expect(emissions).toStrictEqual([
-          {
-            data: {
-              lots: [
-                {
-                  data: {
-                    id: lots[1].id,
-                    priceData: {
-                      regularMarketPrice: 10,
-                    },
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            lots: [
+              {
+                data: {
+                  id: lots[1].id,
+                  priceData: {
+                    regularMarketPrice: 10,
                   },
                 },
-                {
-                  data: {
-                    id: lots[0].id,
-                    priceData: {
-                      regularMarketPrice: 10,
-                    },
+              },
+              {
+                data: {
+                  id: lots[0].id,
+                  priceData: {
+                    regularMarketPrice: 10,
                   },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              lots: [
-                {
-                  data: {
-                    id: lots[1].id,
-                    priceData: {
-                      regularMarketPrice: 11,
-                    },
+        },
+        {
+          data: {
+            lots: [
+              {
+                data: {
+                  id: lots[1].id,
+                  priceData: {
+                    regularMarketPrice: 11,
                   },
                 },
-              ],
-            },
+              },
+            ],
           },
-        ]);
-      } finally {
-        await subscription.return!();
-      }
+        },
+      ]);
+    } finally {
+      await subscription.return!();
     }
-  );
+  });
 
   describe('With `marketValue` and `unrealizedPnl` fields', () => {
     it('Emits updates correctly in conjunction with changes to lot symbols market data', async () => {
@@ -770,15 +762,7 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      // (global as any).globalRequestedSymbols.clear();
-      // console.log('global.globalRequestedSymbols', (global as any).globalRequestedSymbols);
-
-      // (global as any).debuggedTestIsRunningNow = true;
-      // await using _ = {
-      //   [Symbol.asyncDispose]: async () => void ((global as any).debuggedTestIsRunningNow = false),
-      // };
-
-      mockMarketDataControl.onConnectionSend([
+      await using __ = mockMarketDataControl.start([
         { ADBE: { regularMarketPrice: 3 }, AAPL: { regularMarketPrice: 3 } },
         { ADBE: { regularMarketPrice: 4 } },
         { AAPL: { regularMarketPrice: 4 } },
@@ -936,7 +920,7 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using __ = mockMarketDataControl.start([
         {
           ADBE: { regularMarketPrice: 2.5 },
           AAPL: { regularMarketPrice: 2.5 },
@@ -1139,7 +1123,7 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using __ = mockMarketDataControl.start([
         {
           ADBE: { regularMarketPrice: 3 },
           AAPL: { regularMarketPrice: 3 },
@@ -1297,7 +1281,7 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           ADBE: { regularMarketPrice: 10 },
           AAPL: null,
@@ -1335,10 +1319,10 @@ describe('Subscription.lots ', () => {
         data: null,
         errors: [
           {
-            message: 'Couldn\'t find market data for some symbols: "NVDA", "AAPL"',
+            message: 'Couldn\'t find market data for some symbols: "AAPL", "NVDA"',
             extensions: {
               type: 'SYMBOL_MARKET_DATA_NOT_FOUND',
-              details: { symbolsNotFound: ['NVDA', 'AAPL'] },
+              details: { symbolsNotFound: ['AAPL', 'NVDA'] },
             },
           },
         ],
@@ -1357,7 +1341,7 @@ describe('Subscription.lots ', () => {
         { ...reusableLotDatas[1], symbol: 'AAPL', remainingQuantity: 2 },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using __ = mockMarketDataControl.start([
         {
           ['ADBE']: { regularMarketPrice: 1.5 },
           ['AAPL']: { regularMarketPrice: 1.5 },
@@ -1523,48 +1507,44 @@ describe('Subscription.lots ', () => {
           [Symbol.asyncDispose]: async () => void (await subscription.return!()),
         };
 
+        await using mockMarketData = mockMarketDataControl.start();
+
         const emissions: any[] = [];
 
         for (const next of [
           () =>
-            mockMarketDataControl.onConnectionSend([
-              {
-                ADBE: {
-                  currency: 'USD',
-                  marketState: 'REGULAR',
-                  regularMarketPrice: 10,
-                  regularMarketTime: '2024-01-01T00:00:00.000Z',
-                },
-                AAPL: {
-                  currency: 'USD',
-                  marketState: 'REGULAR',
-                  regularMarketPrice: 10,
-                  regularMarketTime: '2024-01-01T00:00:00.000Z',
-                },
+            mockMarketData.next({
+              ADBE: {
+                currency: 'USD',
+                marketState: 'REGULAR',
+                regularMarketPrice: 10,
+                regularMarketTime: '2024-01-01T00:00:00.000Z',
               },
-            ]),
+              AAPL: {
+                currency: 'USD',
+                marketState: 'REGULAR',
+                regularMarketPrice: 10,
+                regularMarketTime: '2024-01-01T00:00:00.000Z',
+              },
+            }),
           () =>
-            mockMarketDataControl.onConnectionSend([
-              {
-                ADBE: {
-                  currency: 'USD',
-                  marketState: 'CLOSED',
-                  regularMarketPrice: 11,
-                  regularMarketTime: '2024-01-01T00:00:01.000Z',
-                },
+            mockMarketData.next({
+              ADBE: {
+                currency: 'USD',
+                marketState: 'CLOSED',
+                regularMarketPrice: 11,
+                regularMarketTime: '2024-01-01T00:00:01.000Z',
               },
-            ]),
+            }),
           () =>
-            mockMarketDataControl.onConnectionSend([
-              {
-                AAPL: {
-                  currency: 'USD',
-                  marketState: 'PRE',
-                  regularMarketPrice: 12,
-                  regularMarketTime: '2024-01-01T00:00:02.000Z',
-                },
+            mockMarketData.next({
+              AAPL: {
+                currency: 'USD',
+                marketState: 'PRE',
+                regularMarketPrice: 12,
+                regularMarketTime: '2024-01-01T00:00:02.000Z',
               },
-            ]),
+            }),
         ]) {
           await next();
           emissions.push((await subscription.next()).value);

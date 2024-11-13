@@ -133,17 +133,14 @@ beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await HoldingStatsChangeModel.destroy({ where: {} });
   await PortfolioStatsChangeModel.destroy({ where: {} });
-  mockMarketDataControl.reset();
 });
 
 afterAll(async () => {
-  await Promise.all([
-    HoldingStatsChangeModel.destroy({ where: {} }),
-    PortfolioStatsChangeModel.destroy({ where: {} }),
-    TradeRecordModel.destroy({ where: {} }),
-    InstrumentInfoModel.destroy({ where: {} }),
-    UserModel.destroy({ where: {} }),
-  ]);
+  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await TradeRecordModel.destroy({ where: {} });
+  await InstrumentInfoModel.destroy({ where: {} });
+  await UserModel.destroy({ where: {} });
   unmockGqlContext();
 });
 
@@ -163,11 +160,6 @@ describe('Subscription.portfolioStats ', () => {
         totalRealizedProfitOrLossRate: 0.25,
       },
     ]);
-
-    (global as any).debuggedTestIsRunningNow = true;
-    await using _ = {
-      [Symbol.asyncDispose]: async () => void ((global as any).debuggedTestIsRunningNow = false),
-    };
 
     const firstItem = await pipe(
       gqlWsClient.iterate({
@@ -459,139 +451,135 @@ describe('Subscription.portfolioStats ', () => {
     ]);
   });
 
-  it(
-    'When targeting only certain fields, only portfolio stats changes that have any of these ' +
-      'fields modified will cause updates to be emitted',
-    async () => {
-      await TradeRecordModel.bulkCreate([
-        { ...reusableTradeDatas[0], symbol: 'VUAG' },
-        { ...reusableTradeDatas[1], symbol: 'ADBE' },
-      ]);
-      await HoldingStatsChangeModel.bulkCreate([
-        { ...reusableHoldingStats[0], symbol: 'VUAG' },
-        { ...reusableHoldingStats[1], symbol: 'ADBE' },
-      ]);
-      const initialPStats = (
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            relatedTradeId: reusableTradeDatas[0].id,
-            ownerId: mockUserId1,
-            forCurrency: 'GBP',
-            changedAt: reusableTradeDatas[0].performedAt,
-            totalPresentInvestedAmount: 100,
-            totalRealizedAmount: 100,
-            totalRealizedProfitOrLossAmount: 20,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-          {
-            relatedTradeId: reusableTradeDatas[1].id,
-            ownerId: mockUserId1,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[1].performedAt,
-            totalPresentInvestedAmount: 200,
-            totalRealizedAmount: 200,
-            totalRealizedProfitOrLossAmount: 40,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-        ])
-      ).map(pStats => pStats.dataValues);
+  it('When targeting only certain fields, only portfolio stats changes that have any of these fields modified will cause updates to be emitted', async () => {
+    await TradeRecordModel.bulkCreate([
+      { ...reusableTradeDatas[0], symbol: 'VUAG' },
+      { ...reusableTradeDatas[1], symbol: 'ADBE' },
+    ]);
+    await HoldingStatsChangeModel.bulkCreate([
+      { ...reusableHoldingStats[0], symbol: 'VUAG' },
+      { ...reusableHoldingStats[1], symbol: 'ADBE' },
+    ]);
+    const initialPStats = (
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[0].id,
+          ownerId: mockUserId1,
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[0].performedAt,
+          totalPresentInvestedAmount: 100,
+          totalRealizedAmount: 100,
+          totalRealizedProfitOrLossAmount: 20,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[1].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[1].performedAt,
+          totalPresentInvestedAmount: 200,
+          totalRealizedAmount: 200,
+          totalRealizedProfitOrLossAmount: 40,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+      ])
+    ).map(pStats => pStats.dataValues);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
-          subscription {
-            portfolioStats {
-              data {
-                forCurrency
-                totalRealizedProfitOrLossAmount
-                totalRealizedProfitOrLossRate
-              }
+    const subscription = gqlWsClient.iterate({
+      query: `
+        subscription {
+          portfolioStats {
+            data {
+              forCurrency
+              totalRealizedProfitOrLossAmount
+              totalRealizedProfitOrLossRate
             }
-          }`,
+          }
+        }`,
+    });
+
+    const emissions: any[] = [];
+
+    try {
+      emissions.push((await subscription.next()).value);
+
+      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
+      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          ...initialPStats[0],
+          relatedTradeId: reusableTradeDatas[2].id,
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[2].performedAt,
+          totalRealizedAmount: 101,
+        },
+      ]);
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId1,
+        portfolioStats: { set: [{ forCurrency: 'GBP' }] },
+        holdingStats: { set: ['VUAG'] },
       });
 
-      const emissions: any[] = [];
+      // *** Not expecting an emission here (because the `totalRealizedAmount` field which was modified wasn't targeted)...
 
-      try {
-        emissions.push((await subscription.next()).value);
-
-        await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
-        await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            ...initialPStats[0],
-            relatedTradeId: reusableTradeDatas[2].id,
-            forCurrency: 'GBP',
-            changedAt: reusableTradeDatas[2].performedAt,
-            totalRealizedAmount: 101,
-          },
-        ]);
-        await publishUserHoldingChangedRedisEvent({
-          ownerId: mockUserId1,
-          portfolioStats: { set: [{ forCurrency: 'GBP' }] },
-          holdingStats: { set: ['VUAG'] },
-        });
-
-        // *** Not expecting an emission here (because the `totalRealizedAmount` field which was modified wasn't targeted)...
-
-        await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
-        await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            ...initialPStats[1],
-            relatedTradeId: reusableTradeDatas[3].id,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[3].performedAt,
-            totalRealizedProfitOrLossAmount: 41,
-          },
-        ]);
-        await publishUserHoldingChangedRedisEvent({
-          ownerId: mockUserId1,
-          portfolioStats: { set: [{ forCurrency: 'USD' }] },
-          holdingStats: { set: ['ADBE'] },
-        });
-
-        emissions.push((await subscription.next()).value);
-      } finally {
-        await subscription.return!();
-      }
-
-      expect(emissions).toStrictEqual([
+      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
+      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
+      await PortfolioStatsChangeModel.bulkCreate([
         {
-          data: {
-            portfolioStats: [
-              {
-                data: {
-                  forCurrency: 'USD',
-                  totalRealizedProfitOrLossAmount: 40,
-                  totalRealizedProfitOrLossRate: 0.25,
-                },
-              },
-              {
-                data: {
-                  forCurrency: 'GBP',
-                  totalRealizedProfitOrLossAmount: 20,
-                  totalRealizedProfitOrLossRate: 0.25,
-                },
-              },
-            ],
-          },
-        },
-        {
-          data: {
-            portfolioStats: [
-              {
-                data: {
-                  forCurrency: 'USD',
-                  totalRealizedProfitOrLossAmount: 41,
-                  totalRealizedProfitOrLossRate: 0.25,
-                },
-              },
-            ],
-          },
+          ...initialPStats[1],
+          relatedTradeId: reusableTradeDatas[3].id,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[3].performedAt,
+          totalRealizedProfitOrLossAmount: 41,
         },
       ]);
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId1,
+        portfolioStats: { set: [{ forCurrency: 'USD' }] },
+        holdingStats: { set: ['ADBE'] },
+      });
+
+      emissions.push((await subscription.next()).value);
+    } finally {
+      await subscription.return!();
     }
-  );
+
+    expect(emissions).toStrictEqual([
+      {
+        data: {
+          portfolioStats: [
+            {
+              data: {
+                forCurrency: 'USD',
+                totalRealizedProfitOrLossAmount: 40,
+                totalRealizedProfitOrLossRate: 0.25,
+              },
+            },
+            {
+              data: {
+                forCurrency: 'GBP',
+                totalRealizedProfitOrLossAmount: 20,
+                totalRealizedProfitOrLossRate: 0.25,
+              },
+            },
+          ],
+        },
+      },
+      {
+        data: {
+          portfolioStats: [
+            {
+              data: {
+                forCurrency: 'USD',
+                totalRealizedProfitOrLossAmount: 41,
+                totalRealizedProfitOrLossRate: 0.25,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  });
 
   describe('With `marketValue` and `unrealizedPnl` fields', () => {
     it("Emits updates correctly in conjunction with changes to market data of the portfolio stats' underlying holdings", async () => {
@@ -638,7 +626,7 @@ describe('Subscription.portfolioStats ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           VUAG: { regularMarketPrice: 50 },
           ADBE: { regularMarketPrice: 50 },
@@ -658,18 +646,18 @@ describe('Subscription.portfolioStats ', () => {
       const emissions = await asyncPipe(
         gqlWsClient.iterate({
           query: `
-              subscription {
-                portfolioStats {
-                  data {
-                    forCurrency
-                    marketValue
-                    unrealizedPnl {
-                      amount
-                      percent
-                    }
+            subscription {
+              portfolioStats {
+                data {
+                  forCurrency
+                  marketValue
+                  unrealizedPnl {
+                    amount
+                    percent
                   }
                 }
-              }`,
+              }
+            }`,
         }),
         itTake(4),
         itCollect
@@ -791,7 +779,7 @@ describe('Subscription.portfolioStats ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           VUAG: { regularMarketPrice: 50 },
           ADBE: { regularMarketPrice: 50 },
@@ -956,130 +944,126 @@ describe('Subscription.portfolioStats ', () => {
       ]);
     });
 
-    it(
-      'When targeting empty portfolio stats, initial zero data is emitted and further changes ' +
-        'in market data do not cause any updates to be emitted',
-      async () => {
-        await TradeRecordModel.bulkCreate([
-          { ...reusableTradeDatas[0], symbol: 'VUAG' },
-          { ...reusableTradeDatas[1], symbol: 'ADBE' },
-        ]);
-        await HoldingStatsChangeModel.bulkCreate([
-          {
-            ...reusableHoldingStats[0],
-            symbol: 'VUAG',
-            totalLotCount: 0,
-            totalQuantity: 0,
-            totalPresentInvestedAmount: 0,
-          },
-          {
-            ...reusableHoldingStats[1],
-            symbol: 'ADBE',
-            totalLotCount: 2,
-            totalQuantity: 2,
-            totalPresentInvestedAmount: 100,
-          },
-        ]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            relatedTradeId: reusableTradeDatas[0].id,
-            ownerId: mockUserId1,
-            forCurrency: 'GBP',
-            changedAt: reusableTradeDatas[0].performedAt,
-            totalPresentInvestedAmount: 0,
-          },
-          {
-            relatedTradeId: reusableTradeDatas[1].id,
-            ownerId: mockUserId1,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[1].performedAt,
-            totalPresentInvestedAmount: 100,
-          },
-        ]);
+    it('When targeting empty portfolio stats, initial zero data is emitted and further changes in market data do not cause any updates to be emitted', async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[0], symbol: 'VUAG' },
+        { ...reusableTradeDatas[1], symbol: 'ADBE' },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        {
+          ...reusableHoldingStats[0],
+          symbol: 'VUAG',
+          totalLotCount: 0,
+          totalQuantity: 0,
+          totalPresentInvestedAmount: 0,
+        },
+        {
+          ...reusableHoldingStats[1],
+          symbol: 'ADBE',
+          totalLotCount: 2,
+          totalQuantity: 2,
+          totalPresentInvestedAmount: 100,
+        },
+      ]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[0].id,
+          ownerId: mockUserId1,
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[0].performedAt,
+          totalPresentInvestedAmount: 0,
+        },
+        {
+          relatedTradeId: reusableTradeDatas[1].id,
+          ownerId: mockUserId1,
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[1].performedAt,
+          totalPresentInvestedAmount: 100,
+        },
+      ]);
 
-        mockMarketDataControl.onConnectionSend([
-          {
-            ADBE: { regularMarketPrice: 51 },
-            AAPL: { regularMarketPrice: 51 },
-          },
-          {
-            ADBE: { regularMarketPrice: 52 },
-            AAPL: { regularMarketPrice: 52 },
-          },
-          {
-            ADBE: { regularMarketPrice: 53 },
-            AAPL: { regularMarketPrice: 53 },
-          },
-        ]);
+      await using _ = mockMarketDataControl.start([
+        {
+          VUAG: { regularMarketPrice: 51 },
+          ADBE: { regularMarketPrice: 51 },
+        },
+        {
+          VUAG: { regularMarketPrice: 52 },
+          ADBE: { regularMarketPrice: 52 },
+        },
+        {
+          VUAG: { regularMarketPrice: 53 },
+          ADBE: { regularMarketPrice: 53 },
+        },
+      ]);
 
-        const subscription = gqlWsClient.iterate({
-          query: `
-            subscription {
-              portfolioStats {
-                data {
-                  forCurrency
-                  marketValue
-                  unrealizedPnl {
-                    amount
-                    percent
-                  }
+      const subscription = gqlWsClient.iterate({
+        query: `
+          subscription {
+            portfolioStats {
+              data {
+                forCurrency
+                marketValue
+                unrealizedPnl {
+                  amount
+                  percent
                 }
               }
-            }`,
-        });
+            }
+          }`,
+      });
 
-        const emissions = await pipe(subscription, itTake(3), itCollect);
+      const emissions = await pipe(subscription, itTake(3), itCollect);
 
-        expect(emissions).toStrictEqual([
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    marketValue: 102,
-                    unrealizedPnl: { amount: 2, percent: 2 },
-                  },
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 102,
+                  unrealizedPnl: { amount: 2, percent: 2 },
                 },
-                {
-                  data: {
-                    forCurrency: 'GBP',
-                    marketValue: 0,
-                    unrealizedPnl: { amount: 0, percent: 0 },
-                  },
+              },
+              {
+                data: {
+                  forCurrency: 'GBP',
+                  marketValue: 0,
+                  unrealizedPnl: { amount: 0, percent: 0 },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    marketValue: 104,
-                    unrealizedPnl: { amount: 4, percent: 4 },
-                  },
+        },
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 104,
+                  unrealizedPnl: { amount: 4, percent: 4 },
                 },
-              ],
-            },
+              },
+            ],
           },
-          {
-            data: {
-              portfolioStats: [
-                {
-                  data: {
-                    forCurrency: 'USD',
-                    marketValue: 106,
-                    unrealizedPnl: { amount: 6, percent: 6 },
-                  },
+        },
+        {
+          data: {
+            portfolioStats: [
+              {
+                data: {
+                  forCurrency: 'USD',
+                  marketValue: 106,
+                  unrealizedPnl: { amount: 6, percent: 6 },
                 },
-              ],
-            },
+              },
+            ],
           },
-        ]);
-      }
-    );
+        },
+      ]);
+    });
 
     it('Emits updates correctly in conjunction with changes to position symbols whose market data cannot be found', async () => {
       await TradeRecordModel.bulkCreate([
@@ -1134,7 +1118,7 @@ describe('Subscription.portfolioStats ', () => {
         },
       ]);
 
-      mockMarketDataControl.onConnectionSend([
+      await using _ = mockMarketDataControl.start([
         {
           VUAG: { regularMarketPrice: 100 },
           ADBE: null,
@@ -1213,7 +1197,7 @@ describe('Subscription.portfolioStats ', () => {
           },
         ]);
 
-        mockMarketDataControl.onConnectionSend([
+        await using _ = mockMarketDataControl.start([
           {
             ['VUAG']: { regularMarketPrice: 1.5 },
             ['ADBE']: { regularMarketPrice: 1.5 },
