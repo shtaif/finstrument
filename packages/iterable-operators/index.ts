@@ -10,6 +10,7 @@ export { asyncIterThrottle, asyncIterThrottle as itThrottle } from './itThrottle
 export { itShare, itShare as asyncIterShare } from './itShare.js';
 export { itTake, itTake as asyncItTake } from './itTake.js';
 export { itTakeFirst, itTakeFirst as asyncIterTakeFirst } from './itTakeFirst.js';
+export { itCycle } from './itCycle.js';
 export { asyncIterTakeUntil, asyncIterTakeUntil as itTakeUntil } from './itTakeUntil.js';
 export { itAppend, itAppend as asyncIterAppend } from './itAppend.js';
 export { itLazyDefer, itLazyDefer as asyncIterLazyDefer } from './itLazyDefer.js';
