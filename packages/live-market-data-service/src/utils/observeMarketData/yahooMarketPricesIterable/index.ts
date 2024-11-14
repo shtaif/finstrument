@@ -1,10 +1,9 @@
-import { pickBy, isEmpty, partition, pick, compact } from 'lodash-es';
+import { pickBy, isEmpty, partition, pick } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable/of.js';
 import yahooFinance from 'yahoo-finance2';
 import {
   itPairwise,
-  itStartWith,
   itMap,
   itTap,
   itLazyDefer,
@@ -103,39 +102,39 @@ function yahooMarketPricesIterable(params: {
               }),
               itMap(priceDatas =>
                 pipe(
-                  parsedSymbols.map(s => {
-                    if (!priceDatas[s.baseInstrumentSymbol]) {
-                      return;
-                    }
+                  parsedSymbols
+                    .filter(s => priceDatas[s.baseInstrumentSymbol] !== undefined)
+                    .map(s => {
+                      if (!s.currencyOverride) {
+                        return [
+                          s.normalizedFullSymbol,
+                          priceDatas[s.baseInstrumentSymbol],
+                        ] as const;
+                      }
 
-                    if (!s.currencyOverride) {
-                      return [s.normalizedFullSymbol, priceDatas[s.baseInstrumentSymbol]] as const;
-                    }
+                      const instPriceData = priceDatas[s.baseInstrumentSymbol]!;
+                      const overrideCurrencyPriceData =
+                        priceDatas[`${instPriceData.currency}${s.currencyOverride}=X`];
 
-                    const instPriceData = priceDatas[s.baseInstrumentSymbol]!;
-                    const overrideCurrencyPriceData =
-                      priceDatas[`${instPriceData.currency}${s.currencyOverride}=X`];
+                      const overriddenPriceData = {
+                        quoteSourceName: instPriceData.quoteSourceName,
+                        marketState: instPriceData.marketState,
+                        currency: s.currencyOverride,
+                        regularMarketTime:
+                          (overrideCurrencyPriceData?.regularMarketTime ?? 0) >
+                          (instPriceData?.regularMarketTime ?? 0)
+                            ? overrideCurrencyPriceData?.regularMarketTime
+                            : instPriceData?.regularMarketTime,
+                        regularMarketPrice:
+                          !!instPriceData.regularMarketPrice &&
+                          !!overrideCurrencyPriceData!.regularMarketPrice
+                            ? instPriceData.regularMarketPrice *
+                              overrideCurrencyPriceData!.regularMarketPrice
+                            : undefined,
+                      };
 
-                    const overriddenPriceData = {
-                      quoteSourceName: instPriceData.quoteSourceName,
-                      marketState: instPriceData.marketState,
-                      currency: s.currencyOverride,
-                      regularMarketTime:
-                        (overrideCurrencyPriceData?.regularMarketTime ?? 0) >
-                        (instPriceData?.regularMarketTime ?? 0)
-                          ? overrideCurrencyPriceData?.regularMarketTime
-                          : instPriceData?.regularMarketTime,
-                      regularMarketPrice:
-                        !!instPriceData.regularMarketPrice &&
-                        !!overrideCurrencyPriceData!.regularMarketPrice
-                          ? instPriceData.regularMarketPrice *
-                            overrideCurrencyPriceData!.regularMarketPrice
-                          : undefined,
-                    };
-
-                    return [s.normalizedFullSymbol, overriddenPriceData] as const;
-                  }),
-                  $ => compact($),
+                      return [s.normalizedFullSymbol, overriddenPriceData] as const;
+                    }),
                   $ => objectFromEntriesTyped($)
                 )
               )
@@ -144,8 +143,7 @@ function yahooMarketPricesIterable(params: {
         );
       }),
     itThrottle(env.SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS),
-    itStartWith({} as SymbolPrices),
-    itPairwise(),
+    itPairwise({} as SymbolPrices),
     itMap(([prevPrices, nowsPrices]) => {
       const changedOrInitialPrices = pickBy(nowsPrices!, (_, symbol) => {
         const [nowsPriceTime, previousPriceTime, nowsPrice, previousPrice] = [

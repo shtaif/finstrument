@@ -7,7 +7,6 @@ import {
   itMap,
   itShare,
   itTap,
-  itStartWith,
   itPairwise,
   itLazyDefer,
   itMerge,
@@ -39,8 +38,7 @@ function observePricesDataMultiplexed<TSymbols extends string = string>(params: 
     source =>
       pipe(
         source,
-        itStartWith([] as TSymbols[]),
-        itPairwise(),
+        itPairwise([] as TSymbols[]),
         itFilter(([prev, next], i) => i === 0 || !isEqual(prev, next)),
         itMap(([, nextDistinctSymbolSet]) => nextDistinctSymbolSet)
       )
