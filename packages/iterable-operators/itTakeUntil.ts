@@ -1,5 +1,7 @@
 export { asyncIterTakeUntil, type TerminationTrigger };
 
+// TODO: In the event of an any exception thrown from `terminationTrigger` - the whole result iterator should probably throw it as well and close itself
+
 function asyncIterTakeUntil<T>(
   terminationTrigger: TerminationTrigger
 ): (source: AsyncIterable<T>) => AsyncIterable<T> {

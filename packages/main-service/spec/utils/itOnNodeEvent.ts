@@ -3,7 +3,7 @@ import { iterified } from 'iterified';
 
 export { itOnNodeEvent };
 
-function itOnNodeEvent<TValues extends unknown[] = any[]>(
+function itOnNodeEvent<TValues extends unknown[] = unknown[]>(
   emitter: NodeJS.EventEmitter,
   eventName: string
 ): AsyncIterable<TValues> {
