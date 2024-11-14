@@ -12,7 +12,6 @@ type Lot {
   openedAt: DateTime!
   recordCreatedAt: DateTime!
   recordUpdatedAt: DateTime!
-  # owner: User!
   instrument: InstrumentInfo!
   priceData: InstrumentMarketData!
   unrealizedPnl: PnlInfo!
@@ -22,6 +21,3 @@ input LotsFilters {
   ids: [ID!]
   symbols: [ID!]
 }
-
-# owner!: UserModel;
-# lotClosings!: LotClosingModel[];
