@@ -21,8 +21,9 @@ import { itOnNodeEvent } from './itOnNodeEvent.js';
 export {
   startMockMarketDataService,
   mockMarketDataControl,
-  type SymbolMarketData,
+  type MockMarketDataInput,
   type MockMarketUpdateItemInput,
+  type SymbolMarketData,
 };
 
 async function startMockMarketDataService(): Promise<{ close: () => Promise<void> }> {
@@ -77,37 +78,42 @@ async function startMockMarketDataService(): Promise<{ close: () => Promise<void
             return nextIterForMockMarketUpdates;
           }),
           itTakeUntil(itOnNodeEvent(ws, 'close')),
-          itMap(nextMockMarketData => {
-            return pick(nextMockMarketData, currAskedSymbols);
+          itMap(nextMockData => {
+            return pipe(
+              nextMockData,
+              $ => pick($, currAskedSymbols),
+              $ =>
+                mapValues($, symbolData =>
+                  symbolData === null
+                    ? null
+                    : {
+                        currency: 'USD',
+                        marketState: 'REGULAR',
+                        regularMarketTime: '2024-01-01T00:00:00.000Z',
+                        quoteSourceName: undefined,
+                        ...symbolData,
+                      }
+                )
+            );
           }),
-          itFilter(
-            (nextMockMarketDataFiltered, i) => i === 0 || !isEmpty(nextMockMarketDataFiltered)
-          ),
-          itMap(nextMockMarketData => ({
-            success: true as const,
-            data: mapValues(nextMockMarketData, symbolData =>
-              symbolData === null
-                ? null
-                : {
-                    currency: 'USD',
-                    marketState: 'REGULAR',
-                    regularMarketTime: '2024-01-01T00:00:00.000Z',
-                    quoteSourceName: undefined,
-                    ...symbolData,
-                  }
-            ),
-          }))
+          itFilter((nextMockDataFiltered, i) => i === 0 || !isEmpty(nextMockDataFiltered))
         );
 
-        for await (const payload of outgoingUpdates) {
-          if (ws.readyState !== WebSocket.OPEN) {
-            break;
+        try {
+          for await (const payload of outgoingUpdates) {
+            if (ws.readyState !== WebSocket.OPEN) {
+              break;
+            }
+            await wsSendJson(ws, { success: true, data: payload });
+            mockMarketDataControl.messageHandleFeedbackChannel.next();
           }
-          const serialized = JSON.stringify(payload);
-          await new Promise<void>((resolve, reject) =>
-            ws.send(serialized, {}, err => (err ? reject(err) : resolve()))
+        } catch (err: any) {
+          console.error(
+            'Mock market service encountered an issue while processing data',
+            err.stack
           );
-          mockMarketDataControl.messageHandleFeedbackChannel.next();
+          await wsSendJson(ws, { success: false, data: { message: err.message } });
+          throw err;
         }
       })();
     }
@@ -117,11 +123,18 @@ async function startMockMarketDataService(): Promise<{ close: () => Promise<void
 
   return {
     close: async () => {
-      return new Promise<void>((resolve, reject) => {
-        mockMarketDataServiceWsServer.close(err => (err ? reject(err) : resolve()));
-      });
+      await new Promise<void>((resolve, reject) =>
+        mockMarketDataServiceWsServer.close(err => (err ? reject(err) : resolve()))
+      );
     },
   };
+}
+
+async function wsSendJson(ws: WebSocket, payload: unknown): Promise<void> {
+  const serialized = JSON.stringify(payload);
+  await new Promise<void>((resolve, reject) =>
+    ws.send(serialized, {}, err => (err ? reject(err) : resolve()))
+  );
 }
 
 const mockDataFeedChannel = iterifiedUnwrapped<AsyncIterable<MockMarketUpdateItemInput>>();
@@ -164,8 +177,8 @@ const mockMarketDataControl = new (class {
     }
   }
 
-  start(adHocStartWith?: MockMarketInput): AsyncDisposable & {
-    next: (nextData: MockMarketInput) => Promise<void>;
+  start(adHocStartWith?: MockMarketDataInput): AsyncDisposable & {
+    next: (nextData: MockMarketDataInput) => Promise<void>;
   } {
     const stopInnerItersTrigger = Promise.withResolvers<void>();
 
@@ -177,7 +190,7 @@ const mockMarketDataControl = new (class {
         stopInnerItersTrigger.resolve();
       },
 
-      async next(nextData: MockMarketInput) {
+      async next(nextData: MockMarketDataInput) {
         const whenFullyConsumed = Promise.withResolvers<void>();
 
         const dataIter = pipe(
@@ -213,7 +226,7 @@ const mockMarketDataControl = new (class {
   }
 })();
 
-type MockMarketInput =
+type MockMarketDataInput =
   | MockMarketUpdateItemInput
   | Iterable<MockMarketUpdateItemInput>
   | AsyncIterable<MockMarketUpdateItemInput>
