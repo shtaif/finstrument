@@ -10,6 +10,7 @@ import {
   itShare,
   myIterableCleanupPatcher,
   type MaybeAsyncIterable,
+  type ExtractAsyncIterableValue,
 } from 'iterable-operators';
 import {
   observeStatsObjectChanges,
@@ -228,144 +229,128 @@ function observeStatsWithMarketDataHelper(params: {
           $,
           itMap(changedSymbols => {
             assign(allCurrentMarketData, changedSymbols);
-            return {
-              current: allCurrentMarketData,
-              changed: changedSymbols,
-            };
+            return { current: allCurrentMarketData, changed: changedSymbols };
           })
         );
       })
   );
 
   return pipe(
-    itMerge(
-      pipe(
-        statsObjectsWithWatchedSymbolsIter,
-        itMap(statsCurrentAndChanged => ({
-          stats: statsCurrentAndChanged,
-          marketData: undefined,
-        }))
-      ),
-      pipe(
-        symbolMarketDataIter,
-        itMap(marketDataCurrentAndChanged => ({
-          stats: undefined,
-          marketData: marketDataCurrentAndChanged,
-        }))
-      )
-    ),
-    myIterableCleanupPatcher(async function* (source) {
-      const it = source[Symbol.asyncIterator]();
-
-      let statsMostRecentValue;
-      let marketDataMostRecentValue;
-
-      do {
-        const { done, value } = await it.next();
-        if (done) {
-          return;
-        }
-        if (value.stats) {
-          statsMostRecentValue = value;
-        } else {
-          marketDataMostRecentValue = value;
-        }
-      } while (!statsMostRecentValue || !marketDataMostRecentValue);
-
+    itLazyDefer(() => {
       const current = {
-        stats: statsMostRecentValue.stats.current,
-        marketData: marketDataMostRecentValue.marketData.current,
+        stats: {
+          portfolioStats: {},
+          holdingStats: {},
+          lots: {},
+        } as ExtractAsyncIterableValue<typeof statsObjectsWithWatchedSymbolsIter>['current'],
+
+        marketData: {} as DeepNonNullable<UpdatedSymbolPriceMap>,
       };
 
-      yield {
-        current,
-        changed: { stats: statsMostRecentValue.stats.changed },
-      };
-
-      for await (const next of { [Symbol.asyncIterator]: () => it }) {
-        if (next.stats) {
-          current.stats = next.stats.current;
-        } else {
-          assign(current.marketData, next.marketData.changed);
-        }
-        yield {
-          current,
-          changed: next.stats
-            ? { stats: next.stats.changed }
-            : { marketData: next.marketData.changed },
-        };
-      }
+      return itMerge(
+        pipe(
+          statsObjectsWithWatchedSymbolsIter,
+          itMap(statsCurrentAndChanged => {
+            current.stats = statsCurrentAndChanged.current;
+            return {
+              current,
+              changed: {
+                stats: statsCurrentAndChanged.changed,
+                marketData: undefined,
+              },
+            };
+          })
+        ),
+        pipe(
+          symbolMarketDataIter,
+          itMap(marketDataCurrentAndChanged => {
+            current.marketData = marketDataCurrentAndChanged.current;
+            return {
+              current,
+              changed: {
+                stats: undefined,
+                marketData: marketDataCurrentAndChanged.changed,
+              },
+            };
+          })
+        )
+      );
     }),
-    itMap(async ({ current, changed }) => {
-      const [
-        portfolioStatsToSetFiltered,
-        holdingStatsToSetFiltered,
-        lotsToSetFiltered,
-        portfolioStatsToRemove,
-        holdingStatsToRemove,
-        lotsToRemove,
-      ] = changed.stats
-        ? [
-            changed.stats.portfolioStats.set.filter(p =>
-              p.watchedSymbols.every(s => s in current.marketData)
+    myIterableCleanupPatcher(async function* (source) {
+      let statsChangesPendingMatchingMarketData;
+
+      for await (const { current, changed } of source) {
+        if (changed.stats) {
+          statsChangesPendingMatchingMarketData = changed.stats;
+        }
+
+        if (statsChangesPendingMatchingMarketData) {
+          if (
+            [
+              statsChangesPendingMatchingMarketData.portfolioStats.set,
+              statsChangesPendingMatchingMarketData.holdingStats.set,
+              statsChangesPendingMatchingMarketData.lots.set,
+            ]
+              .flat()
+              .flatMap(item => item.watchedSymbols)
+              .every(s => s in current.marketData)
+          ) {
+            yield {
+              current,
+              changed: {
+                stats: statsChangesPendingMatchingMarketData,
+              },
+            };
+            statsChangesPendingMatchingMarketData = undefined;
+          }
+        } else if (changed.marketData) {
+          const [portfolioStatsToSetFiltered, holdingStatsToSetFiltered, lotsToSetFiltered] = [
+            filter(current.stats.portfolioStats, p =>
+              p.watchedSymbols.some(sym => sym in changed.marketData)
             ),
-            changed.stats.holdingStats.set.filter(h =>
-              h.watchedSymbols.every(s => s in current.marketData)
+            filter(current.stats.holdingStats, h =>
+              h.watchedSymbols.some(sym => sym in changed.marketData)
             ),
-            changed.stats.lots.set.filter(l =>
-              l.watchedSymbols.every(s => s in current.marketData)
+            filter(current.stats.lots, l =>
+              l.watchedSymbols.some(sym => sym in changed.marketData)
             ),
-            changed.stats.portfolioStats.remove,
-            changed.stats.holdingStats.remove,
-            changed.stats.lots.remove,
-          ]
-        : [
-            filter(
-              current.stats.portfolioStats,
-              p =>
-                p.watchedSymbols.some(s => s in changed.marketData) &&
-                p.watchedSymbols.every(s => s in current.marketData)
-            ),
-            filter(
-              current.stats.holdingStats,
-              h =>
-                h.watchedSymbols.some(s => s in changed.marketData) &&
-                h.watchedSymbols.every(s => s in current.marketData)
-            ),
-            filter(
-              current.stats.lots,
-              l =>
-                l.watchedSymbols.some(s => s in changed.marketData) &&
-                l.watchedSymbols.every(s => s in current.marketData)
-            ),
-            [],
-            [],
-            [],
           ];
 
-      return {
-        currentStats: {
-          portfolioStats: mapValues(current.stats.portfolioStats, p => p.obj),
-          holdingStats: mapValues(current.stats.holdingStats, h => h.obj),
-          lots: mapValues(current.stats.lots, l => l.obj),
-        },
-        changedStats: {
-          portfolioStats: {
-            remove: portfolioStatsToRemove,
-            set: portfolioStatsToSetFiltered.map(p => p.obj),
-          },
-          holdingStats: {
-            remove: holdingStatsToRemove,
-            set: holdingStatsToSetFiltered.map(h => h.obj),
-          },
-          lots: {
-            remove: lotsToRemove,
-            set: lotsToSetFiltered.map(l => l.obj),
-          },
-        },
-        currentMarketData: current.marketData,
-      };
+          yield {
+            current,
+            changed: {
+              stats: {
+                portfolioStats: { remove: [], set: portfolioStatsToSetFiltered },
+                holdingStats: { remove: [], set: holdingStatsToSetFiltered },
+                lots: { remove: [], set: lotsToSetFiltered },
+              },
+            },
+          };
+        }
+      }
     }),
+    itMap(({ current, changed }) => ({
+      currentStats: {
+        portfolioStats: mapValues(current.stats.portfolioStats, p => p.obj),
+        holdingStats: mapValues(current.stats.holdingStats, h => h.obj),
+        lots: mapValues(current.stats.lots, l => l.obj),
+      },
+      changedStats: {
+        portfolioStats: {
+          remove: changed.stats.portfolioStats.remove,
+          set: changed.stats.portfolioStats.set.map(p => p.obj),
+        },
+        holdingStats: {
+          remove: changed.stats.holdingStats.remove,
+          set: changed.stats.holdingStats.set.map(h => h.obj),
+        },
+        lots: {
+          remove: changed.stats.lots.remove,
+          set: changed.stats.lots.set.map(l => l.obj),
+        },
+      },
+      currentMarketData: current.marketData,
+    })),
     itFilter(
       ({ changedStats }, i) =>
         i === 0 ||
