@@ -35,7 +35,7 @@
     "iter-tools": "^7.5.3",
     "iterable-operators": "workspace:^",
     "iterified": "^1.2.5",
-    "ix": "^5.0.0",
+    "ix": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
     "lodash-es": "^4.17.21",
     "pg": "^8.11.3",

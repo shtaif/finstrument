@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ngrok/ngrok": "^0.5.2",
-    "@reactivex/ix-esnext-esm": "^5.0.0",
+    "@reactivex/ix-esnext-esm": "^7.0.0",
     "better-sse": "^0.9.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
