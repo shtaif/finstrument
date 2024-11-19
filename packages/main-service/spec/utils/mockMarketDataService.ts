@@ -50,8 +50,7 @@ async function startMockMarketDataService(): Promise<{ close: () => Promise<void
               $ => sortedUniq($)
             )
           ),
-          itStartWith([] as string[]),
-          itPairwise(),
+          itPairwise([] as string[]),
           itFilter(([prev, next], i) => i === 0 || !isEqual(prev, next)),
           itShare()
         );

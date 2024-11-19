@@ -17,6 +17,7 @@ import { resolvers as holdingStatsChangesResolvers } from './schema/HoldingStats
 import { resolvers as lotResolvers } from './schema/Lot/resolvers.js';
 import { resolvers as instrumentInfoResolvers } from './schema/InstrumentInfo/resolvers.js';
 import { resolvers as aggregatePnlResolvers } from './schema/AggregatePnl/resolvers.js';
+import { resolvers as observedCombinedPortfolioStatsResolvers } from './schema/ObservedCombinedPortfolioStats/resolvers.js';
 import { resolvers as observedPortfolioStatsResolvers } from './schema/ObservedPortfolioStats/resolvers.js';
 import { resolvers as observedHoldingStatsResolvers } from './schema/ObservedHoldingStats/resolvers.js';
 import { resolvers as observedLotsResolvers } from './schema/ObservedLots/resolvers.js';
@@ -40,6 +41,7 @@ const typeDefs = await Promise.all(
     `${import.meta.dirname}/schema/SymbolPortfolioPortion/schema.graphql`,
     `${import.meta.dirname}/schema/InstrumentInfo/schema.graphql`,
     `${import.meta.dirname}/schema/AggregatePnl/schema.graphql`,
+    `${import.meta.dirname}/schema/ObservedCombinedPortfolioStats/schema.graphql`,
     `${import.meta.dirname}/schema/ObservedPortfolioStats/schema.graphql`,
     `${import.meta.dirname}/schema/ObservedHoldingStats/schema.graphql`,
     `${import.meta.dirname}/schema/ObservedLots/schema.graphql`,
@@ -58,6 +60,7 @@ const resolvers = [
   lotResolvers,
   instrumentInfoResolvers,
   aggregatePnlResolvers,
+  observedCombinedPortfolioStatsResolvers,
   observedPortfolioStatsResolvers,
   observedHoldingStatsResolvers,
   observedLotsResolvers,
