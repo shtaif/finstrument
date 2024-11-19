@@ -2,7 +2,7 @@ import { setImmediate } from 'node:timers/promises';
 import { uniq, flatten, pick } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { iterifiedUnwrapped } from 'iterified';
-import { asyncIterMap, itTakeFirst, myIterableCleanupPatcher } from 'iterable-operators';
+import { asyncIterMap, itShare, itTakeFirst, myIterableCleanupPatcher } from 'iterable-operators';
 import {
   yahooMarketPricesIterable,
   type SymbolPrices,
@@ -72,7 +72,8 @@ const baseSymbolPricesPoller = pipe(
     }
   }),
   asyncIterMap(currSymbolSet => pipe([...currSymbolSet], flatten, uniq)),
-  observedSymbolsIter => yahooMarketPricesIterable({ symbols: observedSymbolsIter })
+  observedSymbolsIter => yahooMarketPricesIterable({ symbols: observedSymbolsIter }),
+  itShare()
 );
 
 async function marketDataPrimeFasterInit(): Promise<void> {
