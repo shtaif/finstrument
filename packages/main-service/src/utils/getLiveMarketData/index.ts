@@ -12,6 +12,10 @@ import { normalizeFloatImprecisions } from '../normalizeFloatImprecisions.js';
 import { objectCreateNullProto } from '../objectCreateNullProto.js';
 import { observeStatsWithMarketDataHelper } from './observeStatsWithMarketDataHelper.js';
 import { type UpdatedSymbolPrice } from '../marketDataService/index.js';
+import {
+  observeCombinedPortfolioStats,
+  type CombinedPortfolioStats,
+} from './observeCombinedPortfolioStats/index.js';
 // import { type AllLeafPropsIntoBools } from './AllLeafPropsIntoBools.js';
 import { portfolioStatsCalcMarketStats } from './portfolioStatsCalcMarketStats.js';
 import { calcPnlInTranslateCurrencies } from './calcPnlInTranslateCurrencies.js';
@@ -29,6 +33,8 @@ export {
   type Lot,
   type InstrumentMarketPriceInfo,
   type PnlInfo,
+  observeCombinedPortfolioStats,
+  type CombinedPortfolioStats,
 };
 
 // TODO: `combineLatest` from '@reactivex/ix-esnext-esm/asynciterable' becomes stuck indefinitely whenever any of its input iterables finishes empty of values - contribute to working this out through the public repo?

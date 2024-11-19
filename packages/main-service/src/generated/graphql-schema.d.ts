@@ -209,14 +209,46 @@ export type ObservePricesDataInput = {
   symbols: Array<Scalars['String']['input']>;
 };
 
+export type ObservedCombinedPortfolioStats = {
+  __typename?: 'ObservedCombinedPortfolioStats';
+  compositionByHoldings: Array<ObservedCombinedPortfolioStatsCompositionByHoldingsItem>;
+  costBasis: Scalars['Float']['output'];
+  currencyCombinedBy: Scalars['String']['output'];
+  lastChangedAt?: Maybe<Scalars['DateTime']['output']>;
+  marketValue: Scalars['Float']['output'];
+  mostRecentTradeId?: Maybe<Scalars['ID']['output']>;
+  ownerId: Scalars['ID']['output'];
+  realizedAmount: Scalars['Float']['output'];
+  realizedPnlAmount: Scalars['Float']['output'];
+  realizedPnlRate: Scalars['Float']['output'];
+  unrealizedPnl: ObservedCombinedPortfolioStatsUnrealizedPnl;
+};
+
+export type ObservedCombinedPortfolioStatsCompositionByHoldingsItem = {
+  __typename?: 'ObservedCombinedPortfolioStatsCompositionByHoldingsItem';
+  portionOfPortfolioCostBasis: Scalars['Float']['output'];
+  portionOfPortfolioMarketValue: Scalars['Float']['output'];
+  portionOfPortfolioUnrealizedPnl: Scalars['Float']['output'];
+  symbol: Scalars['String']['output'];
+};
+
+export type ObservedCombinedPortfolioStatsUnrealizedPnl = {
+  __typename?: 'ObservedCombinedPortfolioStatsUnrealizedPnl';
+  amount: Scalars['Float']['output'];
+  fraction: Scalars['Float']['output'];
+};
+
 export type ObservedHoldingStats = {
   __typename?: 'ObservedHoldingStats';
   breakEvenPrice?: Maybe<Scalars['Float']['output']>;
-  currentPortfolioPortion?: Maybe<Scalars['Float']['output']>;
+  currentPortfolioPortion: Scalars['Float']['output'];
   lastChangedAt: Scalars['DateTime']['output'];
   lastRelatedTradeId: Scalars['ID']['output'];
   marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
+  portionOfPortfolioCostBasis: Scalars['Float']['output'];
+  portionOfPortfolioMarketValue: Scalars['Float']['output'];
+  portionOfPortfolioUnrealizedPnl: Scalars['Float']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
   totalLotCount: Scalars['Int']['output'];
@@ -392,6 +424,7 @@ export type SetTradesResult = {
 export type Subscription = {
   __typename?: 'Subscription';
   aggregatePnl: AggregatePnlChangeResult;
+  combinedPortfolioStats: ObservedCombinedPortfolioStats;
   holdingStats: Array<ObservedHoldingStatsUpdate>;
   lots: Array<ObservedLotUpdate>;
   observeHoldingRevenue: HoldingRevenueChangeNotification;
@@ -403,6 +436,11 @@ export type Subscription = {
 export type SubscriptionAggregatePnlArgs = {
   holdings?: InputMaybe<Array<AggregatePnlHoldingSpecifier>>;
   lots?: InputMaybe<Array<AggregatePnlLotSpecifier>>;
+};
+
+
+export type SubscriptionCombinedPortfolioStatsArgs = {
+  currencyToCombineIn?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -564,6 +602,9 @@ export type ResolversTypes = {
   Mutation: ResolverTypeWrapper<{}>;
   ObserveHoldingRevenueInput: ResolverTypeWrapper<DeepPartial<ObserveHoldingRevenueInput>>;
   ObservePricesDataInput: ResolverTypeWrapper<DeepPartial<ObservePricesDataInput>>;
+  ObservedCombinedPortfolioStats: ResolverTypeWrapper<DeepPartial<ObservedCombinedPortfolioStats>>;
+  ObservedCombinedPortfolioStatsCompositionByHoldingsItem: ResolverTypeWrapper<DeepPartial<ObservedCombinedPortfolioStatsCompositionByHoldingsItem>>;
+  ObservedCombinedPortfolioStatsUnrealizedPnl: ResolverTypeWrapper<DeepPartial<ObservedCombinedPortfolioStatsUnrealizedPnl>>;
   ObservedHoldingStats: ResolverTypeWrapper<DeepPartial<ObservedHoldingStats>>;
   ObservedHoldingStatsUpdate: ResolverTypeWrapper<DeepPartial<ObservedHoldingStatsUpdate>>;
   ObservedHoldingStatsUpdateType: ResolverTypeWrapper<DeepPartial<ObservedHoldingStatsUpdateType>>;
@@ -623,6 +664,9 @@ export type ResolversParentTypes = {
   Mutation: {};
   ObserveHoldingRevenueInput: DeepPartial<ObserveHoldingRevenueInput>;
   ObservePricesDataInput: DeepPartial<ObservePricesDataInput>;
+  ObservedCombinedPortfolioStats: DeepPartial<ObservedCombinedPortfolioStats>;
+  ObservedCombinedPortfolioStatsCompositionByHoldingsItem: DeepPartial<ObservedCombinedPortfolioStatsCompositionByHoldingsItem>;
+  ObservedCombinedPortfolioStatsUnrealizedPnl: DeepPartial<ObservedCombinedPortfolioStatsUnrealizedPnl>;
   ObservedHoldingStats: DeepPartial<ObservedHoldingStats>;
   ObservedHoldingStatsUpdate: DeepPartial<ObservedHoldingStatsUpdate>;
   ObservedLot: DeepPartial<ObservedLot>;
@@ -785,13 +829,45 @@ export type MutationResolvers<ContextType = AppGqlContextValue, ParentType exten
   setTrades?: Resolver<ResolversTypes['SetTradesResult'], ParentType, ContextType, RequireFields<MutationSetTradesArgs, 'input'>>;
 };
 
+export type ObservedCombinedPortfolioStatsResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedCombinedPortfolioStats'] = ResolversParentTypes['ObservedCombinedPortfolioStats']> = {
+  compositionByHoldings?: Resolver<Array<ResolversTypes['ObservedCombinedPortfolioStatsCompositionByHoldingsItem']>, ParentType, ContextType>;
+  costBasis?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  currencyCombinedBy?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  lastChangedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  marketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  mostRecentTradeId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  ownerId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  realizedAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  realizedPnlAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  realizedPnlRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  unrealizedPnl?: Resolver<ResolversTypes['ObservedCombinedPortfolioStatsUnrealizedPnl'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ObservedCombinedPortfolioStatsCompositionByHoldingsItemResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedCombinedPortfolioStatsCompositionByHoldingsItem'] = ResolversParentTypes['ObservedCombinedPortfolioStatsCompositionByHoldingsItem']> = {
+  portionOfPortfolioCostBasis?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  portionOfPortfolioMarketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  portionOfPortfolioUnrealizedPnl?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  symbol?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type ObservedCombinedPortfolioStatsUnrealizedPnlResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedCombinedPortfolioStatsUnrealizedPnl'] = ResolversParentTypes['ObservedCombinedPortfolioStatsUnrealizedPnl']> = {
+  amount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  fraction?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
 export type ObservedHoldingStatsResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['ObservedHoldingStats'] = ResolversParentTypes['ObservedHoldingStats']> = {
   breakEvenPrice?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
-  currentPortfolioPortion?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  currentPortfolioPortion?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   lastChangedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   lastRelatedTradeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   marketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   ownerId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  portionOfPortfolioCostBasis?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  portionOfPortfolioMarketValue?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  portionOfPortfolioUnrealizedPnl?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   priceData?: Resolver<ResolversTypes['InstrumentMarketData'], ParentType, ContextType>;
   symbol?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   totalLotCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -921,6 +997,7 @@ export type SetTradesResultResolvers<ContextType = AppGqlContextValue, ParentTyp
 
 export type SubscriptionResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = {
   aggregatePnl?: SubscriptionResolver<ResolversTypes['AggregatePnlChangeResult'], "aggregatePnl", ParentType, ContextType, Partial<SubscriptionAggregatePnlArgs>>;
+  combinedPortfolioStats?: SubscriptionResolver<ResolversTypes['ObservedCombinedPortfolioStats'], "combinedPortfolioStats", ParentType, ContextType, RequireFields<SubscriptionCombinedPortfolioStatsArgs, 'currencyToCombineIn'>>;
   holdingStats?: SubscriptionResolver<Array<ResolversTypes['ObservedHoldingStatsUpdate']>, "holdingStats", ParentType, ContextType, Partial<SubscriptionHoldingStatsArgs>>;
   lots?: SubscriptionResolver<Array<ResolversTypes['ObservedLotUpdate']>, "lots", ParentType, ContextType, RequireFields<SubscriptionLotsArgs, 'filters'>>;
   observeHoldingRevenue?: SubscriptionResolver<ResolversTypes['HoldingRevenueChangeNotification'], "observeHoldingRevenue", ParentType, ContextType, RequireFields<SubscriptionObserveHoldingRevenueArgs, 'input'>>;
@@ -983,6 +1060,9 @@ export type Resolvers<ContextType = AppGqlContextValue> = {
   LotProfitInfo?: LotProfitInfoResolvers<ContextType>;
   MeInfo?: MeInfoResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
+  ObservedCombinedPortfolioStats?: ObservedCombinedPortfolioStatsResolvers<ContextType>;
+  ObservedCombinedPortfolioStatsCompositionByHoldingsItem?: ObservedCombinedPortfolioStatsCompositionByHoldingsItemResolvers<ContextType>;
+  ObservedCombinedPortfolioStatsUnrealizedPnl?: ObservedCombinedPortfolioStatsUnrealizedPnlResolvers<ContextType>;
   ObservedHoldingStats?: ObservedHoldingStatsResolvers<ContextType>;
   ObservedHoldingStatsUpdate?: ObservedHoldingStatsUpdateResolvers<ContextType>;
   ObservedLot?: ObservedLotResolvers<ContextType>;

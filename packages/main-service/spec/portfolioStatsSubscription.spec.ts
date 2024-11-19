@@ -144,7 +144,7 @@ afterAll(async () => {
   unmockGqlContext();
 });
 
-describe('Subscription.portfolioStats ', () => {
+describe('Subscription.portfolioStats', () => {
   it('Upon subscription immediately emits an initial message with the state of all targeted portfolio stats', async () => {
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
     await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);

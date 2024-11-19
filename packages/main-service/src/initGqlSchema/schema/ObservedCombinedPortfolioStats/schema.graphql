@@ -1,0 +1,29 @@
+type Subscription {
+  combinedPortfolioStats(currencyToCombineIn: String = "USD"): ObservedCombinedPortfolioStats!
+}
+
+type ObservedCombinedPortfolioStats {
+  ownerId: ID!
+  mostRecentTradeId: ID
+  lastChangedAt: DateTime
+  currencyCombinedBy: String!
+  costBasis: Float!
+  realizedAmount: Float!
+  realizedPnlAmount: Float!
+  realizedPnlRate: Float!
+  marketValue: Float!
+  unrealizedPnl: ObservedCombinedPortfolioStatsUnrealizedPnl!
+  compositionByHoldings: [ObservedCombinedPortfolioStatsCompositionByHoldingsItem!]!
+}
+
+type ObservedCombinedPortfolioStatsUnrealizedPnl {
+  amount: Float!
+  fraction: Float!
+}
+
+type ObservedCombinedPortfolioStatsCompositionByHoldingsItem {
+  symbol: String!
+  portionOfPortfolioCostBasis: Float!
+  portionOfPortfolioUnrealizedPnl: Float!
+  portionOfPortfolioMarketValue: Float!
+}
