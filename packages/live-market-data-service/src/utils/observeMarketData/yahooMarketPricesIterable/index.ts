@@ -1,6 +1,6 @@
 import { pickBy, isEmpty, partition, pick } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
-import { of } from '@reactivex/ix-esnext-esm/asynciterable/of.js';
+import { of } from '@reactivex/ix-esnext-esm/asynciterable';
 import yahooFinance from 'yahoo-finance2';
 import {
   itPairwise,
