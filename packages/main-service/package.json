@@ -12,8 +12,8 @@
     "dev:app": "bun --watch ./src/index.ts",
     "dev:gql-codegen-watch": "cd ../main-service-gql-codegen && pnpm start",
     "test": "NODE_COMPILE_CACHE=./_node_compile_cache vitest run --config ./spec/vitest.config.ts",
-    "dev:test": "NODE_COMPILE_CACHE=./_node_compile_cache vitest --config ./spec/vitest.config.ts",
-    "dev:test-with-gql-codegen": "concurrently -r -P \"cd ../main-service-gql-codegen && pnpm start\" \"pnpm dev:test {*}\"",
+    "test:dev": "NODE_COMPILE_CACHE=./_node_compile_cache vitest --config ./spec/vitest.config.ts",
+    "test:dev-with-gql-codegen": "concurrently -r -P \"cd ../main-service-gql-codegen && pnpm start\" \"pnpm test:dev {*}\"",
     "build": "rm -rf ./dist && tsc --outDir ./dist && copyfiles -u 1 ./src/**/*.graphql ./dist"
   },
   "dependencies": {
