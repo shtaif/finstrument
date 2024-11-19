@@ -10,7 +10,6 @@ import {
   itPairwise,
   itLazyDefer,
   itMerge,
-  itFinally,
   myIterableCleanupPatcher,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
@@ -128,72 +127,67 @@ const outgoingSymbolCtrl = {
   },
 };
 
-const sharedMarketDataUnderlyingSource = itLazyDefer(() => {
-  const requestedSymbols = new Map<string, { timesRequested: number }>();
-  const symbolRecentDataCache: { [symbol: string]: UpdatedSymbolPrice } = Object.create(null);
-
-  return pipe(
-    iterateMarketDataServiceDataStream({
-      forSymbols: pipe(
-        itLazyDefer(() => {
-          const symbolRequestsActivatedIterator =
-            outgoingSymbolCtrl.channel.iterable[Symbol.asyncIterator]();
-          return { [Symbol.asyncIterator]: () => symbolRequestsActivatedIterator };
-        }),
-        myIterableCleanupPatcher(async function* (source) {
-          outgoingSymbolCtrl.readyForNext.resolve();
-          try {
-            yield* source;
-          } finally {
-            outgoingSymbolCtrl.readyForNext = Promise.withResolvers();
-          }
-        }),
-        itFinally(() => {
-          requestedSymbols.clear(); // TODO: Is this necessary since we the `requestedSymbols` here would be recreated on every resubscription?
-          for (const k in symbolRecentDataCache) {
-            delete symbolRecentDataCache[k];
-          }
-        }),
-        itMap(request => {
-          if (request.add)
-            for (const symbol of request.add) {
-              let symbolState = requestedSymbols.get(symbol);
-              if (symbolState) {
-                symbolState.timesRequested++;
-              } else {
-                symbolState = { timesRequested: 1 };
-                requestedSymbols.set(symbol, symbolState);
-              }
-            }
-          if (request.remove)
-            for (const symbol of request.remove) {
-              const symbolState = requestedSymbols.get(symbol)!;
-              if (symbolState) {
-                if (symbolState.timesRequested === 1) {
-                  requestedSymbols.delete(symbol);
-                  delete symbolRecentDataCache[symbol];
-                } else {
-                  symbolState.timesRequested--;
-                }
-              }
-            }
-          return [...requestedSymbols.keys()]; // TODO: Design this such that only *changes* in observed symbols are communicated rather than the complete set every time
-        })
-      ),
-    }),
-    itTap(incomingUpdates => {
-      for (const symbol in incomingUpdates) {
-        if (requestedSymbols.has(symbol)) {
-          symbolRecentDataCache[symbol] = incomingUpdates[symbol];
+const sharedMarketDataUnderlyingSource = pipe(
+  iterateMarketDataServiceDataStream({
+    forSymbols: pipe(
+      itLazyDefer(() => {
+        const symbolRequestsActivatedIterator =
+          outgoingSymbolCtrl.channel.iterable[Symbol.asyncIterator]();
+        return { [Symbol.asyncIterator]: () => symbolRequestsActivatedIterator };
+      }),
+      myIterableCleanupPatcher(async function* (source) {
+        outgoingSymbolCtrl.readyForNext.resolve();
+        try {
+          yield* source;
+        } finally {
+          outgoingSymbolCtrl.readyForNext = Promise.withResolvers();
+          requestedSymbols.clear();
+          symbolRecentDataCache = {};
         }
+      }),
+      itMap(request => {
+        if (request.add)
+          for (const symbol of request.add) {
+            let symbolState = requestedSymbols.get(symbol);
+            if (symbolState) {
+              symbolState.timesRequested++;
+            } else {
+              symbolState = { timesRequested: 1 };
+              requestedSymbols.set(symbol, symbolState);
+            }
+          }
+        if (request.remove)
+          for (const symbol of request.remove) {
+            const symbolState = requestedSymbols.get(symbol)!;
+            if (symbolState) {
+              if (symbolState.timesRequested === 1) {
+                requestedSymbols.delete(symbol);
+                delete symbolRecentDataCache[symbol];
+              } else {
+                symbolState.timesRequested--;
+              }
+            }
+          }
+        return [...requestedSymbols.keys()]; // TODO: Design this such that only *changes* in observed symbols are communicated rather than the complete set every time
+      })
+    ),
+  }),
+  itTap(incomingUpdates => {
+    for (const symbol in incomingUpdates) {
+      if (requestedSymbols.has(symbol)) {
+        symbolRecentDataCache[symbol] = incomingUpdates[symbol];
       }
-    }),
-    itShare(),
-    myIterableCleanupPatcher(async function* (source) {
-      if (isNotEmpty(symbolRecentDataCache)) {
-        yield symbolRecentDataCache;
-      }
-      yield* source;
-    })
-  );
-});
+    }
+  }),
+  itShare(),
+  myIterableCleanupPatcher(async function* (source) {
+    if (isNotEmpty(symbolRecentDataCache)) {
+      yield symbolRecentDataCache;
+    }
+    yield* source;
+  })
+);
+
+const requestedSymbols = new Map<string, { timesRequested: number }>();
+
+let symbolRecentDataCache: { [symbol: string]: UpdatedSymbolPrice } = Object.create(null);
