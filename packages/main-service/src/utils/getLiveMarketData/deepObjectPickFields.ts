@@ -1,5 +1,5 @@
 import { isObjectLike } from 'lodash-es';
-import { type SetIntersection, type OmitByValue } from 'utility-types';
+import { type SetIntersection, type PickByValue } from 'utility-types';
 
 export { deepObjectPickFields, type DeepObjectFieldsPicked };
 
@@ -42,16 +42,24 @@ type DeepObjectFieldsPicked<
   TObj extends object,
   TFieldSelection /* extends AllLeafPropsIntoBools<TObj>*/,
 > = {
+  [K in SetIntersection<keyof TObj, keyof PickByValue<TFieldSelection, true>>]: TObj[K];
+} & {
+  [K in SetIntersection<keyof TObj, keyof TFieldSelection> as TFieldSelection[K] extends false
+    ? never
+    : TFieldSelection[K] extends true
+      ? never
+      : TFieldSelection[K] extends boolean
+        ? K
+        : never]?: TObj[K];
+} & {
   [K in SetIntersection<
-    keyof TObj,
-    keyof OmitByValue<TFieldSelection, undefined | false>
-  >]: TFieldSelection[K] extends true
-    ? TObj[K]
-    : TObj[K] extends object[]
-      ? DeepObjectFieldsPicked<TObj[K][number], NonNullable<TFieldSelection[K]>>[]
-      : TObj[K] extends object
-        ? TFieldSelection[K] extends object
-          ? DeepObjectFieldsPicked<TObj[K], TFieldSelection[K]>
-          : never
-        : never;
+    keyof PickByValue<TObj, object | object[]>,
+    keyof PickByValue<TFieldSelection, object>
+  >]: TObj[K] extends object[]
+    ? DeepObjectFieldsPicked<TObj[K][number], TFieldSelection[K]>[]
+    : TObj[K] extends object
+      ? TFieldSelection[K] extends object
+        ? DeepObjectFieldsPicked<TObj[K], TFieldSelection[K]>
+        : never
+      : never;
 };

@@ -46,7 +46,7 @@ function getLiveMarketData(params: {
   specifiers: StatsObjectSpecifier[];
   translateToCurrencies?: string[];
   fields: SelectableFields;
-}): AsyncIterable<DeepObjectFieldsPicked<MarketDataUpdate<string>, Record<string, any>>> {
+}): AsyncIterable<DeepPartial<MarketDataUpdate<string>>> {
   // TODO: Need to enhance logic such that empty holding stats and empty lots symbols are excluded from the price observations, and are only reported once in the initial message with their zero stats
 
   const paramsNorm = {
