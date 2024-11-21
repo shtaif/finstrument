@@ -5,7 +5,7 @@
   height: 130px;
 
   .loading-spinner {
-    font-size: 64px;
+    font-size: 4rem;
   }
 
   .upload-icon-container {
@@ -13,12 +13,12 @@
     margin-bottom: 16px;
 
     .upload-icon {
-      font-size: 48px;
+      font-size: 3rem;
       color: #1668dc;
     }
   }
 
   .text-line {
-    font-size: 16px;
+    font-size: 1rem;
   }
 }
