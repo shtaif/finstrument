@@ -29,7 +29,7 @@
   .part.mkt-value-part {
     .mkt-value-content-line {
       .mkt-value-amount-display {
-        font-size: 20px;
+        font-size: 1.25rem;
       }
     }
   }
@@ -37,7 +37,7 @@
   .part.unrealized-pnl-part {
     .unrealized-pnl-content-line {
       .pnl-amount-display {
-        font-size: 20px;
+        font-size: 1.25rem;
       }
 
       .pnl-percentage-value {
