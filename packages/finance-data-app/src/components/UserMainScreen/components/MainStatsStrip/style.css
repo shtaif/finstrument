@@ -1,0 +1,53 @@
+.cmp-main-stats-strip {
+  display: flex;
+  height: 80px;
+
+  .part {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+
+    .part-label-line {
+      display: block;
+      white-space: nowrap;
+    }
+
+    .mkt-value-content-line,
+    .unrealized-pnl-content-line {
+      white-space: nowrap;
+    }
+  }
+
+  .part-divider {
+    display: block;
+    height: 70%;
+    margin: 0 20px;
+    align-self: center;
+  }
+
+  .part.mkt-value-part {
+    .mkt-value-content-line {
+      .mkt-value-amount-display {
+        font-size: 20px;
+      }
+    }
+  }
+
+  .part.unrealized-pnl-part {
+    .unrealized-pnl-content-line {
+      .pnl-amount-display {
+        font-size: 20px;
+      }
+
+      .pnl-percentage-value {
+        &.has-profit {
+          color: #0eb35b;
+        }
+        &.has-loss {
+          color: #e62333;
+        }
+      }
+    }
+  }
+}

@@ -1,19 +1,22 @@
 import React, { useMemo } from 'react';
 import { useLocalStorage } from 'react-use';
-import { notification } from 'antd';
+import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
 import { Iterate } from 'react-async-iterable';
 import { pipe } from 'shared-utils';
-import { itCatch, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
+import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { documentVisibilityChanges } from '../../utils/documentVisibilityChanges.ts';
+import { MainStatsStrip } from './components/MainStatsStrip/index.tsx';
 import { PositionsTable } from '../PositionsTable/index.tsx';
 import { HoldingDataErrorPanel } from './components/HoldingDataErrorPanel';
 import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
 import { HoldingStatsRealTimeActivityStatus } from './components/HoldingStatsRealTimeActivityStatus/index.tsx';
 import { UploadTrades } from './components/UploadTrades/index.tsx';
+import { useTradeImportSuccessNotification } from './notifications/useTradeImportSuccessNotification.tsx';
+import { useServerConnectionErrorNotification } from './notifications/useServerConnectionErrorNotification.tsx';
 import './style.css';
 
 export { UserMainScreen };
@@ -26,32 +29,44 @@ function UserMainScreen() {
     number | undefined
   >('last_fetched_holdings_count', undefined);
 
-  const holdingStatsIter = useMemo(
-    () =>
-      pipe(
-        combinedHoldingStatsIter(),
-        itTap((next, i) => {
-          if (i === 0) {
-            setLastFetchedHoldingsCount(next.holdingStats.length);
-          }
-        }),
-        itCatch(err => {
-          serverConnectionErrorNotification.show();
-          throw err;
-        }),
-        itShare()
-      ),
-    []
-  );
+  const portfolioStatsIter = useMemo(() => createPortfolioStatsIter(), []);
 
-  const visibilityConditionedHoldingStatsIters = useMemo(
-    () =>
-      pipe(
-        documentVisibilityChanges,
-        itMap(docVisible => (docVisible ? holdingStatsIter : (async function* () {})()))
-      ),
-    [holdingStatsIter]
-  );
+  const holdingStatsIter = useMemo(() => {
+    return pipe(
+      itCombineLatest(createCombinedHoldingStatsIter(), portfolioStatsIter),
+      itMap(([nextHoldingUpdate, nextPortfolioUpdate]) => {
+        const compositionBySymbol = pipe(nextPortfolioUpdate.stats?.compositionByHoldings, $ =>
+          keyBy($, comp => comp.symbol)
+        );
+
+        const holdingStatsWithPortfolioPortions = nextHoldingUpdate.holdingStats.map(update => ({
+          ...update,
+          portionOfPortfolioMarketValue:
+            compositionBySymbol[update.symbol].portionOfPortfolioMarketValue,
+        }));
+
+        const errors =
+          !nextHoldingUpdate.errors?.length && !nextPortfolioUpdate.errors?.length
+            ? undefined
+            : [...(nextHoldingUpdate.errors ?? []), ...(nextPortfolioUpdate.errors ?? [])];
+
+        return {
+          errors,
+          holdingStats: holdingStatsWithPortfolioPortions,
+        };
+      }),
+      itTap((next, i) => {
+        if (i === 0) {
+          setLastFetchedHoldingsCount(next.holdingStats.length);
+        }
+      }),
+      itCatch(err => {
+        serverConnectionErrorNotification.show();
+        throw err;
+      }),
+      itShare()
+    );
+  }, []);
 
   return (
     <div className="cmp-user-main-screen">
@@ -68,128 +83,130 @@ function UserMainScreen() {
         onUploadFailure={_err => {}}
       />
 
-      <Iterate
-        initialValue={!document.hidden ? holdingStatsIter : (async function* () {})()}
-        value={visibilityConditionedHoldingStatsIters}
-      >
-        {({ value: holdingStatsIter }) => (
-          <>
-            <HoldingStatsRealTimeActivityStatus input={holdingStatsIter} />
+      <div>
+        <Iterate initialValue={!document.hidden} value={documentVisibilityChanges}>
+          {({ value: docVisible }) => {
+            const [holdingStatsOrEmptyIter, portfolioStatsIterOrEmptyIter] = [
+              docVisible ? holdingStatsIter : (async function* () {})(),
+              docVisible ? portfolioStatsIter : (async function* () {})(),
+            ];
+            return (
+              <>
+                <HoldingStatsRealTimeActivityStatus input={holdingStatsOrEmptyIter} />
 
-            <Iterate value={holdingStatsIter}>
-              {next => (
-                <>
-                  {(next.error || next.value?.errors) && (
-                    <HoldingDataErrorPanel
-                      errors={next.error ? [next.error] : next.value?.errors}
-                    />
+                <Iterate value={portfolioStatsIterOrEmptyIter}>
+                  {({ value: nextStats, pendingFirst }) => (
+                    <>
+                      <MainStatsStrip
+                        loading={pendingFirst}
+                        data={
+                          !nextStats?.stats
+                            ? undefined
+                            : {
+                                currencyShownIn: nextStats.stats.currencyCombinedBy,
+                                marketValue: nextStats.stats.marketValue,
+                                unrealizedPnl: {
+                                  amount: nextStats.stats.unrealizedPnl.amount,
+                                  fraction: nextStats.stats.unrealizedPnl.fraction,
+                                },
+                              }
+                        }
+                      />
+                    </>
                   )}
+                </Iterate>
 
-                  <PositionsTable
-                    className="positions-table"
-                    loading={next.pendingFirst}
-                    loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-                    holdings={next.value?.holdingStats?.map(
-                      ({
-                        symbol,
-                        totalQuantity,
-                        breakEvenPrice,
-                        marketValue,
-                        priceData,
-                        unrealizedPnl,
-                      }) => ({
-                        symbol,
-                        currency: priceData.currency ?? undefined,
-                        quantity: totalQuantity,
-                        breakEvenPrice: breakEvenPrice ?? undefined,
-                        marketPrice: priceData.regularMarketPrice,
-                        timeOfPrice: priceData.regularMarketTime,
-                        marketState: priceData.marketState,
-                        marketValue,
-                        unrealizedPnl: {
-                          amount: unrealizedPnl.amount,
-                          percent: unrealizedPnl.percent,
-                        },
-                        comprisingPositions: {
-                          iter: [
-                            () =>
-                              pipe(
-                                createLotDataIter({ symbol }),
-                                itMap(({ lots }) => lots)
-                              ),
-                            [symbol],
-                          ],
-                        },
-                      })
-                    )}
-                  />
-                </>
-              )}
-            </Iterate>
-          </>
-        )}
-      </Iterate>
+                <Iterate value={holdingStatsOrEmptyIter}>
+                  {next => (
+                    <>
+                      {(next.error || next.value?.errors) && (
+                        <HoldingDataErrorPanel
+                          errors={next.error ? [next.error] : next.value?.errors}
+                        />
+                      )}
+
+                      <PositionsTable
+                        className="positions-table"
+                        loading={next.pendingFirst}
+                        loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
+                        holdings={(next.value?.holdingStats ?? []).map(
+                          ({
+                            symbol,
+                            totalQuantity,
+                            portionOfPortfolioMarketValue,
+                            breakEvenPrice,
+                            marketValue,
+                            priceData,
+                            unrealizedPnl,
+                          }) => ({
+                            symbol,
+                            currency: priceData.currency ?? undefined,
+                            portfolioValuePortion: portionOfPortfolioMarketValue,
+                            quantity: totalQuantity,
+                            breakEvenPrice: breakEvenPrice ?? undefined,
+                            marketPrice: priceData.regularMarketPrice,
+                            timeOfPrice: priceData.regularMarketTime,
+                            marketState: priceData.marketState,
+                            marketValue,
+                            unrealizedPnl: {
+                              amount: unrealizedPnl.amount,
+                              percent: unrealizedPnl.percent,
+                            },
+                            comprisingPositions: {
+                              iter: [
+                                () =>
+                                  pipe(
+                                    createLotDataIter({ symbol }),
+                                    itMap(({ lots }) => lots)
+                                  ),
+                                [symbol],
+                              ],
+                            },
+                          })
+                        )}
+                      />
+                    </>
+                  )}
+                </Iterate>
+              </>
+            );
+          }}
+        </Iterate>
+      </div>
     </div>
   );
 }
 
-function useTradeImportSuccessNotification() {
-  const [notif, notifPlacement] = notification.useNotification();
-
-  const show = () =>
-    notif.success({
-      key: 'trade_import_success_notification',
-      message: <>Trades imported successfully</>,
-    });
-
-  return {
-    show: show,
-    placement: notifPlacement,
-  };
-}
-
-function useServerConnectionErrorNotification() {
-  const [notif, notifPlacement] = notification.useNotification();
-
-  const show = () =>
-    notif.error({
-      key: 'server_data_connection_error_notification',
-      message: <>Error</>,
-      description: <>Couldn't connect to server data stream</>,
-    });
-
-  return {
-    show: show,
-    placement: notifPlacement,
-  };
-}
-
-function combinedHoldingStatsIter(): AsyncIterable<{
-  holdingStats: HoldingStatsItem[];
+function createCombinedHoldingStatsIter(): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;
+  holdingStats: HoldingStatsItem[];
 }> {
   return pipe(
-    itLazyDefer(() => {
-      const allCurrHoldingStats = {} as { [symbol: string]: HoldingStatsItem };
+    itLazyDefer(() =>
+      gqlWsClient.iterate<HoldingStatsDataSubscriptionResult>({
+        query: gqlPrint(holdingStatsDataSubscription),
+      })
+    ),
+    $ =>
+      itLazyDefer(() => {
+        const allCurrHoldingStats = {} as { [symbol: string]: HoldingStatsItem };
 
-      return pipe(
-        gqlWsClient.iterate<HoldingStatsDataSubscriptionResult>({
-          query: gqlPrint(holdingStatsDataSubscription),
-        }),
-        itTap(next => {
-          for (const update of next.data?.holdingStats ?? []) {
-            ({
-              ['SET']: () => (allCurrHoldingStats[update.data.symbol] = update.data),
-              ['REMOVE']: () => delete allCurrHoldingStats[update.data.symbol],
-            })[update.type]();
-          }
-        }),
-        itMap(next => ({
-          holdingStats: Object.values(allCurrHoldingStats),
-          errors: next.errors,
-        }))
-      );
-    }),
+        return pipe(
+          $,
+          itTap(next => {
+            for (const update of next.data?.holdingStats ?? []) {
+              ({
+                ['SET']: () => (allCurrHoldingStats[update.data.symbol] = update.data),
+                ['REMOVE']: () => delete allCurrHoldingStats[update.data.symbol],
+              })[update.type]();
+            }
+          }),
+          itMap(next => ({
+            holdingStats: Object.values(allCurrHoldingStats),
+            errors: next.errors,
+          }))
+        );
+      }),
     itShare()
   );
 }
@@ -221,9 +238,49 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
 type HoldingStatsDataSubscriptionResult = DocumentType<typeof holdingStatsDataSubscription>;
 type HoldingStatsItem = HoldingStatsDataSubscriptionResult['holdingStats'][number]['data'];
 
-function createLotDataIter({ symbol }: { symbol: string }): AsyncIterable<{
-  lots: LotItem[];
+function createPortfolioStatsIter(): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;
+  stats: undefined | PortfolioStatsUpdate;
+}> {
+  return pipe(
+    itLazyDefer(() =>
+      gqlWsClient.iterate<PortfolioStatsSubscriptionResults>({
+        query: gqlPrint(portfolioStatsDataSubscription),
+        variables: { currencyToCombineIn: 'USD' },
+      })
+    ),
+    itMap(next => ({
+      stats: next.data?.combinedPortfolioStats,
+      errors: next.errors,
+    })),
+    itShare()
+  );
+}
+
+const portfolioStatsDataSubscription = graphql(/* GraphQL */ `
+  subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {
+    combinedPortfolioStats(currencyToCombineIn: $currencyToCombineIn) {
+      currencyCombinedBy
+      costBasis
+      marketValue
+      unrealizedPnl {
+        amount
+        fraction
+      }
+      compositionByHoldings {
+        symbol
+        portionOfPortfolioMarketValue
+      }
+    }
+  }
+`);
+
+type PortfolioStatsSubscriptionResults = DocumentType<typeof portfolioStatsDataSubscription>;
+type PortfolioStatsUpdate = PortfolioStatsSubscriptionResults['combinedPortfolioStats'];
+
+function createLotDataIter({ symbol }: { symbol: string }): AsyncIterable<{
+  errors: readonly GraphQLError[] | undefined;
+  lots: LotItem[];
 }> {
   return pipe(
     itLazyDefer(async () => {

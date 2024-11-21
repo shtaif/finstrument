@@ -208,15 +208,46 @@ export type ObservePricesDataInput = {
   symbols: Array<Scalars['String']['input']>;
 };
 
+export type ObservedCombinedPortfolioStats = {
+  __typename?: 'ObservedCombinedPortfolioStats';
+  compositionByHoldings: Array<ObservedCombinedPortfolioStatsCompositionByHoldingsItem>;
+  costBasis: Scalars['Float']['output'];
+  currencyCombinedBy: Scalars['String']['output'];
+  lastChangedAt?: Maybe<Scalars['DateTime']['output']>;
+  marketValue: Scalars['Float']['output'];
+  mostRecentTradeId?: Maybe<Scalars['ID']['output']>;
+  ownerId: Scalars['ID']['output'];
+  realizedAmount: Scalars['Float']['output'];
+  realizedPnlAmount: Scalars['Float']['output'];
+  realizedPnlRate: Scalars['Float']['output'];
+  unrealizedPnl: ObservedCombinedPortfolioStatsUnrealizedPnl;
+};
+
+export type ObservedCombinedPortfolioStatsCompositionByHoldingsItem = {
+  __typename?: 'ObservedCombinedPortfolioStatsCompositionByHoldingsItem';
+  portionOfPortfolioCostBasis: Scalars['Float']['output'];
+  portionOfPortfolioMarketValue: Scalars['Float']['output'];
+  portionOfPortfolioUnrealizedPnl: Scalars['Float']['output'];
+  symbol: Scalars['String']['output'];
+};
+
+export type ObservedCombinedPortfolioStatsUnrealizedPnl = {
+  __typename?: 'ObservedCombinedPortfolioStatsUnrealizedPnl';
+  amount: Scalars['Float']['output'];
+  fraction: Scalars['Float']['output'];
+};
+
 export type ObservedHoldingStats = {
   __typename?: 'ObservedHoldingStats';
   breakEvenPrice?: Maybe<Scalars['Float']['output']>;
-  currentPortfolioCurrencyPortion: Scalars['Float']['output'];
   currentPortfolioPortion: Scalars['Float']['output'];
   lastChangedAt: Scalars['DateTime']['output'];
   lastRelatedTradeId: Scalars['ID']['output'];
   marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
+  portionOfPortfolioCostBasis: Scalars['Float']['output'];
+  portionOfPortfolioMarketValue: Scalars['Float']['output'];
+  portionOfPortfolioUnrealizedPnl: Scalars['Float']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
   totalLotCount: Scalars['Int']['output'];
@@ -269,7 +300,6 @@ export enum ObservedLotUpdateType {
 
 export type ObservedPortfolioStats = {
   __typename?: 'ObservedPortfolioStats';
-  currentPortfolioPortion: Scalars['Float']['output'];
   forCurrency?: Maybe<Scalars['String']['output']>;
   lastChangedAt: Scalars['DateTime']['output'];
   marketValue: Scalars['Float']['output'];
@@ -397,6 +427,7 @@ export type SetTradesResult = {
 export type Subscription = {
   __typename?: 'Subscription';
   aggregatePnl: AggregatePnlChangeResult;
+  combinedPortfolioStats: ObservedCombinedPortfolioStats;
   holdingStats: Array<ObservedHoldingStatsUpdate>;
   lots: Array<ObservedLotUpdate>;
   observeHoldingRevenue: HoldingRevenueChangeNotification;
@@ -408,6 +439,11 @@ export type Subscription = {
 export type SubscriptionAggregatePnlArgs = {
   holdings?: InputMaybe<Array<AggregatePnlHoldingSpecifier>>;
   lots?: InputMaybe<Array<AggregatePnlLotSpecifier>>;
+};
+
+
+export type SubscriptionCombinedPortfolioStatsArgs = {
+  currencyToCombineIn?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -480,6 +516,13 @@ export type HoldingStatsDataSubscriptionSubscriptionVariables = Exact<{ [key: st
 
 export type HoldingStatsDataSubscriptionSubscription = { __typename?: 'Subscription', holdingStats: Array<{ __typename?: 'ObservedHoldingStatsUpdate', type: ObservedHoldingStatsUpdateType, data: { __typename?: 'ObservedHoldingStats', symbol: string, totalQuantity: number, breakEvenPrice?: number | null, marketValue: number, priceData: { __typename?: 'InstrumentMarketData', marketState: HoldingStatsMarketState, regularMarketTime: any, regularMarketPrice: number, currency?: string | null }, unrealizedPnl: { __typename?: 'PnlInfo', amount: number, percent: number } } }> };
 
+export type PortfolioStatsDataSubscriptionSubscriptionVariables = Exact<{
+  currencyToCombineIn: Scalars['String']['input'];
+}>;
+
+
+export type PortfolioStatsDataSubscriptionSubscription = { __typename?: 'Subscription', combinedPortfolioStats: { __typename?: 'ObservedCombinedPortfolioStats', currencyCombinedBy: string, costBasis: number, marketValue: number, unrealizedPnl: { __typename?: 'ObservedCombinedPortfolioStatsUnrealizedPnl', amount: number, fraction: number }, compositionByHoldings: Array<{ __typename?: 'ObservedCombinedPortfolioStatsCompositionByHoldingsItem', symbol: string, portionOfPortfolioMarketValue: number }> } };
+
 export type LotsQueryQueryVariables = Exact<{
   symbol: Scalars['ID']['input'];
 }>;
@@ -497,5 +540,6 @@ export type LotDataSubscriptionSubscription = { __typename?: 'Subscription', lot
 
 export const SetTradesMutationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetTradesMutation"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"SetTradesInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setTrades"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"tradesAddedCount"}},{"kind":"Field","name":{"kind":"Name","value":"tradesModifiedCount"}},{"kind":"Field","name":{"kind":"Name","value":"tradesRemovedCount"}}]}}]}}]} as unknown as DocumentNode<SetTradesMutationMutation, SetTradesMutationMutationVariables>;
 export const HoldingStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"HoldingStatsDataSubscription"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"holdingStats"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"totalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"breakEvenPrice"}},{"kind":"Field","name":{"kind":"Name","value":"marketValue"}},{"kind":"Field","name":{"kind":"Name","value":"priceData"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"marketState"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketTime"}},{"kind":"Field","name":{"kind":"Name","value":"regularMarketPrice"}},{"kind":"Field","name":{"kind":"Name","value":"currency"}}]}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<HoldingStatsDataSubscriptionSubscription, HoldingStatsDataSubscriptionSubscriptionVariables>;
+export const PortfolioStatsDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"PortfolioStatsDataSubscription"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"currencyToCombineIn"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"combinedPortfolioStats"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"currencyToCombineIn"},"value":{"kind":"Variable","name":{"kind":"Name","value":"currencyToCombineIn"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"currencyCombinedBy"}},{"kind":"Field","name":{"kind":"Name","value":"costBasis"}},{"kind":"Field","name":{"kind":"Name","value":"marketValue"}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"fraction"}}]}},{"kind":"Field","name":{"kind":"Name","value":"compositionByHoldings"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"symbol"}},{"kind":"Field","name":{"kind":"Name","value":"portionOfPortfolioMarketValue"}}]}}]}}]}}]} as unknown as DocumentNode<PortfolioStatsDataSubscriptionSubscription, PortfolioStatsDataSubscriptionSubscriptionVariables>;
 export const LotsQueryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"LotsQuery"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"symbol"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lots"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"symbols"},"value":{"kind":"ListValue","values":[{"kind":"Variable","name":{"kind":"Name","value":"symbol"}}]}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<LotsQueryQuery, LotsQueryQueryVariables>;
 export const LotDataSubscriptionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"subscription","name":{"kind":"Name","value":"LotDataSubscription"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"ids"}},"type":{"kind":"NonNullType","type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"lots"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"filters"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"ids"},"value":{"kind":"Variable","name":{"kind":"Name","value":"ids"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"data"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"openedAt"}},{"kind":"Field","name":{"kind":"Name","value":"originalQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"remainingQuantity"}},{"kind":"Field","name":{"kind":"Name","value":"unrealizedPnl"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"percent"}}]}}]}}]}}]}}]} as unknown as DocumentNode<LotDataSubscriptionSubscription, LotDataSubscriptionSubscriptionVariables>;
