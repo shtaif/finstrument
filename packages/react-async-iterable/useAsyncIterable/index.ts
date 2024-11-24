@@ -12,12 +12,10 @@ function useAsyncIterable<TValue>(
   asyncIterOrValue: AsyncIterable<TValue>,
   preIterationInitialValue?: undefined
 ): IterationResult<TValue, undefined>;
-
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
 ): IterationResult<TValue, TInitValue>;
-
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
@@ -129,6 +127,10 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   };
 }
 
+function identity<T>(input: T): T {
+  return input;
+}
+
 type IterationResult<TValue, TInitValue = undefined> = {
   /** The most recent value received */
   value: ExtractAsyncIterableValue<TValue> | TInitValue;
@@ -151,10 +153,6 @@ type IterationResult<TValue, TInitValue = undefined> = {
         }
     ))
 );
-
-function identity<T>(input: T): T {
-  return input;
-}
 
 // ##################################################################################################################################
 // ##################################################################################################################################
