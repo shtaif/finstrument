@@ -3,7 +3,7 @@ import { useLocalStorage } from 'react-use';
 import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { Iterate } from 'react-async-iterable';
+import { Iterate, mapIterate } from 'react-async-iterable';
 import { pipe } from 'shared-utils';
 import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
@@ -94,80 +94,72 @@ function UserMainScreen() {
               <>
                 <HoldingStatsRealTimeActivityStatus input={holdingStatsOrEmptyIter} />
 
-                <Iterate value={portfolioStatsIterOrEmptyIter}>
-                  {({ value: nextStats, pendingFirst }) => (
-                    <>
-                      <MainStatsStrip
-                        loading={pendingFirst}
-                        data={
-                          !nextStats?.stats
-                            ? undefined
-                            : {
-                                currencyShownIn: nextStats.stats.currencyCombinedBy,
-                                marketValue: nextStats.stats.marketValue,
-                                unrealizedPnl: {
-                                  amount: nextStats.stats.unrealizedPnl.amount,
-                                  fraction: nextStats.stats.unrealizedPnl.fraction,
-                                },
-                              }
+                <MainStatsStrip
+                  data={mapIterate(portfolioStatsIterOrEmptyIter, next =>
+                    !next?.stats
+                      ? undefined
+                      : {
+                          currencyShownIn: next.stats.currencyCombinedBy,
+                          marketValue: next.stats.marketValue,
+                          unrealizedPnl: {
+                            amount: next.stats.unrealizedPnl.amount,
+                            fraction: next.stats.unrealizedPnl.fraction,
+                          },
                         }
-                      />
-                    </>
                   )}
-                </Iterate>
+                />
 
                 <Iterate value={holdingStatsOrEmptyIter}>
-                  {next => (
-                    <>
-                      {(next.error || next.value?.errors) && (
-                        <HoldingDataErrorPanel
-                          errors={next.error ? [next.error] : next.value?.errors}
-                        />
-                      )}
-
-                      <PositionsTable
-                        className="positions-table"
-                        loading={next.pendingFirst}
-                        loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-                        holdings={(next.value?.holdingStats ?? []).map(
-                          ({
-                            symbol,
-                            totalQuantity,
-                            portionOfPortfolioMarketValue,
-                            breakEvenPrice,
-                            marketValue,
-                            priceData,
-                            unrealizedPnl,
-                          }) => ({
-                            symbol,
-                            currency: priceData.currency ?? undefined,
-                            portfolioValuePortion: portionOfPortfolioMarketValue,
-                            quantity: totalQuantity,
-                            breakEvenPrice: breakEvenPrice ?? undefined,
-                            marketPrice: priceData.regularMarketPrice,
-                            timeOfPrice: priceData.regularMarketTime,
-                            marketState: priceData.marketState,
-                            marketValue,
-                            unrealizedPnl: {
-                              amount: unrealizedPnl.amount,
-                              percent: unrealizedPnl.percent,
-                            },
-                            comprisingPositions: {
-                              iter: [
-                                () =>
-                                  pipe(
-                                    createLotDataIter({ symbol }),
-                                    itMap(({ lots }) => lots)
-                                  ),
-                                [symbol],
-                              ],
-                            },
-                          })
-                        )}
+                  {next =>
+                    (next.error || next.value?.errors) && (
+                      <HoldingDataErrorPanel
+                        errors={next.error ? [next.error] : next.value?.errors}
                       />
-                    </>
-                  )}
+                    )
+                  }
                 </Iterate>
+
+                <PositionsTable
+                  className="positions-table"
+                  loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
+                  holdings={mapIterate(holdingStatsOrEmptyIter, next =>
+                    next.holdingStats.map(
+                      ({
+                        symbol,
+                        totalQuantity,
+                        portionOfPortfolioMarketValue,
+                        breakEvenPrice,
+                        marketValue,
+                        priceData,
+                        unrealizedPnl,
+                      }) => ({
+                        symbol,
+                        currency: priceData.currency ?? undefined,
+                        portfolioValuePortion: portionOfPortfolioMarketValue,
+                        quantity: totalQuantity,
+                        breakEvenPrice: breakEvenPrice ?? undefined,
+                        marketPrice: priceData.regularMarketPrice,
+                        timeOfPrice: priceData.regularMarketTime,
+                        marketState: priceData.marketState,
+                        marketValue,
+                        unrealizedPnl: {
+                          amount: unrealizedPnl.amount,
+                          percent: unrealizedPnl.percent,
+                        },
+                        comprisingPositions: {
+                          iter: [
+                            () =>
+                              pipe(
+                                createLotDataIter({ symbol }),
+                                itMap(({ lots }) => lots)
+                              ),
+                            [symbol],
+                          ],
+                        },
+                      })
+                    )
+                  )}
+                />
               </>
             );
           }}

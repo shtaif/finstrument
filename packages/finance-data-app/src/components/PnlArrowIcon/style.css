@@ -1,0 +1,17 @@
+.cmp-pnl-arrow-icon {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-inline-end: 0.3125rem;
+
+  .svg-elem {
+    &.is-positive {
+      fill: #35cb8e;
+    }
+
+    &:not(.is-positive) {
+      transform: rotate(180deg);
+      fill: #e62333;
+    }
+  }
+}

@@ -5,9 +5,9 @@ import { commonDecimalNumCurrencyFormat } from '../../utils/commonDecimalNumCurr
 import { LivePriceDisplay } from '../../../LivePriceDisplay';
 import './style.css';
 
-export { RevenueDisplay };
+export { UnrealizedPnlDisplay };
 
-function RevenueDisplay(props: {
+function UnrealizedPnlDisplay(props: {
   className?: string;
   style?: React.CSSProperties;
   unrealizedPnlPercent?: number;

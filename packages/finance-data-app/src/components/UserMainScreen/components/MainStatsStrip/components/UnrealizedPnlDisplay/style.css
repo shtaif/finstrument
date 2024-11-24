@@ -1,0 +1,16 @@
+.cmp-unrealized-pnl-display {
+  display: inline-block;
+
+  .pnl-amount-display {
+    font-size: 1.25rem;
+  }
+
+  .pnl-percentage-value {
+    &.has-profit {
+      color: #35cb8e;
+    }
+    &.has-loss {
+      color: #e62333;
+    }
+  }
+}
