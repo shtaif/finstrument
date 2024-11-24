@@ -1,22 +1,27 @@
 import { useEffect, useState } from 'react';
 import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue.js';
+import { useLatest } from '../utils/hooks/useLatest.js';
+import { isAsyncIter } from '../utils/isAsyncIter.js';
+import { reactAsyncIterSpecialInfoSymbol } from '../mapIterate/index.js';
 
-export { useAsyncIterable, type UseAsyncIterableNext };
+export { useAsyncIterable, type IterationResult };
 
 // TODO: The initial value can be given as a function, which the internal `useState` would invoke as it's defined to do. So the typings should take into account it possibly being a function and if that's the case then to extract its return type instead of using the function type itself
 
 function useAsyncIterable<TValue>(
   asyncIterOrValue: AsyncIterable<TValue>,
   preIterationInitialValue?: undefined
-): UseAsyncIterableNext<TValue, undefined>;
+): IterationResult<TValue, undefined>;
+
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
-): UseAsyncIterableNext<TValue, TInitValue>;
+): IterationResult<TValue, TInitValue>;
+
 function useAsyncIterable<TValue, TInitValue = undefined>(
   asyncIterOrValue: TValue,
   preIterationInitialValue: TInitValue
-): UseAsyncIterableNext<TValue, TInitValue> {
+): IterationResult<TValue, TInitValue> {
   const [currValue, setCurrValue] = useState<ExtractAsyncIterableValue<TValue> | TInitValue>(
     preIterationInitialValue
   ); // Whenever we're pending first iteration, it's always possible we still have an actual value set here from something we consumed previously - therefore the type is either `TValue` or `TInitValue`
@@ -51,13 +56,22 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   //   error: undefined,
   // }));
 
+  const latestSourceMapFn = useLatest(
+    (asyncIterOrValue as any)?.[reactAsyncIterSpecialInfoSymbol]?.mapFn ?? identity
+  );
+
+  const sourceRefForResubscription =
+    (asyncIterOrValue as any)?.[reactAsyncIterSpecialInfoSymbol]?.dependentSourceIter ??
+    asyncIterOrValue;
+
   useEffect(() => {
-    if (!isAsyncIterable(asyncIterOrValue)) {
+    if (!isAsyncIter(asyncIterOrValue)) {
       return;
     }
 
-    const iterator = asyncIterOrValue[Symbol.asyncIterator]();
-    let iteratorClosedBeforeDone = false;
+    const iterator = sourceRefForResubscription[Symbol.asyncIterator]();
+    let iteratorClosedAbruptly = false;
+    let iterationIdx = 0;
 
     setIsPendingFirstIteration(true);
     setIsDone(false);
@@ -66,17 +80,17 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
     (async () => {
       try {
         for await (const value of { [Symbol.asyncIterator]: () => iterator }) {
-          if (!iteratorClosedBeforeDone) {
-            setCurrValue(value);
+          if (!iteratorClosedAbruptly) {
+            setCurrValue(latestSourceMapFn.current(value, iterationIdx++));
             setIsPendingFirstIteration(false);
           }
         }
       } catch (err) {
-        if (!iteratorClosedBeforeDone) {
+        if (!iteratorClosedAbruptly) {
           setError(undefined);
         }
       } finally {
-        if (!iteratorClosedBeforeDone) {
+        if (!iteratorClosedAbruptly) {
           setIsPendingFirstIteration(false);
           setIsDone(true);
         }
@@ -84,13 +98,13 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
     })();
 
     return () => {
+      iteratorClosedAbruptly = true;
       iterator.return?.();
-      iteratorClosedBeforeDone = true;
     };
-  }, [asyncIterOrValue]);
+  }, [sourceRefForResubscription]);
 
   return {
-    value: !isAsyncIterable(asyncIterOrValue)
+    value: !isAsyncIter(asyncIterOrValue)
       ? (asyncIterOrValue as ExtractAsyncIterableValue<TValue>)
       : currValue,
 
@@ -115,8 +129,8 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   };
 }
 
-type UseAsyncIterableNext<TValue, TInitValue = undefined> = {
-  /** The last most recently received value */
+type IterationResult<TValue, TInitValue = undefined> = {
+  /** The most recent value received */
   value: ExtractAsyncIterableValue<TValue> | TInitValue;
 } & (
   | {
@@ -138,8 +152,8 @@ type UseAsyncIterableNext<TValue, TInitValue = undefined> = {
     ))
 );
 
-function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIterableValue<T>> {
-  return typeof (input as any)?.[Symbol.asyncIterator] === 'function';
+function identity<T>(input: T): T {
+  return input;
 }
 
 // ##################################################################################################################################
@@ -151,11 +165,11 @@ function isAsyncIterable<T>(input: T): input is T & AsyncIterable<ExtractAsyncIt
 //   yield* [1, 2, 3];
 // })();
 
-// if (isAsyncIterable(input)) {
+// if (isAsyncIter(input)) {
 //   input;
 // }
 
-// const value: UseAsyncIterableNext<'a', null> = ['a', false, true, 'asdfasdfas'];
+// const value: IterationResult<'a', null> = ['a', false, true, 'asdfasdfas'];
 
 // type ___1 = ExtractAsyncIterableValue<AsyncIterable<'a' | 'b'>>;
 // type ___2 = ExtractAsyncIterableValue<Promise<'a' | 'b'>>;

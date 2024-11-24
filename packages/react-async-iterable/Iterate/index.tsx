@@ -1,5 +1,5 @@
-import { ReactElement, ReactNode } from 'react';
-import { useAsyncIterable, type UseAsyncIterableNext } from '../useAsyncIterable/index.js';
+import { type ReactNode } from 'react';
+import { useAsyncIterable, type IterationResult } from '../useAsyncIterable/index.js';
 import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue.js';
 
 export { Iterate, type IterateProps };
@@ -8,34 +8,34 @@ export { Iterate, type IterateProps };
 
 // function Iterate<TValue, TInitialValue>(props: {
 //   children: (
-//     ...args: UseAsyncIterableNext<ExtractAsyncIterableValue<TValue>, TInitialValue>
+//     ...args: IterationResult<ExtractAsyncIterableValue<TValue>, TInitialValue>
 //   ) => ReactNode;
 //   value: TValue;
 //   initialValue?: TInitialValue;
-// }): ReactElement;
+// }): ReactNode;
 // function Iterate<TValue, TInitialValue>(props: {
 //   children: TValue;
 //   value?: undefined;
 //   initialValue?: TInitialValue;
-// }): ReactElement;
+// }): ReactNode;
 // function Iterate<TValue, TInitialValue>(props: {
 //   children?: undefined;
 //   value: TValue;
 //   initialValue?: TInitialValue;
-// }): ReactElement;
+// }): ReactNode;
 function Iterate<
   TValue,
   TInitialValue extends ExtractAsyncIterableValue<TValue> | undefined = undefined,
 >(
   props: { initialValue?: TInitialValue } & (
     | {
-        children?: (nextIteration: UseAsyncIterableNext<TValue, TInitialValue>) => ReactNode;
+        children?: (nextIteration: IterationResult<TValue, TInitialValue>) => ReactNode;
         value: TValue;
       }
     | { children: TValue; value?: undefined }
     | { children?: undefined; value: TValue }
   )
-): ReactElement {
+): ReactNode {
   const { value, children, initialValue } = props;
 
   const isChildrenGivenAsFunction = typeof children === 'function';
@@ -57,5 +57,5 @@ function Iterate<
 type IterateProps<TValue, TInitialValue> = {
   value: TValue;
   initialValue?: TInitialValue;
-  children?: (nextIterationState: UseAsyncIterableNext<TValue, TInitialValue>) => ReactNode;
+  children?: (nextIterationState: IterationResult<TValue, TInitialValue>) => ReactNode;
 };
