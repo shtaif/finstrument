@@ -1,13 +1,13 @@
 import React, { memo, type ReactElement } from 'react';
 import { range } from 'lodash-es';
-import { Table, Skeleton } from 'antd';
+import { Table, Skeleton, Typography } from 'antd';
 import { type MaybeAsyncIterable } from 'iterable-operators';
 import { Iterate } from 'react-async-iterable';
 import { commonDecimalNumCurrencyFormat } from './utils/commonDecimalNumCurrencyFormat';
 import { SymbolNameTag } from './components/SymbolNameTag';
-import { QuantityDisplay } from './components/QuantityDisplay';
+import { PositionSizeDisplay } from './components/PositionSizeDisplay/index.tsx';
 import { CurrentPriceDisplay } from './components/CurrentPriceDisplay';
-import { RevenueDisplay } from './components/RevenueDisplay';
+import { UnrealizedPnlDisplay } from './components/UnrealizedPnlDisplay';
 import {
   HoldingExpandedPositions,
   type ExpandedPosition,
@@ -35,98 +35,130 @@ function PositionsTable(props: {
 
   return (
     <Iterate value={holdings}>
-      {({ pendingFirst: pendingFirstHoldings, value: nextHoldings }) => (
-        <Table
-          className={`cmp-positions-table ${className}`}
-          style={style}
-          size="small"
-          rowKey={h => h.symbol}
-          pagination={false}
-          dataSource={
-            ((loading || pendingFirstHoldings) && !nextHoldings?.length
-              ? range(loadingStatePlaceholderRowsCount).map((_, i) => ({ symbol: `${i}` }))
-              : nextHoldings) as typeof nextHoldings
-          }
-          expandable={{
-            rowExpandable: () => true,
-            expandedRowClassName: () => 'expandable-positions-container',
-            expandedRowRender: ({ comprisingPositions }, _idx, _indent, expanded) =>
-              expanded &&
-              comprisingPositions && <HoldingExpandedPositions positions={comprisingPositions} />,
-          }}
-        >
-          <Column<HoldingRecord>
-            title={<>Symbol</>}
-            className="symbol-cell"
-            render={(_, pos) =>
-              loading ? <CellSkeleton /> : <SymbolNameTag symbol={pos.symbol} />
-            }
-          />
+      {({ pendingFirst: pendingFirstHoldings, value: nextHoldings }) => {
+        const isLoadingFirstData = pendingFirstHoldings && !nextHoldings?.length;
 
-          <Column<HoldingRecord>
-            title={<>Current Price</>}
-            className="current-price-cell"
-            render={(_, { marketPrice, currency, marketState, timeOfPrice }) =>
-              loading ? (
-                <CellSkeleton />
-              ) : (
-                <CurrentPriceDisplay
-                  marketPrice={marketPrice}
-                  currency={currency}
-                  marketState={marketState}
-                  timeOfPrice={timeOfPrice}
-                />
-              )
+        return (
+          <Table
+            className={`cmp-positions-table ${className}`}
+            style={style}
+            size="small"
+            rowKey={h => h.symbol}
+            pagination={false}
+            dataSource={
+              (isLoadingFirstData || loading
+                ? range(loadingStatePlaceholderRowsCount).map((_, i) => ({ symbol: `${i}` }))
+                : nextHoldings) as HoldingRecord[]
             }
-          />
+            expandable={{
+              rowExpandable: () => true,
+              expandedRowClassName: () => 'expandable-positions-container',
+              expandedRowRender: ({ comprisingPositions }, _idx, _indent, expanded) =>
+                expanded &&
+                comprisingPositions && <HoldingExpandedPositions positions={comprisingPositions} />,
+            }}
+          >
+            <Column<HoldingRecord>
+              title={<>Symbol</>}
+              className="symbol-cell"
+              render={(_, pos) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : (
+                  <SymbolNameTag symbol={pos.symbol} />
+                )
+              }
+            />
 
-          <Column<HoldingRecord>
-            title={<>Break Even Price</>}
-            className="break-even-price-cell"
-            render={(_, pos) =>
-              loading ? (
-                <CellSkeleton />
-              ) : pos.breakEvenPrice === undefined ? (
-                '-'
-              ) : (
-                <>{commonDecimalNumCurrencyFormat(pos.breakEvenPrice, pos.currency)}</>
-              )
-            }
-          />
+            <Column<HoldingRecord>
+              title={<>Current Price</>}
+              className="current-price-cell"
+              render={(_, { marketPrice, currency, marketState, timeOfPrice }) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : (
+                  <CurrentPriceDisplay
+                    marketPrice={marketPrice}
+                    currency={currency}
+                    marketState={marketState}
+                    timeOfPrice={timeOfPrice}
+                  />
+                )
+              }
+            />
 
-          <Column<HoldingRecord>
-            title={<>Quantity of Shares</>}
-            className="quantity-cell"
-            render={(_, { quantity, marketValue, currency }) =>
-              loading ? (
-                <CellSkeleton />
-              ) : (
-                <QuantityDisplay
-                  quantity={quantity}
-                  marketValue={marketValue}
-                  currency={currency}
-                />
-              )
-            }
-          />
+            <Column<HoldingRecord>
+              title={<>Break-even Price</>}
+              className="break-even-price-cell"
+              render={(_, pos) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : pos.breakEvenPrice === undefined ? (
+                  '-'
+                ) : (
+                  <>{commonDecimalNumCurrencyFormat(pos.breakEvenPrice, pos.currency)}</>
+                )
+              }
+            />
 
-          <Column<HoldingRecord>
-            title={<>Revenue</>}
-            className="unrealized-pnl-percent-cell"
-            render={(_, pos) =>
-              loading ? (
-                <CellSkeleton />
-              ) : (
-                <RevenueDisplay
-                  unrealizedPnlPercent={pos.unrealizedPnl?.percent}
-                  unrealizedPnlAmount={pos.unrealizedPnl?.amount}
-                  currency={pos.currency}
-                />
-              )
-            }
-          />
-        </Table>
-      )}
+            <Column<HoldingRecord>
+              title={<>Position</>}
+              className="quantity-cell"
+              render={(_, { quantity, marketValue, currency, portfolioValuePortion }) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : (
+                  <PositionSizeDisplay
+                    quantity={quantity}
+                    marketValue={marketValue}
+                    currency={currency}
+                  />
+                )
+              }
+            />
+
+            <Column<HoldingRecord>
+              title={<>Unrealized P&L</>}
+              className="unrealized-pnl-percent-cell"
+              render={(_, pos) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : (
+                  <UnrealizedPnlDisplay
+                    unrealizedPnlPercent={pos.unrealizedPnl?.percent}
+                    unrealizedPnlAmount={pos.unrealizedPnl?.amount}
+                    currency={pos.currency}
+                  />
+                )
+              }
+            />
+
+            <Column<HoldingRecord>
+              title={<>Portfolio portion</>}
+              className="unrealized-pnl-percent-cell"
+              render={(_, pos) =>
+                isLoadingFirstData || loading ? (
+                  <CellSkeleton />
+                ) : (
+                  <Typography.Text
+                    className="___"
+                    style={{
+                      fontSize: '0.95rem',
+                    }}
+                  >
+                    {pos.portfolioValuePortion &&
+                      pos.portfolioValuePortion.toLocaleString(undefined, {
+                        style: 'percent',
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}
+                  </Typography.Text>
+                )
+              }
+            />
+          </Table>
+        );
+      }}
     </Iterate>
   );
 }
@@ -136,6 +168,7 @@ const { Column } = Table;
 type HoldingRecord = {
   symbol: string;
   currency?: string;
+  portfolioValuePortion?: number;
   quantity?: number;
   breakEvenPrice?: number;
   marketValue?: number;

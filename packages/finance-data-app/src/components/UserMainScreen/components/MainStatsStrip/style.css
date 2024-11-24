@@ -33,21 +33,4 @@
       }
     }
   }
-
-  .part.unrealized-pnl-part {
-    .unrealized-pnl-content-line {
-      .pnl-amount-display {
-        font-size: 1.25rem;
-      }
-
-      .pnl-percentage-value {
-        &.has-profit {
-          color: #0eb35b;
-        }
-        &.has-loss {
-          color: #e62333;
-        }
-      }
-    }
-  }
 }

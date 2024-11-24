@@ -2,6 +2,7 @@ import React from 'react';
 import { Divider, Skeleton, Typography } from 'antd';
 import { Iterate } from 'react-async-iterable';
 import { type MaybeAsyncIterable } from 'iterable-operators';
+import { UnrealizedPnlDisplay } from './components/UnrealizedPnlDisplay/index.tsx';
 import './style.css';
 
 export { MainStatsStrip };
@@ -10,14 +11,17 @@ function MainStatsStrip(props: {
   className?: string;
   style?: React.CSSProperties;
   loading?: boolean;
-  data?: MaybeAsyncIterable<{
-    currencyShownIn: string;
-    marketValue?: number;
-    unrealizedPnl?: {
-      amount: number;
-      fraction: number;
-    };
-  }>;
+  data?: MaybeAsyncIterable<
+    | undefined
+    | {
+        currencyShownIn: string;
+        marketValue?: number;
+        unrealizedPnl?: {
+          amount: number;
+          fraction: number;
+        };
+      }
+  >;
 }) {
   return (
     <div className={`cmp-main-stats-strip ${props.className ?? ''}`} style={props.style}>
@@ -35,10 +39,10 @@ function MainStatsStrip(props: {
                 </>
               ) : (
                 <Typography.Text className="mkt-value-amount-display">
-                  {next.value?.marketValue === undefined ? (
+                  {next.value?.marketValue === undefined || !next.value?.currencyShownIn ? (
                     <>-</>
                   ) : (
-                    next.value.marketValue.toLocaleString(locale, {
+                    next.value.marketValue.toLocaleString(undefined, {
                       style: 'currency',
                       currency: next.value.currencyShownIn,
                       minimumFractionDigits: 1,
@@ -67,40 +71,11 @@ function MainStatsStrip(props: {
                   <Skeleton active title={false} paragraph={{ rows: 1, width: '100%' }} />
                 </>
               ) : (
-                <>
-                  <Typography.Text className="pnl-amount-display">
-                    {!next.value?.unrealizedPnl ? (
-                      <>-</>
-                    ) : (
-                      <>
-                        <NumSign num={next.value.unrealizedPnl.amount} />
-                        {next.value.unrealizedPnl.amount.toLocaleString(locale, {
-                          style: 'currency',
-                          currency: next.value.currencyShownIn,
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 2,
-                        })}
-                      </>
-                    )}
-                  </Typography.Text>{' '}
-                  <Typography.Text type="secondary">/</Typography.Text>{' '}
-                  {!next.value?.unrealizedPnl ? (
-                    <Typography.Text>-</Typography.Text>
-                  ) : (
-                    <>
-                      <Typography.Text
-                        className={`pnl-percentage-value ${next.value.unrealizedPnl.amount > 0 ? 'has-profit' : next.value.unrealizedPnl.amount < 0 ? 'has-loss' : ''}`}
-                      >
-                        <NumSign num={next.value.unrealizedPnl.fraction} />
-                        {next.value.unrealizedPnl.fraction.toLocaleString(locale, {
-                          style: 'percent',
-                          minimumFractionDigits: 1,
-                          maximumFractionDigits: 2,
-                        })}
-                      </Typography.Text>
-                    </>
-                  )}
-                </>
+                <UnrealizedPnlDisplay
+                  unrealizedPnlAmount={next.value?.unrealizedPnl?.amount}
+                  unrealizedPnlFraction={next.value?.unrealizedPnl?.fraction}
+                  currency={next.value?.currencyShownIn}
+                />
               )
             }
           </Iterate>
@@ -109,12 +84,3 @@ function MainStatsStrip(props: {
     </div>
   );
 }
-
-function NumSign(props: { num?: number }): React.ReactNode {
-  if (props.num === undefined) {
-    return;
-  }
-  return props.num >= 0 ? '+' : '-';
-}
-
-const locale = undefined;

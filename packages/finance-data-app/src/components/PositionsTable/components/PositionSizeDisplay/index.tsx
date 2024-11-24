@@ -3,9 +3,9 @@ import { Typography } from 'antd';
 import { commonDecimalNumCurrencyFormat } from '../../utils/commonDecimalNumCurrencyFormat';
 import './style.css';
 
-export { QuantityDisplay };
+export { PositionSizeDisplay };
 
-const QuantityDisplay = memo(
+const PositionSizeDisplay = memo(
   (props: { quantity?: number; marketValue?: number; currency?: string }): ReactElement => {
     const { quantity, marketValue, currency } = props;
 
