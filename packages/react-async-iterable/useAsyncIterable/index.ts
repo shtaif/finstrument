@@ -1,130 +1,122 @@
-import { useEffect, useState } from 'react';
+import { useRef, useMemo, useEffect } from 'react';
 import { type ExtractAsyncIterableValue } from '../common/ExtractAsyncIterableValue.js';
 import { useLatest } from '../utils/hooks/useLatest.js';
 import { isAsyncIter } from '../utils/isAsyncIter.js';
-import { reactAsyncIterSpecialInfoSymbol } from '../mapIterate/index.js';
+import { useSimpleUpdater } from '../utils/hooks/useSimpleUpdater.js';
+import {
+  reactAsyncIterSpecialInfoSymbol,
+  ReactAsyncIterSpecialInfo,
+} from '../common/reactAsyncIterSpecialInfoSymbol.js';
 
 export { useAsyncIterable, type IterationResult };
 
 // TODO: The initial value can be given as a function, which the internal `useState` would invoke as it's defined to do. So the typings should take into account it possibly being a function and if that's the case then to extract its return type instead of using the function type itself
 
 function useAsyncIterable<TValue>(
-  asyncIterOrValue: AsyncIterable<TValue>,
+  input: AsyncIterable<TValue>,
   preIterationInitialValue?: undefined
 ): IterationResult<TValue, undefined>;
+
 function useAsyncIterable<TValue, TInitValue = undefined>(
-  asyncIterOrValue: TValue,
+  input: TValue,
   preIterationInitialValue: TInitValue
 ): IterationResult<TValue, TInitValue>;
+
 function useAsyncIterable<TValue, TInitValue = undefined>(
-  asyncIterOrValue: TValue,
+  input: TValue,
   preIterationInitialValue: TInitValue
 ): IterationResult<TValue, TInitValue> {
-  const [currValue, setCurrValue] = useState<ExtractAsyncIterableValue<TValue> | TInitValue>(
-    preIterationInitialValue
-  ); // Whenever we're pending first iteration, it's always possible we still have an actual value set here from something we consumed previously - therefore the type is either `TValue` or `TInitValue`
-  const [isPendingFirstIteration, setIsPendingFirstIteration] = useState(false);
-  const [isDone, setIsDone] = useState(false);
-  const [error, setError] = useState<unknown>(undefined);
+  const rerender = useSimpleUpdater();
 
-  // const [currState, setCurrState] = useState<
-  //   | {
-  //       lastRecentValue: TValue | TInitValue; // Whenever we're pending first iteration, it's always possible we still have an actual value set here from something we consumed previously - therefore the type is either `TValue` or `TInitValue`
-  //       isPendingFirstIteration: true;
-  //       isDone: false;
-  //       error: undefined;
-  //     }
-  //   | ({
-  //       lastRecentValue: TValue | TInitValue;
-  //       isPendingFirstIteration: false;
-  //     } & (
-  //       | {
-  //           isDone: false;
-  //           error: undefined;
-  //         }
-  //       | {
-  //           isDone: true;
-  //           error: unknown;
-  //         }
-  //     ))
-  // >(() => ({
-  //   lastRecentValue: preIterationInitialValue,
-  //   isPendingFirstIteration: true,
-  //   isDone: false,
-  //   error: undefined,
-  // }));
+  const stateRef = useRef<IterationResult<TValue, TInitValue>>({
+    value: preIterationInitialValue,
+    pendingFirst: true,
+    done: false,
+    error: undefined,
+  });
 
-  const latestSourceMapFn = useLatest(
-    (asyncIterOrValue as any)?.[reactAsyncIterSpecialInfoSymbol]?.mapFn ?? identity
+  const latestInputRef = useLatest(
+    input as typeof input & {
+      [reactAsyncIterSpecialInfoSymbol]?: ReactAsyncIterSpecialInfo<
+        unknown,
+        ExtractAsyncIterableValue<TValue>
+      >;
+    }
   );
 
-  const sourceRefForResubscription =
-    (asyncIterOrValue as any)?.[reactAsyncIterSpecialInfoSymbol]?.dependentSourceIter ??
-    asyncIterOrValue;
+  if (!isAsyncIter(latestInputRef.current)) {
+    useEffect(() => {}, []);
 
-  useEffect(() => {
-    if (!isAsyncIter(asyncIterOrValue)) {
-      return;
-    }
+    return (stateRef.current = {
+      value: latestInputRef.current as ExtractAsyncIterableValue<TValue>,
+      pendingFirst: false,
+      done: false,
+      error: undefined,
+    });
+  } else {
+    const iterObjToUse =
+      latestInputRef.current[reactAsyncIterSpecialInfoSymbol]?.origPreformattedSource ??
+      latestInputRef.current;
 
-    const iterator = sourceRefForResubscription[Symbol.asyncIterator]();
-    let iteratorClosedAbruptly = false;
-    let iterationIdx = 0;
+    useMemo(() => {
+      stateRef.current = {
+        value: stateRef.current.value,
+        pendingFirst: true,
+        done: false,
+        error: undefined,
+      };
+    }, [iterObjToUse]);
 
-    setIsPendingFirstIteration(true);
-    setIsDone(false);
-    setError(undefined);
+    useEffect(() => {
+      const iterator = (iterObjToUse as AsyncIterable<ExtractAsyncIterableValue<TValue>>)[
+        Symbol.asyncIterator
+      ]();
+      let iteratorClosedAbruptly = false;
 
-    (async () => {
-      try {
-        for await (const value of { [Symbol.asyncIterator]: () => iterator }) {
-          if (!iteratorClosedAbruptly) {
-            setCurrValue(latestSourceMapFn.current(value, iterationIdx++));
-            setIsPendingFirstIteration(false);
-          }
-        }
-      } catch (err) {
-        if (!iteratorClosedAbruptly) {
-          setError(undefined);
-        }
-      } finally {
-        if (!iteratorClosedAbruptly) {
-          setIsPendingFirstIteration(false);
-          setIsDone(true);
-        }
-      }
-    })();
-
-    return () => {
-      iteratorClosedAbruptly = true;
-      iterator.return?.();
-    };
-  }, [sourceRefForResubscription]);
-
-  return {
-    value: !isAsyncIter(asyncIterOrValue)
-      ? (asyncIterOrValue as ExtractAsyncIterableValue<TValue>)
-      : currValue,
-
-    ...(isPendingFirstIteration
-      ? {
-          pendingFirst: true,
-          done: false,
-          error: undefined,
-        }
-      : {
-          pendingFirst: false,
-          ...(!isDone
-            ? {
+      (async () => {
+        let iterationIdx = 0;
+        try {
+          for await (const value of { [Symbol.asyncIterator]: () => iterator }) {
+            if (!iteratorClosedAbruptly) {
+              const formatFn =
+                latestInputRef.current[reactAsyncIterSpecialInfoSymbol]?.formatFn ?? identity;
+              stateRef.current = {
+                value: formatFn(value, iterationIdx++),
+                pendingFirst: false,
                 done: false,
                 error: undefined,
-              }
-            : {
-                done: true,
-                error,
-              }),
-        }),
-  };
+              };
+              rerender();
+            }
+          }
+          stateRef.current = {
+            value: stateRef.current.value,
+            pendingFirst: false,
+            done: true,
+            error: undefined,
+          };
+          rerender();
+        } catch (err) {
+          if (!iteratorClosedAbruptly) {
+            stateRef.current = {
+              value: stateRef.current.value,
+              pendingFirst: false,
+              done: true,
+              error: err,
+            };
+            rerender();
+          }
+        }
+      })();
+
+      return () => {
+        iteratorClosedAbruptly = true;
+        iterator.return?.();
+      };
+    }, [iterObjToUse]);
+
+    return stateRef.current;
+  }
 }
 
 function identity<T>(input: T): T {
