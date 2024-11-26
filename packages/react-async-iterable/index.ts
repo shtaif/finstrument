@@ -1,5 +1,5 @@
 import { useAsyncIterable, type IterationResult } from './useAsyncIterable/index.js';
-import { mapIterate, type FixedRefTransformedIterable } from './mapIterate/index.js';
+import { iterateFormatted, type FixedRefFormattedIterable } from './iterateFormatted/index.js';
 import { Iterate, type IterateProps } from './Iterate/index.jsx';
 
 export {
@@ -7,6 +7,6 @@ export {
   type IterationResult,
   Iterate,
   type IterateProps,
-  mapIterate,
-  type FixedRefTransformedIterable,
+  iterateFormatted,
+  type FixedRefFormattedIterable,
 };

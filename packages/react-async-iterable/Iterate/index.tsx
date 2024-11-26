@@ -46,11 +46,9 @@ function Iterate<
   );
 
   return (
-    <>
-      {isChildrenGivenAsFunction
-        ? (children as any)(useAsyncIterableResult)
-        : useAsyncIterableResult.value}
-    </>
+    (isChildrenGivenAsFunction
+      ? (children as any)(useAsyncIterableResult)
+      : useAsyncIterableResult.value) ?? null
   );
 }
 

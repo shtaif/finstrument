@@ -3,7 +3,7 @@ import { useLocalStorage } from 'react-use';
 import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { Iterate, mapIterate } from 'react-async-iterable';
+import { Iterate, iterateFormatted } from 'react-async-iterable';
 import { pipe } from 'shared-utils';
 import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
@@ -95,7 +95,7 @@ function UserMainScreen() {
                 <HoldingStatsRealTimeActivityStatus input={holdingStatsOrEmptyIter} />
 
                 <MainStatsStrip
-                  data={mapIterate(portfolioStatsIterOrEmptyIter, next =>
+                  data={iterateFormatted(portfolioStatsIterOrEmptyIter, next =>
                     !next?.stats
                       ? undefined
                       : {
@@ -122,7 +122,7 @@ function UserMainScreen() {
                 <PositionsTable
                   className="positions-table"
                   loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-                  holdings={mapIterate(holdingStatsOrEmptyIter, next =>
+                  holdings={iterateFormatted(holdingStatsOrEmptyIter, next =>
                     next.holdingStats.map(
                       ({
                         symbol,
