@@ -41,8 +41,9 @@ function UserMainScreen() {
 
         const holdingStatsWithPortfolioPortions = nextHoldingUpdate.holdingStats.map(update => ({
           ...update,
-          portionOfPortfolioMarketValue:
-            compositionBySymbol[update.symbol].portionOfPortfolioMarketValue,
+          portionOfPortfolioMarketValue: compositionBySymbol[update.symbol]
+            ? compositionBySymbol[update.symbol].portionOfPortfolioMarketValue
+            : undefined,
         }));
 
         const errors =
