@@ -89,13 +89,15 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
               rerender();
             }
           }
-          stateRef.current = {
-            value: stateRef.current.value,
-            pendingFirst: false,
-            done: true,
-            error: undefined,
-          };
-          rerender();
+          if (!iteratorClosedAbruptly) {
+            stateRef.current = {
+              value: stateRef.current.value,
+              pendingFirst: false,
+              done: true,
+              error: undefined,
+            };
+            rerender();
+          }
         } catch (err) {
           if (!iteratorClosedAbruptly) {
             stateRef.current = {
