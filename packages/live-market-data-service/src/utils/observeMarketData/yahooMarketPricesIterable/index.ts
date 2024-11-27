@@ -1,4 +1,4 @@
-import { pickBy, isEmpty, partition, pick } from 'lodash-es';
+import { pickBy, isEmpty, partition, pick, mapValues } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';
 import yahooFinance from 'yahoo-finance2';
@@ -13,7 +13,7 @@ import {
   itThrottle,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
-import { objectFromEntriesTyped, parseSymbol, pipe } from 'shared-utils';
+import { pipe, asyncPipe, objectFromEntriesTyped, parseSymbol } from 'shared-utils';
 import { env } from '../../env.js';
 import {
   getSymbolsCurrentPrices,
@@ -36,7 +36,7 @@ function yahooMarketPricesIterable(params: {
 
   return pipe(
     symbolsIter,
-    itMap(requestedSymbols => requestedSymbols.map(parseSymbol)),
+    itMap(symbols => symbols.map(parseSymbol)),
     symbolsIter =>
       itLazyDefer(() => {
         let abortCtrl = new AbortController();
@@ -44,10 +44,10 @@ function yahooMarketPricesIterable(params: {
 
         return pipe(
           symbolsIter,
-          itSwitchMap(parsedSymbols =>
+          itSwitchMap(askedSymbols =>
             pipe(
               (async function* () {
-                if (parsedSymbols.length === 0) {
+                if (askedSymbols.length === 0) {
                   abortCtrl.abort();
                   abortCtrl = new AbortController();
                   return;
@@ -55,43 +55,46 @@ function yahooMarketPricesIterable(params: {
                 while (true) yield;
               })(),
               itMap(async () => {
-                const [currencyOverriddenSymbols, restSymbols] = partition(
-                  parsedSymbols,
+                const [currencyOverriddenSymbolsAsked, restSymbolsAsked] = partition(
+                  askedSymbols,
                   s => !!s.currencyOverride
                 );
 
-                const [
-                  currencyOverriddenSymbolsExistingInPrev,
-                  currencyOverriddenSymbolsMissingFromPrev,
-                ] = partition(
-                  currencyOverriddenSymbols,
-                  s => !!prevPriceData[s.baseInstrumentSymbol]
+                const baseCurrenciesForAskedOverridenSymbols = await asyncPipe(
+                  currencyOverriddenSymbolsAsked,
+                  $ => $.map(s => s.baseInstrumentSymbol),
+                  async $ => {
+                    const [
+                      overriddenSymbolsPresentInPrevData,
+                      overriddenSymbolsMissingFromPrevData,
+                    ] = partition($, baseSymbol => !!prevPriceData[baseSymbol]);
+
+                    return {
+                      ...pick(prevPriceData, overriddenSymbolsPresentInPrevData),
+                      ...(await getSymbolsCurrentPrices({
+                        signal: abortCtrl.signal,
+                        symbols: overriddenSymbolsMissingFromPrevData,
+                      })),
+                    };
+                  },
+                  $ => mapValues($, mktData => mktData?.currency ?? null)
                 );
 
-                const currencyOverriddenSymbolsPriceData = {
-                  ...pick(
-                    prevPriceData,
-                    currencyOverriddenSymbolsExistingInPrev.map(s => s.baseInstrumentSymbol)
+                const symbolsToFetch = [
+                  ...restSymbolsAsked.map(s => s.baseInstrumentSymbol),
+                  ...currencyOverriddenSymbolsAsked.flatMap(s =>
+                    !baseCurrenciesForAskedOverridenSymbols[s.baseInstrumentSymbol]
+                      ? []
+                      : [
+                          `${s.baseInstrumentSymbol}`,
+                          `${baseCurrenciesForAskedOverridenSymbols[s.baseInstrumentSymbol]}${s.currencyOverride}=X`,
+                        ]
                   ),
-                  ...(await getSymbolsCurrentPrices({
-                    signal: abortCtrl.signal,
-                    symbols: currencyOverriddenSymbolsMissingFromPrev.map(
-                      s => s.baseInstrumentSymbol
-                    ),
-                  })),
-                };
+                ];
 
                 return (prevPriceData = await getSymbolsCurrentPrices({
                   signal: abortCtrl.signal,
-                  symbols: [
-                    ...restSymbols.map(s => s.baseInstrumentSymbol),
-                    ...currencyOverriddenSymbols
-                      .filter(s => !!currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol])
-                      .map(
-                        s =>
-                          `${currencyOverriddenSymbolsPriceData[s.baseInstrumentSymbol]!.currency}${s.currencyOverride}=X`
-                      ),
-                  ],
+                  symbols: symbolsToFetch,
                 }));
               }),
               itCatch(err => {
@@ -102,7 +105,7 @@ function yahooMarketPricesIterable(params: {
               }),
               itMap(priceDatas =>
                 pipe(
-                  parsedSymbols
+                  askedSymbols
                     .filter(s => priceDatas[s.baseInstrumentSymbol] !== undefined)
                     .map(s => {
                       if (!s.currencyOverride) {
