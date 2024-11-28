@@ -1,3 +1,4 @@
+import { range } from 'lodash-es';
 import { afterAll, beforeEach, beforeAll, expect, it } from 'vitest';
 import {
   HoldingStatsChangeModel,
@@ -11,8 +12,7 @@ import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
 
 const mockUserId1 = mockUuidFromNumber(1);
 const mockUserId2 = mockUuidFromNumber(2);
-
-const mockTradeIds = new Array(12).fill(undefined).map((_, i) => mockUuidFromNumber(i));
+const mockTradeIds = range(12).map(mockUuidFromNumber);
 
 beforeAll(async () => {
   await UserModel.bulkCreate([
@@ -25,7 +25,7 @@ beforeAll(async () => {
   ]);
   mockGqlContext(ctx => ({
     ...ctx,
-    getSession: async () => ({ activeUserId: mockUserId1 }),
+    getSession: () => ({ activeUserId: mockUserId1 }),
   }));
 });
 
@@ -91,13 +91,15 @@ it("Retrieves only holdings owned by the active user's own holdings stats", asyn
 
   const resp = await axiosGqlClient({
     data: {
-      query: `{
-        holdingStats {
-          lastRelatedTradeId
-          ownerId
-          symbol
+      query: /* GraphQL */ `
+        {
+          holdingStats {
+            lastRelatedTradeId
+            ownerId
+            symbol
+          }
         }
-      }`,
+      `,
     },
   });
 
@@ -149,24 +151,26 @@ it('Handles empty holdings as intended...', async () => {
 
   const resp = await axiosGqlClient({
     data: {
-      query: `{
-        holdingStats {
-          ownerId
-          symbol
-          lastRelatedTradeId
-          lastChangedAt
-          totalLotCount
-          totalQuantity
-          totalPresentInvestedAmount
-          totalRealizedAmount
-          totalRealizedProfitOrLossAmount
-          totalRealizedProfitOrLossRate
-          breakEvenPrice
-          currentPortfolioPortion
-          # relatedPortfolioStats
-          # unrealizedPnl
+      query: /* GraphQL */ `
+        {
+          holdingStats {
+            ownerId
+            symbol
+            lastRelatedTradeId
+            lastChangedAt
+            totalLotCount
+            totalQuantity
+            totalPresentInvestedAmount
+            totalRealizedAmount
+            totalRealizedProfitOrLossAmount
+            totalRealizedProfitOrLossRate
+            breakEvenPrice
+            currentPortfolioPortion
+            # relatedPortfolioStats
+            # unrealizedPnl
+          }
         }
-      }`,
+      `,
     },
   });
 
@@ -277,32 +281,34 @@ it('Testing the testing capabilities 2', async () => {
   const resp = await axiosGqlClient({
     data: {
       variables: {},
-      query: `{
-        holdingStats {
-          ownerId
-          symbol
-          lastRelatedTradeId
-          lastChangedAt
-          totalLotCount
-          totalQuantity
-          totalPresentInvestedAmount
-          totalRealizedAmount
-          totalRealizedProfitOrLossAmount
-          totalRealizedProfitOrLossRate
-          # currentPortfolioPortion
-          breakEvenPrice
-          # relatedPortfolioStats
-          instrument {
+      query: /* GraphQL */ `
+        {
+          holdingStats {
+            ownerId
             symbol
-            name
-            currency
-            # marketState
-            # regularMarketTime
-            # regularMarketPrice
+            lastRelatedTradeId
+            lastChangedAt
+            totalLotCount
+            totalQuantity
+            totalPresentInvestedAmount
+            totalRealizedAmount
+            totalRealizedProfitOrLossAmount
+            totalRealizedProfitOrLossRate
+            # currentPortfolioPortion
+            breakEvenPrice
+            # relatedPortfolioStats
+            instrument {
+              symbol
+              name
+              currency
+              # marketState
+              # regularMarketTime
+              # regularMarketPrice
+            }
+            # unrealizedPnl
           }
-          # unrealizedPnl
         }
-      }`,
+      `,
     },
   });
 

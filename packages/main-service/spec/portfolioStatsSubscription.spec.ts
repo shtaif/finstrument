@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
+import { range } from 'lodash-es';
 import { asyncPipe, pipe } from 'shared-utils';
 import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
@@ -12,10 +13,10 @@ import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
 import { publishUserHoldingChangedRedisEvent } from './utils/publishUserHoldingChangedRedisEvent.js';
 import { mockMarketDataControl } from './utils/mockMarketDataService.js';
-import { gqlWsClient } from './utils/gqlWsClient.js';
+import { gqlWsClient, gqlWsClientIterateDisposable } from './utils/gqlWsClient.js';
 
 const [mockUserId1, mockUserId2] = [mockUuidFromNumber(1), mockUuidFromNumber(2)];
-const mockTradeIds = new Array(12).fill(undefined).map((_, i) => mockUuidFromNumber(i));
+const mockTradeIds = range(12).map(mockUuidFromNumber);
 
 const reusableTradeDatas = [
   {
@@ -163,7 +164,7 @@ describe('Subscription.portfolioStats', () => {
 
     const firstItem = await pipe(
       gqlWsClient.iterate({
-        query: `
+        query: /* GraphQL */ `
           subscription {
             portfolioStats {
               data {
@@ -177,7 +178,8 @@ describe('Subscription.portfolioStats', () => {
                 totalRealizedProfitOrLossRate
               }
             }
-          }`,
+          }
+        `,
       }),
       itTakeFirst()
     );
@@ -234,8 +236,8 @@ describe('Subscription.portfolioStats', () => {
       },
     ]);
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
         subscription {
           portfolioStats {
             data {
@@ -244,38 +246,35 @@ describe('Subscription.portfolioStats', () => {
               lastChangedAt
             }
           }
-        }`,
+        }
+      `,
     });
 
     const emissions: any[] = [];
 
-    try {
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'AAPL' }]);
-      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'AAPL' }]);
-      await PortfolioStatsChangeModel.bulkCreate([
-        {
-          relatedTradeId: reusableTradeDatas[2].id,
-          ownerId: mockUserId1,
-          forCurrency: 'USD',
-          changedAt: reusableTradeDatas[2].performedAt,
-          totalPresentInvestedAmount: 200,
-          totalRealizedAmount: 200,
-          totalRealizedProfitOrLossAmount: 40,
-          totalRealizedProfitOrLossRate: 0.25,
-        },
-      ]);
-      await publishUserHoldingChangedRedisEvent({
+    await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'AAPL' }]);
+    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'AAPL' }]);
+    await PortfolioStatsChangeModel.bulkCreate([
+      {
+        relatedTradeId: reusableTradeDatas[2].id,
         ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'USD' }] },
-        holdingStats: { set: ['AAPL'] },
-      });
+        forCurrency: 'USD',
+        changedAt: reusableTradeDatas[2].performedAt,
+        totalPresentInvestedAmount: 200,
+        totalRealizedAmount: 200,
+        totalRealizedProfitOrLossAmount: 40,
+        totalRealizedProfitOrLossRate: 0.25,
+      },
+    ]);
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'USD' }] },
+      holdingStats: { set: ['AAPL'] },
+    });
 
-      emissions.push((await subscription.next()).value);
-    } finally {
-      await subscription.return!();
-    }
+    emissions.push((await subscription.next()).value);
 
     expect(emissions).toStrictEqual([
       {
@@ -346,8 +345,8 @@ describe('Subscription.portfolioStats', () => {
       },
     ]);
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
         subscription {
           portfolioStats {
             data {
@@ -356,70 +355,67 @@ describe('Subscription.portfolioStats', () => {
               forCurrency
             }
           }
-        }`,
+        }
+      `,
     });
 
     const emissions: any[] = [];
 
-    try {
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      await (async () => {
-        await TradeRecordModel.bulkCreate([
-          { ...reusableTradeDatas[2], symbol: 'VUAG', ownerId: mockUserId2 },
-        ]);
-        await HoldingStatsChangeModel.bulkCreate([
-          { ...reusableHoldingStats[2], symbol: 'VUAG', ownerId: mockUserId2 },
-        ]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            relatedTradeId: reusableTradeDatas[2].id,
-            ownerId: mockUserId2,
-            forCurrency: 'GBP',
-            changedAt: reusableTradeDatas[2].performedAt,
-            totalPresentInvestedAmount: 100,
-            totalRealizedAmount: 100,
-            totalRealizedProfitOrLossAmount: 20,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-        ]);
-        await publishUserHoldingChangedRedisEvent({
+    await (async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[2], symbol: 'VUAG', ownerId: mockUserId2 },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        { ...reusableHoldingStats[2], symbol: 'VUAG', ownerId: mockUserId2 },
+      ]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[2].id,
           ownerId: mockUserId2,
-          portfolioStats: { set: [{ forCurrency: 'GBP' }] },
-          holdingStats: { set: ['VUAG'] },
-        });
-      })();
+          forCurrency: 'GBP',
+          changedAt: reusableTradeDatas[2].performedAt,
+          totalPresentInvestedAmount: 100,
+          totalRealizedAmount: 100,
+          totalRealizedProfitOrLossAmount: 20,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+      ]);
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId2,
+        portfolioStats: { set: [{ forCurrency: 'GBP' }] },
+        holdingStats: { set: ['VUAG'] },
+      });
+    })();
 
-      await (async () => {
-        await TradeRecordModel.bulkCreate([
-          { ...reusableTradeDatas[3], symbol: 'AAPL', ownerId: mockUserId2 },
-        ]);
-        await HoldingStatsChangeModel.bulkCreate([
-          { ...reusableHoldingStats[3], symbol: 'AAPL', ownerId: mockUserId2 },
-        ]);
-        await PortfolioStatsChangeModel.bulkCreate([
-          {
-            relatedTradeId: reusableTradeDatas[3].id,
-            ownerId: mockUserId1,
-            forCurrency: 'USD',
-            changedAt: reusableTradeDatas[3].performedAt,
-            totalPresentInvestedAmount: 200,
-            totalRealizedAmount: 200,
-            totalRealizedProfitOrLossAmount: 40,
-            totalRealizedProfitOrLossRate: 0.25,
-          },
-        ]);
-        await publishUserHoldingChangedRedisEvent({
+    await (async () => {
+      await TradeRecordModel.bulkCreate([
+        { ...reusableTradeDatas[3], symbol: 'AAPL', ownerId: mockUserId2 },
+      ]);
+      await HoldingStatsChangeModel.bulkCreate([
+        { ...reusableHoldingStats[3], symbol: 'AAPL', ownerId: mockUserId2 },
+      ]);
+      await PortfolioStatsChangeModel.bulkCreate([
+        {
+          relatedTradeId: reusableTradeDatas[3].id,
           ownerId: mockUserId1,
-          portfolioStats: { set: [{ forCurrency: 'USD' }] },
-          holdingStats: { set: ['AAPL'] },
-        });
-      })();
+          forCurrency: 'USD',
+          changedAt: reusableTradeDatas[3].performedAt,
+          totalPresentInvestedAmount: 200,
+          totalRealizedAmount: 200,
+          totalRealizedProfitOrLossAmount: 40,
+          totalRealizedProfitOrLossRate: 0.25,
+        },
+      ]);
+      await publishUserHoldingChangedRedisEvent({
+        ownerId: mockUserId1,
+        portfolioStats: { set: [{ forCurrency: 'USD' }] },
+        holdingStats: { set: ['AAPL'] },
+      });
+    })();
 
-      emissions.push((await subscription.next()).value);
-    } finally {
-      await subscription.return!();
-    }
+    emissions.push((await subscription.next()).value);
 
     expect(emissions).toStrictEqual([
       {
@@ -485,8 +481,8 @@ describe('Subscription.portfolioStats', () => {
       ])
     ).map(pStats => pStats.dataValues);
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
         subscription {
           portfolioStats {
             data {
@@ -495,54 +491,51 @@ describe('Subscription.portfolioStats', () => {
               totalRealizedProfitOrLossRate
             }
           }
-        }`,
+        }
+      `,
     });
 
     const emissions: any[] = [];
 
-    try {
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
-      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
-      await PortfolioStatsChangeModel.bulkCreate([
-        {
-          ...initialPStats[0],
-          relatedTradeId: reusableTradeDatas[2].id,
-          forCurrency: 'GBP',
-          changedAt: reusableTradeDatas[2].performedAt,
-          totalRealizedAmount: 101,
-        },
-      ]);
-      await publishUserHoldingChangedRedisEvent({
-        ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'GBP' }] },
-        holdingStats: { set: ['VUAG'] },
-      });
+    await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
+    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
+    await PortfolioStatsChangeModel.bulkCreate([
+      {
+        ...initialPStats[0],
+        relatedTradeId: reusableTradeDatas[2].id,
+        forCurrency: 'GBP',
+        changedAt: reusableTradeDatas[2].performedAt,
+        totalRealizedAmount: 101,
+      },
+    ]);
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'GBP' }] },
+      holdingStats: { set: ['VUAG'] },
+    });
 
-      // *** Not expecting an emission here (because the `totalRealizedAmount` field which was modified wasn't targeted)...
+    // *** Not expecting an emission here (because the `totalRealizedAmount` field which was modified wasn't targeted)...
 
-      await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
-      await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
-      await PortfolioStatsChangeModel.bulkCreate([
-        {
-          ...initialPStats[1],
-          relatedTradeId: reusableTradeDatas[3].id,
-          forCurrency: 'USD',
-          changedAt: reusableTradeDatas[3].performedAt,
-          totalRealizedProfitOrLossAmount: 41,
-        },
-      ]);
-      await publishUserHoldingChangedRedisEvent({
-        ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'USD' }] },
-        holdingStats: { set: ['ADBE'] },
-      });
+    await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
+    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
+    await PortfolioStatsChangeModel.bulkCreate([
+      {
+        ...initialPStats[1],
+        relatedTradeId: reusableTradeDatas[3].id,
+        forCurrency: 'USD',
+        changedAt: reusableTradeDatas[3].performedAt,
+        totalRealizedProfitOrLossAmount: 41,
+      },
+    ]);
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'USD' }] },
+      holdingStats: { set: ['ADBE'] },
+    });
 
-      emissions.push((await subscription.next()).value);
-    } finally {
-      await subscription.return!();
-    }
+    emissions.push((await subscription.next()).value);
 
     expect(emissions).toStrictEqual([
       {
@@ -645,7 +638,7 @@ describe('Subscription.portfolioStats', () => {
 
       const emissions = await asyncPipe(
         gqlWsClient.iterate({
-          query: `
+          query: /* GraphQL */ `
             subscription {
               portfolioStats {
                 data {
@@ -657,7 +650,8 @@ describe('Subscription.portfolioStats', () => {
                   }
                 }
               }
-            }`,
+            }
+          `,
         }),
         itTake(4),
         itCollect
@@ -787,8 +781,8 @@ describe('Subscription.portfolioStats', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             portfolioStats {
               data {
@@ -800,91 +794,88 @@ describe('Subscription.portfolioStats', () => {
                 }
               }
             }
-          }`,
+          }
+        `,
       });
 
       const emissions: any[] = [];
 
-      try {
+      emissions.push((await subscription.next()).value);
+
+      for (const applyNextChanges of [
+        async () => {
+          await TradeRecordModel.bulkCreate([
+            { ...reusableTradeDatas[3], symbol: 'VUAG' },
+            { ...reusableTradeDatas[4], symbol: 'ADBE' },
+          ]);
+          await HoldingStatsChangeModel.bulkCreate([
+            {
+              ...reusableHoldingStats[3],
+              symbol: 'VUAG',
+              totalLotCount: 2,
+              totalQuantity: 2,
+              totalPresentInvestedAmount: 90,
+            },
+            {
+              ...reusableHoldingStats[4],
+              symbol: 'ADBE',
+              totalLotCount: 2,
+              totalQuantity: 2,
+              totalPresentInvestedAmount: 90,
+            },
+          ]);
+          await PortfolioStatsChangeModel.bulkCreate([
+            {
+              relatedTradeId: reusableTradeDatas[3].id,
+              ownerId: mockUserId1,
+              forCurrency: 'GBP',
+              changedAt: reusableTradeDatas[3].performedAt,
+              totalPresentInvestedAmount: 90,
+            },
+            {
+              relatedTradeId: reusableTradeDatas[4].id,
+              ownerId: mockUserId1,
+              forCurrency: 'USD',
+              changedAt: reusableTradeDatas[4].performedAt,
+              totalPresentInvestedAmount: 240,
+            },
+          ]);
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            portfolioStats: { set: [{ forCurrency: 'GBP' }, { forCurrency: 'USD' }] },
+            holdingStats: { set: ['VUAG', 'ADBE'] },
+          });
+        },
+
+        async () => {
+          await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[5], symbol: 'AAPL' }]);
+          await HoldingStatsChangeModel.bulkCreate([
+            {
+              ...reusableHoldingStats[5],
+              symbol: 'AAPL',
+              totalLotCount: 1,
+              totalQuantity: 1,
+              totalPresentInvestedAmount: 40,
+            },
+          ]);
+          await PortfolioStatsChangeModel.bulkCreate([
+            {
+              relatedTradeId: reusableTradeDatas[5].id,
+              ownerId: mockUserId1,
+              forCurrency: 'USD',
+              changedAt: reusableTradeDatas[5].performedAt,
+              totalPresentInvestedAmount: 190,
+            },
+          ]);
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            portfolioStats: { set: [{ forCurrency: 'USD' }] },
+            holdingStats: { set: ['AAPL'] },
+          });
+        },
+      ]) {
+        await applyNextChanges();
         emissions.push((await subscription.next()).value);
-
-        for (const applyNextChanges of [
-          async () => {
-            await TradeRecordModel.bulkCreate([
-              { ...reusableTradeDatas[3], symbol: 'VUAG' },
-              { ...reusableTradeDatas[4], symbol: 'ADBE' },
-            ]);
-            await HoldingStatsChangeModel.bulkCreate([
-              {
-                ...reusableHoldingStats[3],
-                symbol: 'VUAG',
-                totalLotCount: 2,
-                totalQuantity: 2,
-                totalPresentInvestedAmount: 90,
-              },
-              {
-                ...reusableHoldingStats[4],
-                symbol: 'ADBE',
-                totalLotCount: 2,
-                totalQuantity: 2,
-                totalPresentInvestedAmount: 90,
-              },
-            ]);
-            await PortfolioStatsChangeModel.bulkCreate([
-              {
-                relatedTradeId: reusableTradeDatas[3].id,
-                ownerId: mockUserId1,
-                forCurrency: 'GBP',
-                changedAt: reusableTradeDatas[3].performedAt,
-                totalPresentInvestedAmount: 90,
-              },
-              {
-                relatedTradeId: reusableTradeDatas[4].id,
-                ownerId: mockUserId1,
-                forCurrency: 'USD',
-                changedAt: reusableTradeDatas[4].performedAt,
-                totalPresentInvestedAmount: 240,
-              },
-            ]);
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              portfolioStats: { set: [{ forCurrency: 'GBP' }, { forCurrency: 'USD' }] },
-              holdingStats: { set: ['VUAG', 'ADBE'] },
-            });
-          },
-
-          async () => {
-            await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[5], symbol: 'AAPL' }]);
-            await HoldingStatsChangeModel.bulkCreate([
-              {
-                ...reusableHoldingStats[5],
-                symbol: 'AAPL',
-                totalLotCount: 1,
-                totalQuantity: 1,
-                totalPresentInvestedAmount: 40,
-              },
-            ]);
-            await PortfolioStatsChangeModel.bulkCreate([
-              {
-                relatedTradeId: reusableTradeDatas[5].id,
-                ownerId: mockUserId1,
-                forCurrency: 'USD',
-                changedAt: reusableTradeDatas[5].performedAt,
-                totalPresentInvestedAmount: 190,
-              },
-            ]);
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              portfolioStats: { set: [{ forCurrency: 'USD' }] },
-              holdingStats: { set: ['AAPL'] },
-            });
-          },
-        ]) {
-          await applyNextChanges();
-          emissions.push((await subscription.next()).value);
-        }
-      } finally {
-        await subscription.return!();
       }
 
       expect(emissions).toStrictEqual([
@@ -997,8 +988,8 @@ describe('Subscription.portfolioStats', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             portfolioStats {
               data {
@@ -1010,7 +1001,8 @@ describe('Subscription.portfolioStats', () => {
                 }
               }
             }
-          }`,
+          }
+        `,
       });
 
       const emissions = await pipe(subscription, itTake(3), itCollect);
@@ -1126,8 +1118,8 @@ describe('Subscription.portfolioStats', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             portfolioStats {
               data {
@@ -1139,7 +1131,8 @@ describe('Subscription.portfolioStats', () => {
                 }
               }
             }
-          }`,
+          }
+        `,
       });
 
       const firstEmission = await pipe(subscription, itTakeFirst());
@@ -1216,8 +1209,8 @@ describe('Subscription.portfolioStats', () => {
           },
         ]);
 
-        const subscription = gqlWsClient.iterate({
-          query: `
+        await using subscription = gqlWsClientIterateDisposable({
+          query: /* GraphQL */ `
             subscription {
               portfolioStats {
                 data {
@@ -1225,7 +1218,7 @@ describe('Subscription.portfolioStats', () => {
                   unrealizedPnl {
                     amount
                     percent
-                    currencyAdjusted (currency: "EUR") {
+                    currencyAdjusted(currency: "EUR") {
                       currency
                       exchangeRate
                       amount
@@ -1233,7 +1226,8 @@ describe('Subscription.portfolioStats', () => {
                   }
                 }
               }
-            }`,
+            }
+          `,
         });
 
         const emissions = await asyncPipe(subscription, itTake(3), itCollect);

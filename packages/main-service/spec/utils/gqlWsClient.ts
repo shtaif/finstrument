@@ -1,5 +1,9 @@
 import { WebSocket } from 'ws';
-import { createClient as createGqlWsClient, type SubscribePayload } from 'graphql-ws';
+import {
+  createClient as createGqlWsClient,
+  type SubscribePayload,
+  type ExecutionResult,
+} from 'graphql-ws';
 
 export { gqlWsClient, gqlWsClientIterateDisposable };
 
@@ -8,10 +12,10 @@ const gqlWsClient = createGqlWsClient({
   url: `ws://localhost:${process.env.PORT}/graphql`,
 });
 
-function gqlWsClientIterateDisposable(
+function gqlWsClientIterateDisposable<Data = Record<string, unknown>, Extensions = unknown>(
   subscribePayload: SubscribePayload
-): ReturnType<typeof gqlWsClient.iterate> & AsyncDisposable {
-  const subscription = gqlWsClient.iterate(subscribePayload);
+): AsyncIterableIterator<ExecutionResult<Data, Extensions>> & AsyncDisposable {
+  const subscription = gqlWsClient.iterate<Data, Extensions>(subscribePayload);
   return {
     next: () => subscription.next(),
     return: () => subscription.return!(),
