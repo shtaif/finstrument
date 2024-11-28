@@ -18,6 +18,7 @@ export { itFinally, itFinally as asyncIterFinally } from './itFinally.js';
 export { itCatch } from './itCatch.js';
 export { itCollect, itCollect as asyncIterCollect } from './itCollect.js';
 export { hangingIterable } from './hangingIterable.js';
+export { empty } from './empty.js';
 export { myIterableCleanupPatcher } from './myIterableCleanupPatcher.js';
 export { type MaybeAsyncIterable } from './MaybeAsyncIterable.js';
 export { type InfiniteAsyncIterable } from './InfiniteAsyncIterable.js';
