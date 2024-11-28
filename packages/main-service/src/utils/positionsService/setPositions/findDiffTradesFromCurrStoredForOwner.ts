@@ -100,7 +100,6 @@ async function findDiffTradesFromCurrStoredForOwner(params: {
               exs_t.quantity = new_t.quantity AND
               exs_t.price = new_t.price
             );
-            -- OR exs_t.occurrence_count < new_t.occurrence_count
         `,
         {
           transaction,

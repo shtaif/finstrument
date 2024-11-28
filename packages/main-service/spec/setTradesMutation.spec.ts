@@ -75,14 +75,12 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await Promise.all([
-    HoldingStatsChangeModel.destroy({ where: {} }),
-    PortfolioStatsChangeModel.destroy({ where: {} }),
-    LotModel.destroy({ where: {} }),
-    TradeRecordModel.destroy({ where: {} }),
-    InstrumentInfoModel.destroy({ where: {} }),
-    UserModel.destroy({ where: {} }),
-  ]);
+  await TradeRecordModel.destroy({ where: {} });
+  await LotModel.destroy({ where: {} });
+  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await InstrumentInfoModel.destroy({ where: {} });
+  await UserModel.destroy({ where: {} });
   unmockGqlContext();
 });
 
@@ -4012,5 +4010,58 @@ describe('Mutation.setTrades', () => {
         totalRealizedProfitOrLossRate: 0,
       },
     ]);
+  });
+
+  it('Importing a trade dataset containing multiple trades equal <symbol + date> combinations', async () => {
+    const tradesCsv = `
+      Trades,Header,Asset Category,Symbol,Date/Time,Quantity,T. Price
+      Trades,Data,Stocks,ADBE,"2024-01-01, 00:00:00",1,1.1
+      Trades,Data,Stocks,ADBE,"2024-01-01, 00:00:00",2,1.2
+      Trades,Data,Stocks,ADBE,"2024-01-01, 00:00:00",3,1.3
+      Trades,Data,Stocks,ADBE,"2024-01-02, 00:00:00",1,1.1
+      Trades,Data,Stocks,ADBE,"2024-01-02, 00:00:00",2,1.2
+      Trades,Data,Stocks,AAPL,"2024-01-03, 00:00:00",1,1.1
+      Trades,Data,Stocks,AAPL,"2024-01-03, 00:00:00",2,1.2
+      Trades,Data,Stocks,NVDA,"2024-01-03, 00:00:00",10,1.1
+    `.trim();
+
+    const resp = await axiosGqlClient({
+      data: {
+        variables: { tradesCsv },
+        query: /* GraphQL */ `
+          mutation ($tradesCsv: String!) {
+            setTrades(input: { mode: REPLACE, data: { csv: $tradesCsv } }) {
+              tradesAddedCount
+              tradesModifiedCount
+              tradesRemovedCount
+            }
+          }
+        `,
+      },
+    });
+
+    expect(resp.data).toStrictEqual({
+      data: null,
+      errors: [
+        {
+          message:
+            'Importing multiple trades with the same symbol and date combination is not supported; ' +
+            'detected duplicate pairs are (3): ' +
+            '[ADBE + 2023-12-31T22:00:00.000Z], ' +
+            '[ADBE + 2024-01-01T22:00:00.000Z], ' +
+            '[AAPL + 2024-01-02T22:00:00.000Z]',
+          extensions: {
+            code: 'DUPLICATE_TRADES',
+            duplicatePairsDetected: [
+              { symbol: 'ADBE', timestamp: '2023-12-31T22:00:00.000Z' },
+              { symbol: 'ADBE', timestamp: '2024-01-01T22:00:00.000Z' },
+              { symbol: 'AAPL', timestamp: '2024-01-02T22:00:00.000Z' },
+            ],
+          },
+          path: ['setTrades'],
+          locations: [{ column: 13, line: 3 }],
+        },
+      ],
+    });
   });
 });

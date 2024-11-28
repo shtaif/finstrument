@@ -11,6 +11,7 @@ import {
   uniq,
   difference,
   keys,
+  range,
 } from 'lodash-es';
 import { pipe, asyncPipe, CustomError } from 'shared-utils';
 import {
@@ -48,21 +49,46 @@ async function setPositions(params: {
 
   const { ownerAlias, csvData, mode = 'MERGE' } = params;
 
-  const tradeRecordsParsed = parseCsvLedgerFormat({ input: csvData }).map(
-    ({ symbol, dateAndTime, quantity, tPrice }) => ({
+  const inputTrades = pipe(
+    parseCsvLedgerFormat({ input: csvData }).map(({ symbol, dateAndTime, quantity, tPrice }) => ({
       symbol,
       quantity,
       price: tPrice,
       performedAt: dateAndTime,
-    })
+    })),
+    $ => sortBy($, t => t.performedAt)
   );
 
   const targetOwnerId = (await UserModel.findOne({ where: { alias: ownerAlias } }))?.id;
 
   if (!targetOwnerId) {
     throw new CustomError({
-      type: 'OWNER_NOT_FOUND',
+      code: 'OWNER_NOT_FOUND',
       message: `No such user with alias "${ownerAlias}" could be found`,
+    });
+  }
+
+  const duplicates = pipe(
+    (() => {
+      const sameSymbolTimestampReoccurrences = new Map<string, number>();
+      for (const t of inputTrades) {
+        const key = `${t.symbol}_${t.performedAt.toISOString()}`;
+        const currentCount = sameSymbolTimestampReoccurrences.get(key) ?? 0;
+        sameSymbolTimestampReoccurrences.set(key, currentCount + 1);
+      }
+      return sameSymbolTimestampReoccurrences;
+    })(),
+    $ => $.entries(),
+    $ => $.filter(([, occurrences]) => occurrences > 1),
+    $ => $.map(([key]) => pipe(key.split('_'), ([symbol, timestamp]) => ({ symbol, timestamp }))),
+    $ => $.toArray()
+  );
+
+  if (duplicates.length) {
+    throw new CustomError({
+      code: 'DUPLICATE_TRADES',
+      message: `Importing multiple trades with the same symbol and date combination is not supported; detected duplicate pairs are (${duplicates.length}): ${duplicates.map(d => `[${d.symbol} + ${d.timestamp}]`).join(', ')}`,
+      duplicatePairsDetected: duplicates,
     });
   }
 
@@ -91,32 +117,10 @@ async function setPositions(params: {
 
       const symbolsHeldBefore = holdingStatsBefore.map(({ symbol }) => symbol);
 
-      // const symbolsHeldBefore2 = (
-      //   await TradeRecordModel.findAll({
-      //     transaction: t,
-      //     attributes: ['symbol'],
-      //     where: {
-      //       ownerId: targetOwnerId,
-      //       quantity: { [Op.gt]: 0 },
-      //     },
-      //     order: [['performedAt', 'ASC']],
-      //   })
-      // ).map(({ symbol }) => symbol);
-
-      // const currenciesHeldBefore = pipe(
-      //   await retrievePortfolioStatsChanges({
-      //     transaction: t,
-      //     latestPerOwner: true,
-      //     filters: { ownerIds: [targetOwnerId] },
-      //   }),
-      //   portfolios => portfolios.map(({ forCurrency }) => forCurrency),
-      //   uniq
-      // );
-
       const [tradesToCreate, tradesToModify] = await asyncPipe(
         findDiffTradesFromCurrStoredForOwner({
           ownerId: targetOwnerId,
-          tradeRecords: tradeRecordsParsed,
+          tradeRecords: inputTrades,
           transaction: t,
         }),
         tradeDifferences =>
@@ -125,30 +129,26 @@ async function setPositions(params: {
 
       const newlyAddedTrades = await asyncPipe(
         tradesToCreate,
-        v =>
-          v.flatMap(({ symbol, quantity, price, performedAt, existingCount, newCount }) =>
-            pipe(
-              newCount - existingCount,
-              diffCount =>
-                new Array<{
-                  ownerId: string;
-                  symbol: string;
-                  quantity: number;
-                  price: number;
-                  performedAt: Date;
-                }>(diffCount),
-              arr => arr.fill({ ownerId: targetOwnerId, symbol, quantity, price, performedAt })
-            )
-          ),
+        $ =>
+          $.flatMap(({ symbol, quantity, price, performedAt, existingCount, newCount }) => {
+            const diffCount = newCount - existingCount;
+            return range(diffCount).map(() => ({
+              ownerId: targetOwnerId,
+              symbol,
+              quantity,
+              price,
+              performedAt,
+            }));
+          }),
         tradeRecsToAdd => TradeRecordModel.bulkCreate(tradeRecsToAdd, { transaction: t }),
-        v => v.map(({ dataValues }) => dataValues),
-        v => sortBy(v, ({ performedAt }) => performedAt)
+        $ => $.map(({ dataValues }) => dataValues),
+        $ => sortBy($, ({ performedAt }) => performedAt)
       );
 
       const modifiedTrades = await asyncPipe(
         tradesToModify,
-        v =>
-          v.map(async ({ symbol, quantity, price, performedAt }) => {
+        $ =>
+          $.map(async ({ symbol, quantity, price, performedAt }) => {
             const [, [affectedRow]] = await TradeRecordModel.update(
               {
                 ownerId: targetOwnerId,
@@ -169,9 +169,9 @@ async function setPositions(params: {
             );
             return affectedRow;
           }),
-        v => Promise.all(v),
-        v => v.map(({ dataValues }) => dataValues),
-        v => sortBy(v, ({ performedAt }) => performedAt)
+        $ => Promise.all($),
+        $ => $.map(({ dataValues }) => dataValues),
+        $ => sortBy($, ({ performedAt }) => performedAt)
       );
 
       const [tradesRemoved, lotIdsDeleteCandidates] =
@@ -184,7 +184,7 @@ async function setPositions(params: {
                   attributes: ['id', 'symbol', 'quantity'],
                   where: {
                     ownerId: targetOwnerId,
-                    [Op.and]: tradeRecordsParsed.map(({ performedAt, symbol }) => ({
+                    [Op.and]: inputTrades.map(({ performedAt, symbol }) => ({
                       [Op.not]: { performedAt, symbol },
                     })),
                   },
@@ -202,8 +202,6 @@ async function setPositions(params: {
                   },
                 })
               ).map(({ id }) => id);
-
-              // console.log({ lotIdsDeleteCandidates });
 
               await TradeRecordModel.destroy({
                 transaction: t,
@@ -225,25 +223,6 @@ async function setPositions(params: {
       ).map(t => t.dataValues);
 
       const symbolsHeldAfter = uniq(allResultingTrades.map(({ symbol }) => symbol));
-      // const symbolsHeldAfter = (
-      //   await TradeRecordModel.findAll({
-      //     transaction: t,
-      //     attributes: ['symbol'],
-      //     group: 'symbol',
-      //     where: { ownerId: targetOwnerId },
-      //   })
-      // ).map(({ symbol }) => symbol);
-
-      // const [symbolsRemoved3, symbolsAdded3] = [
-      //   difference(symbolsHeldBefore, symbolsHeldAfter),
-      //   difference(symbolsHeldAfter, symbolsHeldBefore),
-      // ];
-
-      // const holdingChangedOrModifiedSymbols = pipe(
-      //   newlyAddedTrades,
-      //   trades => trades.map(t => t.symbol),
-      //   uniq
-      // );
 
       const symbolLotCountsBefore = chain(holdingStatsBefore)
         .keyBy(({ symbol }) => symbol)
@@ -265,8 +244,8 @@ async function setPositions(params: {
           ...tradesToModify.map(t => t.symbol),
           ...tradesRemoved.map(t => t.symbol).filter(symbol => symbolLotCountsAfter[symbol]),
         ],
-        v => uniq(v),
-        v => v.toSorted()
+        $ => uniq($),
+        $ => $.toSorted()
       );
 
       const instInfos = await asyncPipe(
@@ -283,128 +262,14 @@ async function setPositions(params: {
         pipe(symbolsHeldAfter, symbols => symbols.map(s => instInfos[s].currency), uniq),
       ];
 
-      // const currenciesRemoved = difference(currenciesHeldBefore, currenciesHeldAfter);
-
       const currenciesHavingTradesRemoved = uniq(
         tradesRemoved.map(t => instInfos[t.symbol].currency)
       );
 
-      // const currenciesHavingAllTradesRemoved = difference(
-      //   currenciesHavingTradesRemoved,
-      //   currenciesHeldAfter
-      // );
       const currenciesHavingAllTradesRemoved = difference(
         currenciesHeldBefore,
         currenciesHeldAfter
       );
-
-      // const symbolsHavingTradesRemoved = uniq(tradesRemoved.map(t => t.symbol));
-
-      // const symbolsFromBeforeNowDisappeared = !symbolsHavingTradesRemoved.length
-      //   ? []
-      //   : (
-      //       await sequelize.query<{ symbol: string }>(
-      //         `
-      //           SELECT
-      //             DISTINCT t.symbol AS symbol
-      //           FROM
-      //             "${TradeRecordModel.tableName}" AS t
-      //           WHERE
-      //             t.owner_id = :targetOwnerId AND
-      //             t.symbol NOT IN (:symbolsHavingTradesRemoved)
-      //         `,
-      //         {
-      //           transaction: t,
-      //           type: QueryTypes.SELECT,
-      //           replacements: { targetOwnerId, symbolsHavingTradesRemoved },
-      //         }
-      //       )
-      //     ).map(({ symbol }) => symbol);
-
-      // const currenciesFromBeforeNowDisappeared = !currenciesHavingTradesRemoved.length
-      //   ? []
-      //   : (
-      //       await sequelize.query<{ currency: string }>(
-      //         `
-      //           SELECT
-      //             DISTINCT ii.currency AS currency
-      //           FROM
-      //             "${TradeRecordModel.tableName}" AS t
-      //             JOIN "${InstrumentInfoModel.tableName}" AS ii ON t.symbol = ii.symbol
-      //           WHERE
-      //             t.owner_id = :targetOwnerId AND
-      //             ii.currency NOT IN (:currenciesHavingTradesRemoved)
-      //         `,
-      //         {
-      //           transaction: t,
-      //           type: QueryTypes.SELECT,
-      //           replacements: { targetOwnerId, currenciesHavingTradesRemoved },
-      //         }
-      //       )
-      //     ).map(({ currency }) => currency);
-
-      // const ______ = pipe(
-      //   await sequelize.query<{ symbol: string } | { currency: string }>(
-      //     `
-      //       ${
-      //         !symbolsHavingTradesRemoved.length
-      //           ? 'SELECT NULL LIMIT 0;'
-      //           : `
-      //         SELECT
-      //           DISTINCT t.symbol AS symbol
-      //         FROM
-      //           "${TradeRecordModel.tableName}" AS t
-      //         WHERE
-      //           t.owner_id = :targetOwnerId AND
-      //           t.symbol NOT IN (:symbolsHavingTradesRemoved);
-      //       `
-      //       }
-      //       ${
-      //         !currenciesHavingTradesRemoved.length
-      //           ? 'SELECT NULL LIMIT 0;'
-      //           : `
-      //         SELECT
-      //           DISTINCT ii.currency AS currency
-      //         FROM
-      //           "${TradeRecordModel.tableName}" AS t
-      //           JOIN "${InstrumentInfoModel.tableName}" AS ii ON t.symbol = ii.symbol
-      //         WHERE
-      //           t.owner_id = :targetOwnerId AND
-      //           ii.currency NOT IN (:currenciesHavingTradesRemoved);
-      //       `
-      //       }
-      //     `,
-      //     {
-      //       transaction: t,
-      //       type: QueryTypes.SELECT,
-      //       // type: QueryTypes.RAW,
-      //       replacements: {
-      //         targetOwnerId,
-      //         symbolsHavingTradesRemoved,
-      //         currenciesHavingTradesRemoved,
-      //       },
-      //     }
-      //   )
-      // );
-
-      // console.log(
-      //   '______',
-      //   pipe(
-      //     partition(______, record => 'symbol' in record),
-      //     ([symbolsFromBeforeNowDisappeared, currenciesFromBeforeNowDisappeared]) => ({
-      //       symbolsFromBeforeNowDisappeared: symbolsFromBeforeNowDisappeared.map(
-      //         ({ symbol }) => symbol
-      //       ),
-      //       currenciesFromBeforeNowDisappeared: currenciesFromBeforeNowDisappeared.map(
-      //         ({ currency }) => currency
-      //       ),
-      //     })
-      //   )
-      //   // ______[1].map(({ rows }) => rows)
-      // );
-
-      // console.log('tradesRemoved', tradesRemoved, uniq(tradesRemoved.map(t => t.symbol)));
-      // console.log({ symbolsFromBeforeNowDisappeared, currenciesFromBeforeNowDisappeared });
 
       const currenciesHavingSomeTradesRemoved = difference(
         currenciesHavingTradesRemoved,
@@ -419,16 +284,16 @@ async function setPositions(params: {
 
       const lotClosingsBySymbols = pipe(
         allResultingTrades,
-        v => groupBy(v, ({ symbol }) => symbol),
-        v =>
-          mapValues(v, tradesBySymbol =>
+        $ => groupBy($, ({ symbol }) => symbol),
+        $ =>
+          mapValues($, tradesBySymbol =>
             pipe(
               tradesBySymbol!.map(trade => ({ trade, remaining: Math.abs(trade.quantity) })),
               buysAndSales => partition(buysAndSales, ({ trade }) => trade.quantity > 0)
             )
           ),
-        v =>
-          mapValues(v, ([buys, sales]) => {
+        $ =>
+          mapValues($, ([buys, sales]) => {
             const lotClosings: {
               buyTradeId: string;
               associatedSellTradeId: string;
@@ -523,23 +388,6 @@ async function setPositions(params: {
         compact
       );
 
-      // const lotIdsDeleteCandidates = (
-      //   await LotModel.findAll({
-      //     transaction: t,
-      //     attributes: ['id'],
-      //     where: {
-      //       openingTradeId: tradesRemoved.filter(t => t.quantity > 0).map(t => t.id),
-      //     },
-      //   })
-      // ).map(({ id }) => id);
-
-      // const ___AFTER = await LotModel.findAll({
-      //   transaction: t,
-      //   attributes: ['id'],
-      // });
-
-      // console.log({ ___BEFORE, ___AFTER });
-
       // TODO: Is the following needed? Since each trade deletion cascades into its referencing lot, at this point this shouldn't actually ever have anything left to delete - need to log result to verify
       await LotModel.destroy({
         transaction: t,
@@ -551,8 +399,8 @@ async function setPositions(params: {
           transaction: t,
           attributes: ['id', 'openingTradeId'],
         }),
-        v => keyBy(v, ({ openingTradeId }) => openingTradeId),
-        v => mapValues(v, ({ id }) => id)
+        $ => keyBy($, ({ openingTradeId }) => openingTradeId),
+        $ => mapValues($, ({ id }) => id)
       );
 
       await LotClosingModel.destroy({ transaction: t, where: {} });
