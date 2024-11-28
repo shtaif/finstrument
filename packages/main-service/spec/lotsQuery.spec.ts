@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
+import { range } from 'lodash-es';
 import { InstrumentInfoModel, LotModel, TradeRecordModel, UserModel } from '../src/db/index.js';
 import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { axiosGqlClient } from './utils/axiosGqlClient.js';
@@ -6,7 +7,7 @@ import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
 import { mockMarketDataControl } from './utils/mockMarketDataService.js';
 
 const [mockUserId1, mockUserId2] = [mockUuidFromNumber(1), mockUuidFromNumber(2)];
-const mockTradeIds = new Array(12).fill(undefined).map((_, i) => mockUuidFromNumber(i));
+const mockTradeIds = range(12).map(mockUuidFromNumber);
 
 const reusableTradeDatas = [
   {
@@ -371,15 +372,14 @@ describe('Query.lots', () => {
             variables: {
               ids: [lots[0].id, mockUuidFromNumber(1), mockUuidFromNumber(2)],
             },
-            query: `
+            query: /* GraphQL */ `
               query ($ids: [ID!]!) {
-                lots (
-                  filters: { ids: $ids }
-                ) {
+                lots(filters: { ids: $ids }) {
                   id
                   symbol
                 }
-              }`,
+              }
+            `,
           },
         });
 
@@ -411,15 +411,14 @@ describe('Query.lots', () => {
             variables: {
               ids: [lots[0].id, lots[1].id, lots[2].id],
             },
-            query: `
+            query: /* GraphQL */ `
               query ($ids: [ID!]!) {
-                lots (
-                  filters: { ids: $ids }
-                ) {
+                lots(filters: { ids: $ids }) {
                   id
                   symbol
                 }
-            }`,
+              }
+            `,
           },
         });
 

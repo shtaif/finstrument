@@ -57,7 +57,7 @@ describe('Query.me ', () => {
   it('For an authenticated caller returns a full user object', async () => {
     mockGqlContext(ctx => ({
       ...ctx,
-      getSession: async () => ({ activeUserId: mockUserId1 }),
+      getSession: () => ({ activeUserId: mockUserId1 }),
     }));
 
     const resp = await axiosGqlClient({

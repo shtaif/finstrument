@@ -61,7 +61,7 @@ beforeAll(async () => {
 
   mockGqlContext(ctx => ({
     ...ctx,
-    getSession: async () => ({ activeUserId: mockUserId1 }),
+    getSession: () => ({ activeUserId: mockUserId1 }),
   }));
 });
 
@@ -94,7 +94,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -153,7 +153,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -506,7 +506,7 @@ describe('Mutation.setTrades', () => {
 
       const redisEventPromise = pipe(
         userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-          targetOwnerIds: [mockUserId1, mockUserId2],
+          targetOwnerIds: [mockUserId1],
         }),
         itTakeFirst()
       );
@@ -731,7 +731,7 @@ describe('Mutation.setTrades', () => {
 
       const redisEventPromise = pipe(
         userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-          targetOwnerIds: [mockUserId1, mockUserId2],
+          targetOwnerIds: [mockUserId1],
         }),
         itTakeFirst()
       );
@@ -864,7 +864,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -1092,7 +1092,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -1331,7 +1331,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -1391,12 +1391,7 @@ describe('Mutation.setTrades', () => {
         remove: [],
       },
       lots: {
-        set: [
-          allFinalLots[1].id,
-          allFinalLots[2].id,
-          allFinalLots[3].id,
-          allFinalLots[4].id,
-        ],
+        set: [allFinalLots[1].id, allFinalLots[2].id, allFinalLots[3].id, allFinalLots[4].id],
         remove: [],
       },
     });
@@ -1731,7 +1726,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -2135,7 +2130,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -2202,11 +2197,7 @@ describe('Mutation.setTrades', () => {
     });
 
     expect(allFinalTrades).toStrictEqual([initialTrades[0], initialTrades[2], initialTrades[4]]);
-    expect(allFinalLots).toStrictEqual([
-      initialLots[0],
-      initialLots[2],
-      initialLots[4],
-    ]);
+    expect(allFinalLots).toStrictEqual([initialLots[0], initialLots[2], initialLots[4]]);
     expect(allFinalHoldingStatsChanges).toStrictEqual([
       initialHoldingStats[0],
       initialHoldingStats[2],
@@ -2391,7 +2382,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -2617,7 +2608,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -2937,7 +2928,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -3252,7 +3243,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -3567,7 +3558,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );
@@ -3849,7 +3840,7 @@ describe('Mutation.setTrades', () => {
 
     const redisEventPromise = pipe(
       userHoldingsChangedTopic.subscribe(testRedisSubscriber, {
-        targetOwnerIds: [mockUserId1, mockUserId2],
+        targetOwnerIds: [mockUserId1],
       }),
       itTakeFirst()
     );

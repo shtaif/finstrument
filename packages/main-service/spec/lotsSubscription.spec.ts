@@ -1,5 +1,5 @@
+import { range } from 'lodash-es';
 import { Sequelize } from 'sequelize';
-import { setTimeout } from 'node:timers/promises';
 import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
 import { asyncPipe, pipe } from 'shared-utils';
 import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
@@ -14,10 +14,10 @@ import { mockUuidFromNumber } from './utils/mockUuidFromNumber.js';
 import { mockGqlContext, unmockGqlContext } from './utils/mockGqlContext.js';
 import { publishUserHoldingChangedRedisEvent } from './utils/publishUserHoldingChangedRedisEvent.js';
 import { mockMarketDataControl } from './utils/mockMarketDataService.js';
-import { gqlWsClient } from './utils/gqlWsClient.js';
+import { gqlWsClient, gqlWsClientIterateDisposable } from './utils/gqlWsClient.js';
 
 const [mockUserId1, mockUserId2] = [mockUuidFromNumber(1), mockUuidFromNumber(2)];
-const mockTradeIds = new Array(12).fill(undefined).map((_, i) => mockUuidFromNumber(i));
+const mockTradeIds = range(12).map(mockUuidFromNumber);
 
 const reusableTradeDatas = [
   {
@@ -187,7 +187,7 @@ describe('Subscription.lots ', () => {
 
     const firstItem = await pipe(
       gqlWsClient.iterate({
-        query: `
+        query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -260,8 +260,8 @@ describe('Subscription.lots ', () => {
     const secondNonexistingLotId = mockUuidFromNumber(2);
     const thirdNonexistingLotId = mockUuidFromNumber(3);
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
         subscription {
           lots (
             filters: {
@@ -334,8 +334,8 @@ describe('Subscription.lots ', () => {
       },
     ]);
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
         subscription {
           lots (
             filters: {
@@ -355,174 +355,86 @@ describe('Subscription.lots ', () => {
         }`,
     });
 
-    try {
-      const emissions = [(await subscription.next()).value];
+    const emissions = [(await subscription.next()).value];
 
-      await TradeRecordModel.bulkCreate([
-        { ...reusableTradeDatas[3], symbol: 'NVDA', quantity: -2, price: 1.2 },
-      ]);
-      await LotModel.update(
-        {
-          remainingQuantity: 1,
-          realizedProfitOrLoss: 0.2,
-        },
-        { where: { id: lots[2].id } }
-      );
-      await publishUserHoldingChangedRedisEvent({
-        ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'USD' }] },
-        holdingStats: { set: ['NVDA'] },
-        lots: { set: [lots[2].id] },
-      });
+    await TradeRecordModel.bulkCreate([
+      { ...reusableTradeDatas[3], symbol: 'NVDA', quantity: -2, price: 1.2 },
+    ]);
+    await LotModel.update(
+      {
+        remainingQuantity: 1,
+        realizedProfitOrLoss: 0.2,
+      },
+      { where: { id: lots[2].id } }
+    );
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'USD' }] },
+      holdingStats: { set: ['NVDA'] },
+      lots: { set: [lots[2].id] },
+    });
 
-      await TradeRecordModel.bulkCreate([
-        { ...reusableTradeDatas[4], symbol: 'ADBE', quantity: -2, price: 1.2 },
-        { ...reusableTradeDatas[5], symbol: 'NVDA', quantity: -2, price: 1.2 },
-      ]);
-      await LotModel.update(
-        {
-          remainingQuantity: 1,
-          realizedProfitOrLoss: 0.2,
-        },
-        {
-          where: { id: [lots[0].id, lots[2].id] },
-        }
-      );
-      await publishUserHoldingChangedRedisEvent({
-        ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'USD' }] },
-        holdingStats: { set: ['ADBE', 'NVDA'] },
-        lots: { set: [lots[0].id, lots[2].id] },
-      });
+    await TradeRecordModel.bulkCreate([
+      { ...reusableTradeDatas[4], symbol: 'ADBE', quantity: -2, price: 1.2 },
+      { ...reusableTradeDatas[5], symbol: 'NVDA', quantity: -2, price: 1.2 },
+    ]);
+    await LotModel.update(
+      {
+        remainingQuantity: 1,
+        realizedProfitOrLoss: 0.2,
+      },
+      {
+        where: { id: [lots[0].id, lots[2].id] },
+      }
+    );
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'USD' }] },
+      holdingStats: { set: ['ADBE', 'NVDA'] },
+      lots: { set: [lots[0].id, lots[2].id] },
+    });
 
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      expect(emissions).toStrictEqual([
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[1].id,
-                  originalQuantity: 3,
-                  remainingQuantity: 3,
-                  realizedProfitOrLoss: 0,
-                },
+    expect(emissions).toStrictEqual([
+      {
+        data: {
+          lots: [
+            {
+              data: {
+                id: lots[1].id,
+                originalQuantity: 3,
+                remainingQuantity: 3,
+                realizedProfitOrLoss: 0,
               },
-              {
-                data: {
-                  id: lots[0].id,
-                  originalQuantity: 3,
-                  remainingQuantity: 3,
-                  realizedProfitOrLoss: 0,
-                },
+            },
+            {
+              data: {
+                id: lots[0].id,
+                originalQuantity: 3,
+                remainingQuantity: 3,
+                realizedProfitOrLoss: 0,
               },
-            ],
-          },
+            },
+          ],
         },
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[0].id,
-                  originalQuantity: 3,
-                  remainingQuantity: 1,
-                  realizedProfitOrLoss: 0.2,
-                },
+      },
+      {
+        data: {
+          lots: [
+            {
+              data: {
+                id: lots[0].id,
+                originalQuantity: 3,
+                remainingQuantity: 1,
+                realizedProfitOrLoss: 0.2,
               },
-            ],
-          },
+            },
+          ],
         },
-      ]);
-    } finally {
-      await subscription.return!();
-    }
+      },
+    ]);
   });
-
-  // it('*** *** *** Some of the requested lots are closed lots (1 in total): ID "10000000-0000-0000-0000-000000000000"', async () => {
-  //   await TradeRecordModel.bulkCreate([
-  //     {
-  //       id: mockTradeIds[0],
-  //       ownerId: mockUserId1,
-  //       symbol: 'ADBE',
-  //       performedAt: '2024-01-01T00:00:00.000Z',
-  //       quantity: 2,
-  //       price: 1.1,
-  //     },
-  //     {
-  //       id: mockTradeIds[1],
-  //       ownerId: mockUserId1,
-  //       symbol: 'AAPL',
-  //       performedAt: '2024-01-01T00:00:01.000Z',
-  //       quantity: 2,
-  //       price: 1.1,
-  //     },
-  //     {
-  //       id: mockTradeIds[2],
-  //       ownerId: mockUserId1,
-  //       symbol: 'ADBE',
-  //       performedAt: '2024-01-01T00:00:02.000Z',
-  //       quantity: -2,
-  //       price: 1.2,
-  //     },
-  //   ]);
-
-  //   const lots = await LotModel.bulkCreate([
-  //     {
-  //       id: mockUuidFromNumber(1),
-  //       ownerId: mockUserId1,
-  //       openingTradeId: mockTradeIds[0],
-  //       symbol: 'ADBE',
-  //       remainingQuantity: 0,
-  //       realizedProfitOrLoss: 0.2,
-  //       openedAt: new Date('2024-01-01T00:00:00.000Z'),
-  //       recordCreatedAt: new Date('2024-01-01T00:00:00.000Z'),
-  //       recordUpdatedAt: new Date('2024-01-01T00:00:02.000Z'),
-  //     },
-  //     {
-  //       id: mockUuidFromNumber(2),
-  //       ownerId: mockUserId1,
-  //       openingTradeId: mockTradeIds[1],
-  //       symbol: 'AAPL',
-  //       remainingQuantity: 3,
-  //       realizedProfitOrLoss: 0,
-  //       openedAt: new Date('2024-01-01T00:00:01.000Z'),
-  //       recordCreatedAt: new Date('2024-01-01T00:00:01.000Z'),
-  //       recordUpdatedAt: new Date('2024-01-01T00:00:01.000Z'),
-  //     },
-  //   ]);
-
-  //   const firstItemPromise = pipe(
-  //     gqlWsClient.iterate({
-  //       query: `
-  //         subscription {
-  //           lots (
-  //             filters: {
-  //               ids: [
-  //                 "${lots[0].id}"
-  //                 "${lots[1].id}"
-  //               ]
-  //             }
-  //           ) {
-  //             data {
-  //               id
-  //               ownerId
-  //               remainingQuantity
-  //               realizedProfitOrLoss
-  //             }
-  //           }
-  //         }`,
-  //     }),
-  //     itTakeFirst()
-  //   );
-
-  //   await firstItemPromise.catch(err => {
-  //     err;
-  //   });
-
-  //   await expect(firstItemPromise).to.rejects.toMatchObject({});
-  // });
 
   it('When targeting only certain fields, only lot changes that have any of these fields modified will cause updates to be emitted', async () => {
     await TradeRecordModel.bulkCreate([
@@ -571,8 +483,8 @@ describe('Subscription.lots ', () => {
 
     await using mockMarketData = mockMarketDataControl.start();
 
-    const subscription = gqlWsClient.iterate({
-      query: `
+    await using subscription = gqlWsClientIterateDisposable({
+      query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -592,90 +504,86 @@ describe('Subscription.lots ', () => {
           }`,
     });
 
-    try {
-      const emissions: any[] = [];
+    const emissions: any[] = [];
 
-      mockMarketData.next({
-        [lots[0].symbol]: { regularMarketPrice: 10 },
-        [lots[1].symbol]: { regularMarketPrice: 10 },
-      });
+    mockMarketData.next({
+      [lots[0].symbol]: { regularMarketPrice: 10 },
+      [lots[1].symbol]: { regularMarketPrice: 10 },
+    });
 
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      await TradeRecordModel.create({
-        id: mockTradeIds[2],
-        ownerId: mockUserId1,
-        symbol: lots[0].symbol,
-        performedAt: '2024-01-01T00:00:02.000Z',
-        quantity: -2,
-        price: 1.2,
-      });
+    await TradeRecordModel.create({
+      id: mockTradeIds[2],
+      ownerId: mockUserId1,
+      symbol: lots[0].symbol,
+      performedAt: '2024-01-01T00:00:02.000Z',
+      quantity: -2,
+      price: 1.2,
+    });
 
-      await LotModel.update(
-        {
-          remainingQuantity: lots[0].remainingQuantity - 2,
-        },
-        {
-          where: { id: lots[0].id },
-        }
-      );
+    await LotModel.update(
+      {
+        remainingQuantity: lots[0].remainingQuantity - 2,
+      },
+      {
+        where: { id: lots[0].id },
+      }
+    );
 
-      await publishUserHoldingChangedRedisEvent({
-        ownerId: mockUserId1,
-        portfolioStats: { set: [{ forCurrency: 'USD' }] },
-        holdingStats: { set: [lots[0].symbol] },
-        lots: { set: [lots[0].id] },
-      });
+    await publishUserHoldingChangedRedisEvent({
+      ownerId: mockUserId1,
+      portfolioStats: { set: [{ forCurrency: 'USD' }] },
+      holdingStats: { set: [lots[0].symbol] },
+      lots: { set: [lots[0].id] },
+    });
 
-      // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
+    // *** Not expecting an emission here (because the `remainingQuantity` field which was modified wasn't targeted)...
 
-      mockMarketData.next({
-        [lots[1].symbol]: { regularMarketPrice: 11 },
-      });
+    mockMarketData.next({
+      [lots[1].symbol]: { regularMarketPrice: 11 },
+    });
 
-      emissions.push((await subscription.next()).value);
+    emissions.push((await subscription.next()).value);
 
-      expect(emissions).toStrictEqual([
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[1].id,
-                  priceData: {
-                    regularMarketPrice: 10,
-                  },
+    expect(emissions).toStrictEqual([
+      {
+        data: {
+          lots: [
+            {
+              data: {
+                id: lots[1].id,
+                priceData: {
+                  regularMarketPrice: 10,
                 },
               },
-              {
-                data: {
-                  id: lots[0].id,
-                  priceData: {
-                    regularMarketPrice: 10,
-                  },
+            },
+            {
+              data: {
+                id: lots[0].id,
+                priceData: {
+                  regularMarketPrice: 10,
                 },
               },
-            ],
-          },
+            },
+          ],
         },
-        {
-          data: {
-            lots: [
-              {
-                data: {
-                  id: lots[1].id,
-                  priceData: {
-                    regularMarketPrice: 11,
-                  },
+      },
+      {
+        data: {
+          lots: [
+            {
+              data: {
+                id: lots[1].id,
+                priceData: {
+                  regularMarketPrice: 11,
                 },
               },
-            ],
-          },
+            },
+          ],
         },
-      ]);
-    } finally {
-      await subscription.return!();
-    }
+      },
+    ]);
   });
 
   describe('With `marketValue` and `unrealizedPnl` fields', () => {
@@ -770,7 +678,7 @@ describe('Subscription.lots ', () => {
 
       const emissions = await asyncPipe(
         gqlWsClient.iterate({
-          query: `
+          query: /* GraphQL */ `
             subscription {
               lots (
                 filters: {
@@ -927,8 +835,8 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -950,124 +858,115 @@ describe('Subscription.lots ', () => {
           }`,
       });
 
-      try {
-        const emissions = [(await subscription.next()).value];
+      const emissions = [(await subscription.next()).value];
 
-        for (const applyNextChanges of [
-          async () => {
-            await TradeRecordModel.create({
-              id: mockTradeIds[2],
-              ownerId: mockUserId1,
-              symbol: 'ADBE',
-              performedAt: '2024-01-01T00:00:02.000Z',
-              quantity: -2,
-              price: 2.2,
-            });
+      for (const applyNextChanges of [
+        async () => {
+          await TradeRecordModel.create({
+            id: mockTradeIds[2],
+            ownerId: mockUserId1,
+            symbol: 'ADBE',
+            performedAt: '2024-01-01T00:00:02.000Z',
+            quantity: -2,
+            price: 2.2,
+          });
 
-            await LotModel.update(
-              {
-                remainingQuantity: Sequelize.literal(
-                  `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
-                ),
-              },
-              {
-                where: { id: lots[0].id },
-              }
-            );
-
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              portfolioStats: { set: [{ forCurrency: 'USD' }] },
-              holdingStats: { set: [lots[0].symbol] },
-              lots: { set: [lots[0].id] },
-            });
-          },
-
-          async () => {
-            await TradeRecordModel.create({
-              id: mockTradeIds[3],
-              ownerId: mockUserId1,
-              symbol: 'AAPL',
-              performedAt: '2024-01-01T00:00:03.000Z',
-              quantity: -2,
-              price: 2.4,
-            });
-
-            await LotModel.update(
-              {
-                remainingQuantity: Sequelize.literal(
-                  `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
-                ),
-              },
-              {
-                where: { id: lots[1].id },
-              }
-            );
-
-            await publishUserHoldingChangedRedisEvent({
-              ownerId: mockUserId1,
-              portfolioStats: { set: [{ forCurrency: 'USD' }] },
-              holdingStats: { set: [lots[1].symbol] },
-              lots: { set: [lots[1].id] },
-            });
-          },
-        ]) {
-          await applyNextChanges();
-          emissions.push((await subscription.next()).value);
-          await setTimeout(0); // a non-ideal workaround to let app a chance to finish reacting and processing the current change before we overwhelm it with the one that follows up next
-        }
-
-        expect(emissions).toStrictEqual([
-          {
-            data: {
-              lots: [
-                {
-                  data: {
-                    id: lots[1].id,
-                    marketValue: 12.5,
-                    unrealizedPnl: { amount: 2.5, percent: 25 },
-                  },
-                },
-                {
-                  data: {
-                    id: lots[0].id,
-                    marketValue: 25,
-                    unrealizedPnl: { amount: 5, percent: 25 },
-                  },
-                },
-              ],
+          await LotModel.update(
+            {
+              remainingQuantity: Sequelize.literal(
+                `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
+              ),
             },
-          },
-          {
-            data: {
-              lots: [
-                {
-                  data: {
-                    id: lots[0].id,
-                    marketValue: 20,
-                    unrealizedPnl: { amount: 4, percent: 25 },
-                  },
-                },
-              ],
+            { where: { id: lots[0].id } }
+          );
+
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            portfolioStats: { set: [{ forCurrency: 'USD' }] },
+            holdingStats: { set: [lots[0].symbol] },
+            lots: { set: [lots[0].id] },
+          });
+        },
+
+        async () => {
+          await TradeRecordModel.create({
+            id: mockTradeIds[3],
+            ownerId: mockUserId1,
+            symbol: 'AAPL',
+            performedAt: '2024-01-01T00:00:03.000Z',
+            quantity: -2,
+            price: 2.4,
+          });
+
+          await LotModel.update(
+            {
+              remainingQuantity: Sequelize.literal(
+                `"${LotModel.getAttributes().remainingQuantity.field}" - 2`
+              ),
             },
-          },
-          {
-            data: {
-              lots: [
-                {
-                  data: {
-                    id: lots[1].id,
-                    marketValue: 7.5,
-                    unrealizedPnl: { amount: 1.5, percent: 25 },
-                  },
-                },
-              ],
-            },
-          },
-        ]);
-      } finally {
-        await subscription.return!();
+            { where: { id: lots[1].id } }
+          );
+
+          await publishUserHoldingChangedRedisEvent({
+            ownerId: mockUserId1,
+            portfolioStats: { set: [{ forCurrency: 'USD' }] },
+            holdingStats: { set: [lots[1].symbol] },
+            lots: { set: [lots[1].id] },
+          });
+        },
+      ]) {
+        await applyNextChanges();
+        emissions.push((await subscription.next()).value);
       }
+
+      expect(emissions).toStrictEqual([
+        {
+          data: {
+            lots: [
+              {
+                data: {
+                  id: lots[1].id,
+                  marketValue: 12.5,
+                  unrealizedPnl: { amount: 2.5, percent: 25 },
+                },
+              },
+              {
+                data: {
+                  id: lots[0].id,
+                  marketValue: 25,
+                  unrealizedPnl: { amount: 5, percent: 25 },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            lots: [
+              {
+                data: {
+                  id: lots[0].id,
+                  marketValue: 20,
+                  unrealizedPnl: { amount: 4, percent: 25 },
+                },
+              },
+            ],
+          },
+        },
+        {
+          data: {
+            lots: [
+              {
+                data: {
+                  id: lots[1].id,
+                  marketValue: 7.5,
+                  unrealizedPnl: { amount: 1.5, percent: 25 },
+                },
+              },
+            ],
+          },
+        },
+      ]);
     });
 
     it('When targeting closed lots, initial zero data is emitted and further changes in market data do not cause any updates to be emitted', async () => {
@@ -1138,8 +1037,8 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -1160,10 +1059,6 @@ describe('Subscription.lots ', () => {
             }
           }`,
       });
-
-      await using _ = {
-        [Symbol.asyncDispose]: async () => void (await subscription.return!()),
-      };
 
       const emissions = await pipe(subscription, itTake(3), itCollect);
 
@@ -1289,8 +1184,8 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -1357,8 +1252,8 @@ describe('Subscription.lots ', () => {
         },
       ]);
 
-      const subscription = gqlWsClient.iterate({
-        query: `
+      await using subscription = gqlWsClientIterateDisposable({
+        query: /* GraphQL */ `
           subscription {
             lots (
               filters: {
@@ -1383,10 +1278,6 @@ describe('Subscription.lots ', () => {
             }
           }`,
       });
-
-      await using _ = {
-        [Symbol.asyncDispose]: async () => void (await subscription.return!()),
-      };
 
       const emissions = await asyncPipe(subscription, itTake(3), itCollect);
 
@@ -1479,8 +1370,8 @@ describe('Subscription.lots ', () => {
           { ...reusableLotDatas[1], symbol: 'AAPL' },
         ]);
 
-        const subscription = gqlWsClient.iterate({
-          query: `
+        await using subscription = gqlWsClientIterateDisposable({
+          query: /* GraphQL */ `
             subscription {
               lots (
                 filters: {
@@ -1502,10 +1393,6 @@ describe('Subscription.lots ', () => {
               }
             }`,
         });
-
-        await using _ = {
-          [Symbol.asyncDispose]: async () => void (await subscription.return!()),
-        };
 
         await using mockMarketData = mockMarketDataControl.start();
 
