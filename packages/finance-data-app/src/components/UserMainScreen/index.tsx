@@ -5,7 +5,15 @@ import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
 import { Iterate, iterateFormatted } from 'react-async-iterable';
 import { pipe } from 'shared-utils';
-import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
+import {
+  itCatch,
+  itCombineLatest,
+  itLazyDefer,
+  itMap,
+  itShare,
+  itTap,
+  empty,
+} from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { documentVisibilityChanges } from '../../utils/documentVisibilityChanges.ts';
@@ -15,14 +23,12 @@ import { HoldingDataErrorPanel } from './components/HoldingDataErrorPanel';
 import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
 import { HoldingStatsRealTimeActivityStatus } from './components/HoldingStatsRealTimeActivityStatus/index.tsx';
 import { UploadTrades } from './components/UploadTrades/index.tsx';
-import { useTradeImportSuccessNotification } from './notifications/useTradeImportSuccessNotification.tsx';
 import { useServerConnectionErrorNotification } from './notifications/useServerConnectionErrorNotification.tsx';
 import './style.css';
 
 export { UserMainScreen };
 
 function UserMainScreen() {
-  const tradeImportSuccessNotification = useTradeImportSuccessNotification();
   const serverConnectionErrorNotification = useServerConnectionErrorNotification();
 
   const [lastFetchedHoldingsCount, setLastFetchedHoldingsCount] = useLocalStorage<
@@ -71,7 +77,6 @@ function UserMainScreen() {
 
   return (
     <div className="cmp-user-main-screen">
-      <>{tradeImportSuccessNotification.placement}</>
       <>{serverConnectionErrorNotification.placement}</>
 
       <div>
@@ -80,17 +85,17 @@ function UserMainScreen() {
 
       <UploadTrades
         className="upload-trades"
-        onUploadSuccess={() => tradeImportSuccessNotification.show()}
+        onUploadSuccess={() => {}}
         onUploadFailure={_err => {}}
       />
 
       <div>
         <Iterate initialValue={!document.hidden} value={documentVisibilityChanges}>
           {({ value: docVisible }) => {
-            const [holdingStatsOrEmptyIter, portfolioStatsIterOrEmptyIter] = [
-              docVisible ? holdingStatsIter : (async function* () {})(),
-              docVisible ? portfolioStatsIter : (async function* () {})(),
-            ];
+            const [holdingStatsOrEmptyIter, portfolioStatsIterOrEmptyIter] = docVisible
+              ? [holdingStatsIter, portfolioStatsIter]
+              : [empty(), empty()];
+
             return (
               <>
                 <HoldingStatsRealTimeActivityStatus input={holdingStatsOrEmptyIter} />
@@ -337,3 +342,119 @@ const lotDataSubscription = graphql(/* GraphQL */ `
 
 type LotDataSubscriptionResult = DocumentType<typeof lotDataSubscription>;
 type LotItem = LotDataSubscriptionResult['lots'][number]['data'];
+
+// function useIterSourceExperiment() {
+//   type Item = {
+//     symbol: string;
+//     value: number;
+//   };
+
+//   const iterSource = useMemo(() => {
+//     const iter = (async function* () {
+//       const items = [
+//         { symbol: 'BTC-USD:ILS', value: +Math.random().toFixed(3) },
+//         { symbol: 'ADBE', value: +Math.random().toFixed(3) },
+//         { symbol: 'AAPL', value: +Math.random().toFixed(3) },
+//         { symbol: 'BTC-USD', value: +Math.random().toFixed(3) },
+//         { symbol: 'VUAA.L', value: +Math.random().toFixed(3) },
+//       ];
+
+//       let lastYieldedItem: Item | undefined;
+
+//       yield [...items];
+
+//       while (true) {
+//         await new Promise(resolve => setTimeout(resolve, 500));
+//         let nextItemIdx;
+//         do {
+//           nextItemIdx = Math.floor(Math.random() * items.length);
+//         } while (items[nextItemIdx].symbol === lastYieldedItem?.symbol);
+//         items[nextItemIdx] = {
+//           ...items[nextItemIdx],
+//           value: +Math.random().toFixed(3),
+//         };
+//         lastYieldedItem = items[nextItemIdx];
+//         yield [...items];
+//       }
+//     })();
+
+//     return iter;
+//   }, []);
+
+//   const iterSource2 = useMemo(() => {
+//     return (async function* () {
+//       const keyGetter: (item: Item) => string = item => item.symbol;
+
+//       const subItersMappedByKeys = new Map<string, IterifiedUnwrapped<Item, void | undefined>>();
+//       let itemIters: {
+//         key: string;
+//         iter: AsyncIterable<Item>;
+//       }[] = [];
+//       let itemItersLengthChanged = false;
+
+//       for await (const items of iterSource) {
+//         for (let i = 0; i < items.length; i++) {
+//           const item = items[i];
+//           const key = keyGetter(item);
+//           let itemIter: AsyncIterable<Item>;
+
+//           if (!subItersMappedByKeys.has(key)) {
+//             const sink = iterifiedUnwrapped<Item>();
+//             itemIter = sink.iterable;
+//             itemItersLengthChanged = true;
+//             subItersMappedByKeys.set(key, sink);
+//             sink.next(item);
+//           } else {
+//             const unwrappedIterable = subItersMappedByKeys.get(key)!;
+//             unwrappedIterable.next(item);
+//             itemIter = unwrappedIterable?.iterable;
+//           }
+
+//           itemIters[i] = {
+//             key,
+//             iter: itemIter,
+//           };
+//         }
+//         if (itemItersLengthChanged) {
+//           itemItersLengthChanged = false;
+//           yield itemIters;
+//         }
+//       }
+//     })();
+//   }, []);
+
+//   return [iterSource, iterSource2];
+// }
+
+{
+  /* <div>
+        <pre>
+          <Iterate initialValue={[]} value={iterSource}>
+            {next => JSON.stringify(next.value, undefined, 2)}
+          </Iterate>
+        </pre>
+      </div> */
+}
+{
+  /* <div>
+        <pre>
+          <Iterate initialValue={[]} value={iterSource2}>
+            {next =>
+              next.value.map(value => (
+                <div key={value.key}>
+                  <Iterate value={value.iter}>
+                    {next =>
+                      next.value && (
+                        <span>
+                          {next.value.symbol} - {next.value.value}
+                        </span>
+                      )
+                    }
+                  </Iterate>
+                </div>
+              ))
+            }
+          </Iterate>
+        </pre>
+      </div> */
+}

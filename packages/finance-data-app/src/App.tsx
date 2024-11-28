@@ -16,11 +16,11 @@ function App() {
   return (children =>
     pipe(
       children,
-      children => <SuperTokensWrapper children={children} />,
-      children => <ApolloProvider children={children} client={gqlClient} />,
-      children => (
+      $ => <SuperTokensWrapper children={$} />,
+      $ => <ApolloProvider children={$} client={gqlClient} />,
+      $ => (
         <AntdConfigProvider
-          children={children}
+          children={$}
           theme={{ cssVar: true, algorithm: antdTheme.darkAlgorithm }}
         />
       )

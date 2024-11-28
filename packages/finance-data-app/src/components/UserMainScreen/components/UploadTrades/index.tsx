@@ -5,6 +5,7 @@ import { LoadingOutlined, UploadOutlined } from '@ant-design/icons';
 import { graphql } from '../../../../generated/gql/index.ts';
 import { SetTradesInputMode } from '../../../../generated/gql/graphql.ts';
 import { gqlClient } from '../../../../utils/gqlClient/index.ts';
+import { useTradeImportResultNotification } from './notifications/useTradeImportResultNotification.tsx';
 import './style.css';
 
 export { UploadTrades };
@@ -15,6 +16,8 @@ function UploadTrades(props: {
   onUploadSuccess?: () => void;
   onUploadFailure?: (err: unknown) => void;
 }) {
+  const tradeImportResultNotification = useTradeImportResultNotification();
+
   const [{ loading: isUploadingLedger }, uploadLedger] = useAsyncFn(
     async (file: UploadFile<any>) => {
       const fileContents: string = await (file as any).text();
@@ -30,8 +33,10 @@ function UploadTrades(props: {
           mutation: setTradesMutation,
         });
 
+        tradeImportResultNotification.show();
         await props.onUploadSuccess?.();
       } catch (err) {
+        tradeImportResultNotification.showWithError(err);
         await props.onUploadFailure?.(err);
       }
     },
@@ -39,26 +44,30 @@ function UploadTrades(props: {
   );
 
   return (
-    <Upload.Dragger
-      className={`cmp-upload-trades-area ${props.className ?? ''}`}
-      style={props.style}
-      accept="text/csv"
-      maxCount={1}
-      showUploadList={false}
-      beforeUpload={() => false}
-      onChange={info => uploadLedger(info.file)}
-    >
-      {isUploadingLedger ? (
-        <Spin indicator={<LoadingOutlined className="loading-spinner" spin />} />
-      ) : (
-        <>
-          <div className="upload-icon-container">
-            <UploadOutlined className="upload-icon" />
-          </div>
-          <div className="text-line">Import CSV Ledger</div>
-        </>
-      )}
-    </Upload.Dragger>
+    <>
+      <>{tradeImportResultNotification.placement}</>
+
+      <Upload.Dragger
+        className={`cmp-upload-trades-area ${props.className ?? ''}`}
+        style={props.style}
+        accept="text/csv"
+        maxCount={1}
+        showUploadList={false}
+        beforeUpload={() => false}
+        onChange={info => uploadLedger(info.file)}
+      >
+        {isUploadingLedger ? (
+          <Spin indicator={<LoadingOutlined className="loading-spinner" spin />} />
+        ) : (
+          <>
+            <div className="upload-icon-container">
+              <UploadOutlined className="upload-icon" />
+            </div>
+            <div className="text-line">Import CSV Ledger</div>
+          </>
+        )}
+      </Upload.Dragger>
+    </>
   );
 }
 
