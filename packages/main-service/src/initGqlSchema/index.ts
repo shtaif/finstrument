@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { GraphQLSchema } from 'graphql/index.js';
+import { GraphQLSchema, GraphQLError } from 'graphql/index.js';
 import { entries } from 'lodash-es';
 import { pipe, asyncPipe, CustomError } from 'shared-utils';
 import { itMap } from 'iterable-operators';
@@ -81,12 +81,18 @@ const mappedGqlSchema: GraphQLSchema = await asyncPipe(
           async resolve(parent, args, ctx, info) {
             try {
               return await origResolve(parent, args, ctx, info);
-            } catch (err: any) {
-              if (err instanceof CustomError) {
+            } catch (err) {
+              if (err instanceof GraphQLError) {
                 throw err;
               }
+              if (err instanceof CustomError) {
+                const { message, ...restEnumerablePropsOfErr } = err;
+                throw new GraphQLError(message, {
+                  extensions: restEnumerablePropsOfErr,
+                });
+              }
               console.error('Error during GraphQL field resolution:', err);
-              throw new Error('Internal server error occurred');
+              throw new Error('An internal server error occurred');
             }
           },
         };
