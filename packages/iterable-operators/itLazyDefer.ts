@@ -5,7 +5,10 @@ function itLazyDefer<T>(
 ): AsyncIterable<T> {
   return {
     [Symbol.asyncIterator]() {
-      let deferredIterableInitPromise: Promise<AsyncIterable<T>> | undefined;
+      let deferredIterableInitPossiblyPromise:
+        | undefined
+        | AsyncIterable<T>
+        | Promise<AsyncIterable<T>>;
       let deferredIterator: AsyncIterator<T>;
       let isClosed = false;
 
@@ -15,9 +18,12 @@ function itLazyDefer<T>(
             return { done: true, value: undefined };
           }
           try {
-            if (!deferredIterableInitPromise) {
-              deferredIterableInitPromise = Promise.resolve(iterableFactory());
-              deferredIterator = (await deferredIterableInitPromise)[Symbol.asyncIterator]();
+            if (!deferredIterableInitPossiblyPromise) {
+              deferredIterableInitPossiblyPromise = iterableFactory();
+              const iterable = isPromise(deferredIterableInitPossiblyPromise)
+                ? await deferredIterableInitPossiblyPromise
+                : deferredIterableInitPossiblyPromise;
+              deferredIterator = iterable[Symbol.asyncIterator]();
             }
             return await deferredIterator.next();
           } catch (err) {
@@ -29,10 +35,12 @@ function itLazyDefer<T>(
         async return() {
           if (!isClosed) {
             isClosed = true;
-            if (deferredIterableInitPromise) {
-              await deferredIterableInitPromise;
+            if (deferredIterableInitPossiblyPromise) {
+              if (isPromise(deferredIterableInitPossiblyPromise)) {
+                await deferredIterableInitPossiblyPromise;
+              }
               if (deferredIterator.return) {
-                return deferredIterator.return();
+                await deferredIterator.return();
               }
             }
           }
@@ -41,4 +49,8 @@ function itLazyDefer<T>(
       };
     },
   };
+}
+
+function isPromise<T = unknown>(input: unknown): input is Promise<T> {
+  return !!(input as any)?.then;
 }
