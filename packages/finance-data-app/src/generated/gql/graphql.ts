@@ -240,14 +240,11 @@ export type ObservedCombinedPortfolioStatsUnrealizedPnl = {
 export type ObservedHoldingStats = {
   __typename?: 'ObservedHoldingStats';
   breakEvenPrice?: Maybe<Scalars['Float']['output']>;
-  currentPortfolioPortion: Scalars['Float']['output'];
+  currentPortfolioPortion?: Maybe<Scalars['Float']['output']>;
   lastChangedAt: Scalars['DateTime']['output'];
   lastRelatedTradeId: Scalars['ID']['output'];
   marketValue: Scalars['Float']['output'];
   ownerId: Scalars['ID']['output'];
-  portionOfPortfolioCostBasis: Scalars['Float']['output'];
-  portionOfPortfolioMarketValue: Scalars['Float']['output'];
-  portionOfPortfolioUnrealizedPnl: Scalars['Float']['output'];
   priceData: InstrumentMarketData;
   symbol: Scalars['ID']['output'];
   totalLotCount: Scalars['Int']['output'];
