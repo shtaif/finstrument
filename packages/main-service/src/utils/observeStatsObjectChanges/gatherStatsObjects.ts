@@ -2,7 +2,7 @@ import { differenceWith, groupBy } from 'lodash-es';
 import { CustomError, asyncPipe, pipe } from 'shared-utils';
 import {
   positionsService,
-  type PortfolioStatsChange,
+  type CurrencyStatsChange,
   type HoldingStats,
   type Lot,
 } from '../positionsService/index.js';
@@ -88,10 +88,10 @@ async function gatherPortfolioStats(
     portfolioOwnerId: string;
     statsCurrency?: string | null | undefined;
   }[]
-): Promise<PortfolioStatsChange<true, false>[]> {
+): Promise<CurrencyStatsChange<true, false>[]> {
   return !portfolioStatsSpecifiers.length
     ? []
-    : await positionsService.retrievePortfolioStatsChanges({
+    : await positionsService.retrieveCurrencyStatsChanges({
         latestPerOwner: true,
         filters: {
           or: portfolioStatsSpecifiers.map(({ portfolioOwnerId, statsCurrency }) => ({
@@ -162,7 +162,7 @@ type StatsObjectsArray = readonly [
 
 type StatsObjects = {
   portfolioStatsChanges: {
-    [ownerAndCurrency: string]: PortfolioStatsChange<true, false> & {
+    [ownerAndCurrency: string]: CurrencyStatsChange<true, false> & {
       resolvedHoldings: (HoldingStats & {
         symbolInfo: InstrumentInfo;
       })[];

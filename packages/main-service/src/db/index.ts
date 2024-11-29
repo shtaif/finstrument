@@ -37,10 +37,10 @@ export {
 } from './models/HoldingStatsChangeModel.js';
 
 export {
-  PortfolioStatsChangeModel,
-  type PortfolioStatsChangeModelAttributes,
-  type PortfolioStatsChangeModelCreationAttributes,
-} from './models/PortfolioStatsChangeModel.js';
+  CurrencyStatsChangeModel,
+  type CurrencyStatsChangeModelAttributes,
+  type CurrencyStatsChangeModelCreationAttributes,
+} from './models/CurrencyStatsChangeModel.js';
 
 export {
   PortfolioCompositionChangeModel,

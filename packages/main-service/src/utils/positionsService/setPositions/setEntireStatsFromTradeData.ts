@@ -4,7 +4,7 @@ import { pipe } from 'shared-utils';
 import {
   HoldingStatsChangeModel,
   PortfolioCompositionChangeModel,
-  PortfolioStatsChangeModel,
+  CurrencyStatsChangeModel,
   type TradeRecordModelAttributes,
 } from '../../../db/index.js';
 import { getInstrumentInfos } from '../../getInstrumentInfos/index.js';
@@ -17,7 +17,7 @@ async function setEntireStatsFromTradeData(params: {
   transaction?: Transaction;
 }): Promise<{
   holdingChangesCreated: HoldingStatsChangeModel[];
-  portfolioStatsChangesCreated: PortfolioStatsChangeModel[];
+  portfolioStatsChangesCreated: CurrencyStatsChangeModel[];
   portfolioCompositionChangesCreated: PortfolioCompositionChangeModel[];
 }> {
   // TODO: Need to refactor all calculations that follow to be decimal-accurate (with `pnpm add decimal.js-light`)
@@ -248,7 +248,7 @@ async function setEntireStatsFromTradeData(params: {
     { transaction: params.transaction }
   );
 
-  await PortfolioStatsChangeModel.destroy({
+  await CurrencyStatsChangeModel.destroy({
     transaction: params.transaction,
     where: {
       ownerId: params.ownerId,
@@ -256,7 +256,7 @@ async function setEntireStatsFromTradeData(params: {
     },
   });
 
-  const portfolioStatsChangesCreated = await PortfolioStatsChangeModel.bulkCreate(
+  const portfolioStatsChangesCreated = await CurrencyStatsChangeModel.bulkCreate(
     sortedPortfolioStatsData.map(({ trade, portfolioStats }) => ({
       ownerId: params.ownerId,
       relatedTradeId: trade.id,

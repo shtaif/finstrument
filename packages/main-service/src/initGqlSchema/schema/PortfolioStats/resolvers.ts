@@ -13,7 +13,7 @@ const resolvers = {
       // const requestedFields = pipe(parseResolveInfo(info)!.fieldsByTypeName, Object.values)[0];
       const requestedFields = {} as any;
 
-      const [latestPortfolioStatsChange] = await positionsService.retrievePortfolioStatsChanges({
+      const [latestPortfolioStatsChange] = await positionsService.retrieveCurrencyStatsChanges({
         filters: {
           ownerIds: [ctx.activeSession.activeUserId],
         },

@@ -6,10 +6,10 @@ import {
   type HoldingStatsChange,
 } from './retrieveHoldingStatsChanges/index.js';
 import {
-  retrievePortfolioStatsChanges,
-  type RetrievePortfolioStatsChangesParams,
-  type PortfolioStatsChange,
-} from './retrievePortfolioStatsChanges/index.js';
+  retrieveCurrencyStatsChanges,
+  type RetrieveCurrencyStatsChangesParams,
+  type CurrencyStatsChange,
+} from './retrieveCurrencyStatsChanges/index.js';
 import { setPositions } from './setPositions/index.js';
 import { type PositionRecord } from './positionRecordSchema.js';
 
@@ -17,7 +17,7 @@ const positionsService = {
   retrieveLots,
   retrieveHoldingStats,
   retrieveHoldingStatsChanges,
-  retrievePortfolioStatsChanges,
+  retrieveCurrencyStatsChanges,
   setPositions,
 };
 
@@ -29,6 +29,6 @@ export {
   type HoldingStats,
   type RetrieveHoldingStatsChangesParams,
   type HoldingStatsChange,
-  type RetrievePortfolioStatsChangesParams,
-  type PortfolioStatsChange,
+  type RetrieveCurrencyStatsChangesParams,
+  type CurrencyStatsChange,
 };
