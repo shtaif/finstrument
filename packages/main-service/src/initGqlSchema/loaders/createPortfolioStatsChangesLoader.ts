@@ -1,13 +1,13 @@
 import DataLoader from 'dataloader';
 import { keyBy } from 'lodash-es';
-import { positionsService, type PortfolioStatsChange } from '../../utils/positionsService/index.js';
+import { positionsService, type CurrencyStatsChange } from '../../utils/positionsService/index.js';
 
 export { createPortfolioStatsChangesLoader };
 
 function createPortfolioStatsChangesLoader() {
   return new DataLoader<
     { relatedTradeId: string; includeCompositions?: boolean },
-    PortfolioStatsChange<boolean, boolean>,
+    CurrencyStatsChange<boolean, boolean>,
     string
   >(
     async inputs => {
@@ -18,7 +18,7 @@ function createPortfolioStatsChangesLoader() {
 
       // TODO: Fix `includeCompositions`?
 
-      const portfolioChanges = await positionsService.retrievePortfolioStatsChanges({
+      const portfolioChanges = await positionsService.retrieveCurrencyStatsChanges({
         filters: { relatedTradeIds },
         // includeCompositions,
       });

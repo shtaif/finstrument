@@ -1,6 +1,6 @@
 import DataLoader from 'dataloader';
 import { keyBy } from 'lodash-es';
-import { positionsService, type PortfolioStatsChange } from '../../utils/positionsService/index.js';
+import { positionsService, type CurrencyStatsChange } from '../../utils/positionsService/index.js';
 
 export { createPortfolioStatsLoader };
 
@@ -10,14 +10,14 @@ function createPortfolioStatsLoader() {
       ownerId: string;
       includeCompositions?: boolean;
     },
-    PortfolioStatsChange<boolean, boolean>
+    CurrencyStatsChange<boolean, boolean>
   >(async inputs => {
     const [ownerIds, includeCompositions] = [
       inputs.map(input => input.ownerId),
       inputs.some(input => !!input.includeCompositions),
     ];
 
-    const portfolioStats = await positionsService.retrievePortfolioStatsChanges({
+    const portfolioStats = await positionsService.retrieveCurrencyStatsChanges({
       filters: {
         ownerIds,
       },

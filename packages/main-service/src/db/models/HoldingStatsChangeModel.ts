@@ -2,7 +2,7 @@ import { type HasOneOptions, type BelongsToOptions, type InferAttributes } from 
 import { Model, DataType, Table, Column, BelongsTo, HasOne } from 'sequelize-typescript';
 import { UserModel } from './UserModel.js';
 import { TradeRecordModel } from './TradeRecordModel.js';
-import { PortfolioStatsChangeModel } from './PortfolioStatsChangeModel.js';
+import { CurrencyStatsChangeModel } from './CurrencyStatsChangeModel.js';
 
 export {
   HoldingStatsChangeModel,
@@ -110,11 +110,11 @@ class HoldingStatsChangeModel extends Model<
   } satisfies BelongsToOptions)
   relatedTrade!: Self<TradeRecordModel>;
 
-  @HasOne(() => PortfolioStatsChangeModel, {
+  @HasOne(() => CurrencyStatsChangeModel, {
     foreignKey: 'relatedTradeId',
     sourceKey: 'relatedTradeId',
   } satisfies HasOneOptions)
-  relatedPortfolioStatsChange!: Self<PortfolioStatsChangeModel>;
+  relatedPortfolioStatsChange!: Self<CurrencyStatsChangeModel>;
 }
 
 type HoldingStatsChangeModelAttributes = InferAttributes<HoldingStatsChangeModel>;

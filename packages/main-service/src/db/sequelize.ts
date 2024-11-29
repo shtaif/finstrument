@@ -6,7 +6,7 @@ import { InstrumentInfoModel } from './models/InstrumentInfoModel.js';
 import { LotModel } from './models/LotModel.js';
 import { LotClosingModel } from './models/LotClosingModel.js';
 import { HoldingStatsChangeModel } from './models/HoldingStatsChangeModel.js';
-import { PortfolioStatsChangeModel } from './models/PortfolioStatsChangeModel.js';
+import { CurrencyStatsChangeModel } from './models/CurrencyStatsChangeModel.js';
 import { PortfolioCompositionChangeModel } from './models/PortfolioCompositionChangeModel.js';
 
 export { sequelize, initDbSchema, pgSchemaName };
@@ -25,7 +25,7 @@ const sequelize = new Sequelize(env.POSTGRES_DB_CONNECTION_URL, {
     LotModel,
     LotClosingModel,
     HoldingStatsChangeModel,
-    PortfolioStatsChangeModel,
+    CurrencyStatsChangeModel,
     PortfolioCompositionChangeModel,
   ],
 });

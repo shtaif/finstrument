@@ -20,7 +20,7 @@ import {
   TradeRecordModel,
   UserModel,
   HoldingStatsChangeModel,
-  PortfolioStatsChangeModel,
+  CurrencyStatsChangeModel,
   LotModel,
   LotClosingModel,
 } from '../../../db/index.js';
@@ -29,8 +29,6 @@ import { userHoldingsChangedTopic } from '../../pubsubTopics/userHoldingsChanged
 import { parseCsvLedgerFormat } from '../../parseCsvLedgerFormat.js';
 import { getInstrumentInfos } from '../../getInstrumentInfos/index.js';
 import { retrieveHoldingStats } from '../retrieveHoldingStats/index.js';
-// import { retrievePortfolioStatsChanges } from '../retrievePortfolioStatsChanges/index.js';
-// import { findDiffTradesFromSaved } from './findDiffTradesFromSaved.js';
 import { findDiffTradesFromCurrStoredForOwner } from './findDiffTradesFromCurrStoredForOwner.js';
 import { setEntireStatsFromTradeData } from './setEntireStatsFromTradeData.js';
 
@@ -99,7 +97,7 @@ async function setPositions(params: {
           TradeRecordModel,
           UserModel,
           HoldingStatsChangeModel,
-          PortfolioStatsChangeModel,
+          CurrencyStatsChangeModel,
           LotModel,
           LotClosingModel,
         ]

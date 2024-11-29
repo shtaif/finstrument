@@ -9,7 +9,7 @@ const resolvers = {
     portfolioStatsChanges: authenticatedSessionResolverMiddleware(async (_, _args, ctx) => {
       // const requestedFields = {} as any;
 
-      const portfolioStatsChange = await positionsService.retrievePortfolioStatsChanges({
+      const portfolioStatsChange = await positionsService.retrieveCurrencyStatsChanges({
         // includeCompositions: !!requestedFields.composition,
         filters: { ownerIds: [ctx.activeSession.activeUserId] },
         pagination: { offset: 0 },

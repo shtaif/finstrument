@@ -4,7 +4,7 @@ import { itCollect, itTake } from 'iterable-operators';
 import {
   HoldingStatsChangeModel,
   InstrumentInfoModel,
-  PortfolioStatsChangeModel,
+  CurrencyStatsChangeModel,
   TradeRecordModel,
   UserModel,
 } from '../src/db/index.js';
@@ -104,13 +104,13 @@ beforeAll(async () => {
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await HoldingStatsChangeModel.destroy({ where: {} });
-  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await CurrencyStatsChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await HoldingStatsChangeModel.destroy({ where: {} });
-  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await CurrencyStatsChangeModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
   await UserModel.destroy({ where: {} });
 
@@ -158,7 +158,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 100,
           }))
         );
-        await PortfolioStatsChangeModel.bulkCreate(
+        await CurrencyStatsChangeModel.bulkCreate(
           ['USD', 'GBP'].map((forCurrency, i) => ({
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[i].relatedTradeId,
@@ -185,7 +185,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
         const tradeIds = [reusableTradeDatas[0].id, reusableTradeDatas[1].id];
         await TradeRecordModel.destroy({ where: { id: tradeIds } });
         await HoldingStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
-        await PortfolioStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
+        await CurrencyStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await publishUserHoldingChangedRedisEvent({
           ownerId: mockUserId1,
           holdingStats: { remove: ['ADBE', 'VUAG'] },
@@ -273,7 +273,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 110,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[0].relatedTradeId,
@@ -344,7 +344,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalRealizedProfitOrLossAmount: 5,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[2].relatedTradeId,
@@ -398,7 +398,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalRealizedProfitOrLossAmount: 5,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[4].relatedTradeId,
@@ -533,7 +533,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 100,
           }))
         );
-        await PortfolioStatsChangeModel.bulkCreate(
+        await CurrencyStatsChangeModel.bulkCreate(
           ['USD', 'GBP'].map((forCurrency, i) => ({
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[i].relatedTradeId,
@@ -562,7 +562,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
         const tradeIds = [reusableTradeDatas[0].id, reusableTradeDatas[1].id];
         await TradeRecordModel.destroy({ where: { id: tradeIds } });
         await HoldingStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
-        await PortfolioStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
+        await CurrencyStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await publishUserHoldingChangedRedisEvent({
           ownerId: mockUserId1,
           holdingStats: { remove: ['ADBE', 'VUAG'] },
@@ -668,7 +668,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 110,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[0].relatedTradeId,
@@ -746,7 +746,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalRealizedProfitOrLossAmount: 5,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[2].relatedTradeId,
@@ -800,7 +800,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalRealizedProfitOrLossAmount: 5,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[4].relatedTradeId,
@@ -945,7 +945,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 110,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[0].relatedTradeId,
@@ -1148,7 +1148,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
             totalPresentInvestedAmount: 110,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: reusableHoldingStats[0].relatedTradeId,

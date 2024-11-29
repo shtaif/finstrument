@@ -5,9 +5,9 @@ import { TradeRecordModel } from './TradeRecordModel.js';
 import { HoldingStatsChangeModel } from './HoldingStatsChangeModel.js';
 
 export {
-  PortfolioStatsChangeModel,
-  type PortfolioStatsChangeModelAttributes,
-  type PortfolioStatsChangeModelCreationAttributes,
+  CurrencyStatsChangeModel,
+  type CurrencyStatsChangeModelAttributes,
+  type CurrencyStatsChangeModelCreationAttributes,
 };
 
 @Table({
@@ -15,9 +15,9 @@ export {
   timestamps: false,
   defaultScope: {},
 })
-class PortfolioStatsChangeModel extends Model<
-  PortfolioStatsChangeModelAttributes,
-  PortfolioStatsChangeModelCreationAttributes
+class CurrencyStatsChangeModel extends Model<
+  CurrencyStatsChangeModelAttributes,
+  CurrencyStatsChangeModelCreationAttributes
 > {
   @Column({
     field: 'related_trade_id',
@@ -102,17 +102,17 @@ class PortfolioStatsChangeModel extends Model<
   relatedHoldingStatsChange!: Self<HoldingStatsChangeModel>;
 }
 
-type PortfolioStatsChangeModelAttributes = InferAttributes<PortfolioStatsChangeModel>;
+type CurrencyStatsChangeModelAttributes = InferAttributes<CurrencyStatsChangeModel>;
 
-type PortfolioStatsChangeModelCreationAttributes = {
-  id?: PortfolioStatsChangeModel['id'];
-  ownerId: PortfolioStatsChangeModel['ownerId'];
-  relatedTradeId: PortfolioStatsChangeModel['relatedTradeId'];
-  forCurrency?: PortfolioStatsChangeModel['forCurrency'];
-  totalPresentInvestedAmount?: PortfolioStatsChangeModel['totalPresentInvestedAmount'];
-  totalRealizedAmount?: PortfolioStatsChangeModel['totalRealizedAmount'];
-  totalRealizedProfitOrLossAmount?: PortfolioStatsChangeModel['totalRealizedProfitOrLossAmount'];
-  totalRealizedProfitOrLossRate?: PortfolioStatsChangeModel['totalRealizedProfitOrLossRate'];
+type CurrencyStatsChangeModelCreationAttributes = {
+  id?: CurrencyStatsChangeModel['id'];
+  ownerId: CurrencyStatsChangeModel['ownerId'];
+  relatedTradeId: CurrencyStatsChangeModel['relatedTradeId'];
+  forCurrency?: CurrencyStatsChangeModel['forCurrency'];
+  totalPresentInvestedAmount?: CurrencyStatsChangeModel['totalPresentInvestedAmount'];
+  totalRealizedAmount?: CurrencyStatsChangeModel['totalRealizedAmount'];
+  totalRealizedProfitOrLossAmount?: CurrencyStatsChangeModel['totalRealizedProfitOrLossAmount'];
+  totalRealizedProfitOrLossRate?: CurrencyStatsChangeModel['totalRealizedProfitOrLossRate'];
   changedAt: Date | string | number;
 };
 

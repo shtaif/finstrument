@@ -5,7 +5,7 @@ import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
   HoldingStatsChangeModel,
   InstrumentInfoModel,
-  PortfolioStatsChangeModel,
+  CurrencyStatsChangeModel,
   TradeRecordModel,
   UserModel,
 } from '../src/db/index.js';
@@ -133,12 +133,12 @@ beforeAll(async () => {
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await HoldingStatsChangeModel.destroy({ where: {} });
-  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await CurrencyStatsChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
   await HoldingStatsChangeModel.destroy({ where: {} });
-  await PortfolioStatsChangeModel.destroy({ where: {} });
+  await CurrencyStatsChangeModel.destroy({ where: {} });
   await TradeRecordModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
   await UserModel.destroy({ where: {} });
@@ -149,7 +149,7 @@ describe('Subscription.portfolioStats', () => {
   it('Upon subscription immediately emits an initial message with the state of all targeted portfolio stats', async () => {
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
     await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[0].id,
         ownerId: mockUserId1,
@@ -213,7 +213,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableHoldingStats[0], symbol: 'VUAG' },
       { ...reusableHoldingStats[1], symbol: 'ADBE' },
     ]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[0].id,
         ownerId: mockUserId1,
@@ -256,7 +256,7 @@ describe('Subscription.portfolioStats', () => {
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'AAPL' }]);
     await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'AAPL' }]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[2].id,
         ownerId: mockUserId1,
@@ -322,7 +322,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableHoldingStats[0], symbol: 'VUAG', ownerId: mockUserId1 },
       { ...reusableHoldingStats[1], symbol: 'VUAG', ownerId: mockUserId2 },
     ]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[0].id,
         ownerId: mockUserId1,
@@ -370,7 +370,7 @@ describe('Subscription.portfolioStats', () => {
       await HoldingStatsChangeModel.bulkCreate([
         { ...reusableHoldingStats[2], symbol: 'VUAG', ownerId: mockUserId2 },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[2].id,
           ownerId: mockUserId2,
@@ -396,7 +396,7 @@ describe('Subscription.portfolioStats', () => {
       await HoldingStatsChangeModel.bulkCreate([
         { ...reusableHoldingStats[3], symbol: 'AAPL', ownerId: mockUserId2 },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[3].id,
           ownerId: mockUserId1,
@@ -457,7 +457,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableHoldingStats[1], symbol: 'ADBE' },
     ]);
     const initialPStats = (
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[0].id,
           ownerId: mockUserId1,
@@ -501,7 +501,7 @@ describe('Subscription.portfolioStats', () => {
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
     await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         ...initialPStats[0],
         relatedTradeId: reusableTradeDatas[2].id,
@@ -520,7 +520,7 @@ describe('Subscription.portfolioStats', () => {
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
     await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
-    await PortfolioStatsChangeModel.bulkCreate([
+    await CurrencyStatsChangeModel.bulkCreate([
       {
         ...initialPStats[1],
         relatedTradeId: reusableTradeDatas[3].id,
@@ -586,7 +586,7 @@ describe('Subscription.portfolioStats', () => {
         { ...reusableHoldingStats[1], symbol: 'ADBE' },
         { ...reusableHoldingStats[2], symbol: 'AAPL' },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[0].id,
           ownerId: mockUserId1,
@@ -749,7 +749,7 @@ describe('Subscription.portfolioStats', () => {
           totalPresentInvestedAmount: 150,
         },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[0].id,
           ownerId: mockUserId1,
@@ -824,7 +824,7 @@ describe('Subscription.portfolioStats', () => {
               totalPresentInvestedAmount: 90,
             },
           ]);
-          await PortfolioStatsChangeModel.bulkCreate([
+          await CurrencyStatsChangeModel.bulkCreate([
             {
               relatedTradeId: reusableTradeDatas[3].id,
               ownerId: mockUserId1,
@@ -858,7 +858,7 @@ describe('Subscription.portfolioStats', () => {
               totalPresentInvestedAmount: 40,
             },
           ]);
-          await PortfolioStatsChangeModel.bulkCreate([
+          await CurrencyStatsChangeModel.bulkCreate([
             {
               relatedTradeId: reusableTradeDatas[5].id,
               ownerId: mockUserId1,
@@ -956,7 +956,7 @@ describe('Subscription.portfolioStats', () => {
           totalPresentInvestedAmount: 100,
         },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[0].id,
           ownerId: mockUserId1,
@@ -1086,7 +1086,7 @@ describe('Subscription.portfolioStats', () => {
           totalPresentInvestedAmount: 100,
         },
       ]);
-      await PortfolioStatsChangeModel.bulkCreate([
+      await CurrencyStatsChangeModel.bulkCreate([
         {
           relatedTradeId: reusableTradeDatas[0].id,
           ownerId: mockUserId1,
@@ -1173,7 +1173,7 @@ describe('Subscription.portfolioStats', () => {
             totalPresentInvestedAmount: 2.3,
           },
         ]);
-        await PortfolioStatsChangeModel.bulkCreate([
+        await CurrencyStatsChangeModel.bulkCreate([
           {
             relatedTradeId: reusableTradeDatas[0].id,
             ownerId: mockUserId1,
