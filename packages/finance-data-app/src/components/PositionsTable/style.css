@@ -1,15 +1,15 @@
 .cmp-positions-table {
-  .expandable-positions-container {
-    & > .ant-table-cell {
-      background: var(--ant-color-bg-container);
-    }
+  .symbol-cell {
+    width: 150px;
   }
 
   .current-price-cell {
     width: 21%;
   }
 
-  .symbol-cell {
-    width: 150px;
+  .portfolio-portion-cell {
+    .portion {
+      font-size: 0.95rem;
+    }
   }
 }

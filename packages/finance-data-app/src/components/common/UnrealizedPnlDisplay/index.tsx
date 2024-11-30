@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tag, Typography } from 'antd';
 import { pipe } from 'shared-utils';
-import { PnlArrowIcon } from '../../../../../PnlArrowIcon/index.tsx';
+import { PnlArrowIcon } from '../../PnlArrowIcon/index.tsx';
 import './style.css';
 
 export { UnrealizedPnlDisplay };
@@ -28,37 +28,40 @@ function UnrealizedPnlDisplay(props: {
       bordered={false}
       color={pipe(unrealizedPnlAmount, amount => (!amount ? '' : amount > 0 ? 'green' : 'red'))}
     >
-      <Typography.Text className="pnl-amount-display">
+      {unrealizedPnlAmount !== 0 && (
+        <PnlArrowIcon
+          className="profit-or-loss-indicator-arrow"
+          isPositive={unrealizedPnlAmount > 0}
+        />
+      )}
+      <Typography.Text className="pnl-amount-value">
         {unrealizedPnlAmount === undefined || currency === undefined ? (
           <>-</>
         ) : (
-          <>
-            {unrealizedPnlAmount !== 0 && <PnlArrowIcon isPositive={unrealizedPnlAmount > 0} />}
-            {unrealizedPnlAmount.toLocaleString(undefined, {
-              style: 'currency',
-              currency,
-              signDisplay: 'always',
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 2,
-            })}
-          </>
+          unrealizedPnlAmount.toLocaleString(undefined, {
+            style: 'currency',
+            currency,
+            signDisplay: 'always',
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 2,
+          })
         )}
       </Typography.Text>{' '}
-      <Typography.Text type="secondary">/</Typography.Text>{' '}
-      {unrealizedPnlFraction === undefined ? (
-        <Typography.Text>-</Typography.Text>
-      ) : (
-        <Typography.Text
-          className={`pnl-percentage-value ${unrealizedPnlAmount > 0 ? 'has-profit' : unrealizedPnlAmount < 0 ? 'has-loss' : ''}`}
-        >
-          {unrealizedPnlFraction.toLocaleString(undefined, {
+      <Typography.Text
+        className={`pnl-percentage-value ${unrealizedPnlAmount > 0 ? 'has-profit' : unrealizedPnlAmount < 0 ? 'has-loss' : ''}`}
+      >
+        <Typography.Text type="secondary">/</Typography.Text>{' '}
+        {unrealizedPnlFraction === undefined ? (
+          <>-</>
+        ) : (
+          unrealizedPnlFraction.toLocaleString(undefined, {
             style: 'percent',
             signDisplay: 'always',
             minimumFractionDigits: 1,
             maximumFractionDigits: 2,
-          })}
-        </Typography.Text>
-      )}
+          })
+        )}
+      </Typography.Text>
     </Tag>
   );
 }

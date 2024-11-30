@@ -1,0 +1,20 @@
+.cmp-lot-item {
+  width: 200px;
+  font-size: 0.75rem;
+
+  .ant-card-body {
+    display: flex;
+    flex-direction: column;
+    padding: 0 8px 2px;
+    gap: 6px;
+  }
+
+  .opened-x-ago {
+    font-size: 0.75rem;
+    color: var(--ant-color-text-description);
+  }
+
+  .quantities {
+    color: var(--ant-color-text-description);
+  }
+}

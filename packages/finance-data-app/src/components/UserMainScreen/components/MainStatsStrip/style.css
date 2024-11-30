@@ -33,4 +33,12 @@
       }
     }
   }
+
+  .part.unrealized-pnl-part {
+    .unrealized-pnl-content-line {
+      .unrealized-pnl {
+        font-size: 1rem;
+      }
+    }
+  }
 }
