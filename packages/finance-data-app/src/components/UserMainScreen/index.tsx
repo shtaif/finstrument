@@ -124,16 +124,21 @@ function UserMainScreen() {
                 amount: h.unrealizedPnl.amount,
                 percent: h.unrealizedPnl.percent,
               },
-              comprisingPositions: {
-                iter: [
-                  () =>
-                    pipe(
-                      createLotDataIter({ symbol: h.symbol }),
-                      itMap(({ lots }) => lots)
-                    ),
-                  [h.symbol],
-                ],
-              },
+              comprisingLots: [
+                () =>
+                  pipe(
+                    createLotDataIter({ symbol: h.symbol }),
+                    itMap(({ lots }) =>
+                      lots.map(l => ({
+                        ...l,
+                        date: l.openedAt,
+                        originalQty: l.originalQuantity,
+                        remainingQty: l.remainingQuantity,
+                      }))
+                    )
+                  ),
+                [h.symbol],
+              ],
             }))
           )}
         />
@@ -245,18 +250,39 @@ type PortfolioStatsUpdate = PortfolioStatsSubscriptionResults['combinedPortfolio
 
 function createLotDataIter({ symbol }: { symbol: string }): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;
-  lots: LotItem[];
+  lots: {
+    id: string;
+    openedAt: Date;
+    originalQuantity: number;
+    remainingQuantity: number;
+    unrealizedPnl: {
+      amount: number;
+      percent: number;
+    };
+  }[];
 }> {
   return pipe(
     itLazyDefer(async () => {
+      await gqlClient.clearStore();
+
       const queriedLots = await gqlClient.query({
         variables: { symbol },
         query: lotQuery,
       });
 
+      const queriedLotsById = keyBy(queriedLots.data.lots, l => l.id);
+
       const lotIds = queriedLots.data.lots.map(({ id }) => id);
 
-      const allCurrLots = {} as { [symbol: string]: LotItem };
+      const allCurrLots = {} as {
+        [lotId: string]: {
+          id: string;
+          openedAt: Date;
+          originalQuantity: number;
+          remainingQuantity: number;
+          unrealizedPnl: { amount: number; percent: number };
+        };
+      };
 
       return pipe(
         gqlWsClient.iterate<LotDataSubscriptionResult>({
@@ -266,7 +292,16 @@ function createLotDataIter({ symbol }: { symbol: string }): AsyncIterable<{
         itTap(next => {
           for (const update of next.data?.lots ?? []) {
             ({
-              ['SET']: () => (allCurrLots[update.data.id] = update.data),
+              ['SET']: () =>
+                (allCurrLots[update.data.id] = {
+                  ...queriedLotsById[update.data.id],
+                  originalQuantity: update.data.originalQuantity,
+                  remainingQuantity: update.data.remainingQuantity,
+                  unrealizedPnl: {
+                    amount: update.data.unrealizedPnl.amount,
+                    percent: update.data.unrealizedPnl.percent,
+                  },
+                }),
               ['REMOVE']: () => delete allCurrLots[update.data.id],
             })[update.type]();
           }
@@ -285,6 +320,7 @@ const lotQuery = graphql(/* GraphQL */ `
   query LotsQuery($symbol: ID!) {
     lots(filters: { symbols: [$symbol] }) {
       id
+      openedAt
     }
   }
 `);
@@ -295,7 +331,6 @@ const lotDataSubscription = graphql(/* GraphQL */ `
       type
       data {
         id
-        openedAt
         originalQuantity
         remainingQuantity
         unrealizedPnl {
@@ -308,7 +343,6 @@ const lotDataSubscription = graphql(/* GraphQL */ `
 `);
 
 type LotDataSubscriptionResult = DocumentType<typeof lotDataSubscription>;
-type LotItem = LotDataSubscriptionResult['lots'][number]['data'];
 
 // function useIterSourceExperiment() {
 //   type Item = {

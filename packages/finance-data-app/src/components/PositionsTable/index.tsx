@@ -2,21 +2,19 @@ import React, { memo, type ReactElement } from 'react';
 import { range } from 'lodash-es';
 import { Table, Skeleton, Typography } from 'antd';
 import { type MaybeAsyncIterable } from 'iterable-operators';
-import { Iterate } from 'react-async-iterable';
+import { Iterate, iterateFormatted } from 'react-async-iterable';
 import { commonDecimalNumCurrencyFormat } from './utils/commonDecimalNumCurrencyFormat';
 import { SymbolNameTag } from './components/SymbolNameTag';
 import { PositionSizeDisplay } from './components/PositionSizeDisplay/index.tsx';
 import { CurrentPriceDisplay } from './components/CurrentPriceDisplay';
 import { UnrealizedPnlDisplay } from './components/UnrealizedPnlDisplay';
 import {
-  HoldingExpandedPositions,
-  type ExpandedPosition,
-  type HoldingExpandedPositionsProps,
-} from './components/HoldingExpandedPositions';
+  PositionExpandedLots,
+  type PositionExpandedLotsProps,
+} from './components/PositionExpandedLots/index.tsx';
 import './style.css';
-import { commonPercentageFormat } from './utils/commonPercentageFormat.ts';
 
-export { PositionsTableMemo as PositionsTable, type HoldingRecord, type ExpandedPosition };
+export { PositionsTableMemo as PositionsTable, type HoldingRecord };
 
 function PositionsTable(props: {
   className?: string;
@@ -51,11 +49,24 @@ function PositionsTable(props: {
                 : nextHoldings) as HoldingRecord[]
             }
             expandable={{
+              expandedRowClassName: () => 'comprising-lots-container',
               rowExpandable: () => true,
-              expandedRowClassName: () => 'expandable-positions-container',
-              expandedRowRender: ({ comprisingPositions }, _idx, _indent, expanded) =>
+              expandedRowRender: ({ comprisingLots, currency }, _idx, _indent, expanded) =>
                 expanded &&
-                comprisingPositions && <HoldingExpandedPositions positions={comprisingPositions} />,
+                comprisingLots && (
+                  <PositionExpandedLots
+                    lots={(() => {
+                      const [iterFn, deps] = comprisingLots;
+                      return [
+                        () =>
+                          iterateFormatted(iterFn(), lots =>
+                            lots.map(lot => ({ ...lot, currency }))
+                          ),
+                        deps,
+                      ];
+                    })()}
+                  />
+                ),
             }}
           >
             <Column<HoldingRecord>
@@ -104,7 +115,7 @@ function PositionsTable(props: {
             <Column<HoldingRecord>
               title={<>Position</>}
               className="quantity-cell"
-              render={(_, { quantity, marketValue, currency, portfolioValuePortion }) =>
+              render={(_, { quantity, marketValue, currency }) =>
                 isLoadingFirstData || loading ? (
                   <CellSkeleton />
                 ) : (
@@ -135,17 +146,12 @@ function PositionsTable(props: {
 
             <Column<HoldingRecord>
               title={<>Portfolio portion</>}
-              className="unrealized-pnl-percent-cell"
+              className="portfolio-portion-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
                   <CellSkeleton />
                 ) : (
-                  <Typography.Text
-                    className="___"
-                    style={{
-                      fontSize: '0.95rem',
-                    }}
-                  >
+                  <Typography.Text className="portion">
                     {pos.portfolioValuePortion &&
                       pos.portfolioValuePortion.toLocaleString(undefined, {
                         style: 'percent',
@@ -188,7 +194,7 @@ type HoldingRecord = {
       percent?: number;
     };
   }[];
-  comprisingPositions?: HoldingExpandedPositionsProps['positions'];
+  comprisingLots?: PositionExpandedLotsProps['lots'];
 };
 
 const CellSkeleton = memo(() => {

@@ -45,7 +45,8 @@ function useAsyncIterable<TValue, TInitValue = undefined>(
   );
 
   if (!isAsyncIter(latestInputRef.current)) {
-    useEffect(() => {}, []);
+    useMemo(() => {}, [undefined]);
+    useEffect(() => {}, [undefined]);
 
     return (stateRef.current = {
       value: latestInputRef.current as ExtractAsyncIterableValue<TValue>,

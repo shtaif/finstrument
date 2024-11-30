@@ -1,0 +1,9 @@
+.cmp-position-exapnded-lots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  .lot-item {
+    width: calc(20% - 8px);
+  }
+}

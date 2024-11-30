@@ -2,7 +2,7 @@ import React from 'react';
 import { Divider, Skeleton, Typography } from 'antd';
 import { Iterate } from 'react-async-iterable';
 import { type MaybeAsyncIterable } from 'iterable-operators';
-import { UnrealizedPnlDisplay } from './components/UnrealizedPnlDisplay/index.tsx';
+import { UnrealizedPnlDisplay } from '../../../common/UnrealizedPnlDisplay/index.tsx';
 import './style.css';
 
 export { MainStatsStrip };
@@ -72,6 +72,7 @@ function MainStatsStrip(props: {
                 </>
               ) : (
                 <UnrealizedPnlDisplay
+                  className="unrealized-pnl"
                   unrealizedPnlAmount={next.value?.unrealizedPnl?.amount}
                   unrealizedPnlFraction={next.value?.unrealizedPnl?.fraction}
                   currency={next.value?.currencyShownIn}
