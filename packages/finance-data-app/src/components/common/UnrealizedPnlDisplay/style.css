@@ -2,15 +2,20 @@
   display: inline-block;
 
   .pnl-amount-value {
-    font-size: 1.25em;
+    font-size: 1em;
 
     .profit-or-loss-indicator-arrow {
       font-size: 0.5em;
     }
   }
 
+  .slash-divider {
+    font-size: 0.75em;
+    color: var(--ant-color-text-description);
+  }
+
   .pnl-percentage-value {
-    font-size: 0.875em;
+    font-size: 0.75em;
 
     &.has-profit {
       color: #35cb8e;

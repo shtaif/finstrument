@@ -7,7 +7,7 @@ import { commonDecimalNumCurrencyFormat } from './utils/commonDecimalNumCurrency
 import { SymbolNameTag } from './components/SymbolNameTag';
 import { PositionSizeDisplay } from './components/PositionSizeDisplay/index.tsx';
 import { CurrentPriceDisplay } from './components/CurrentPriceDisplay';
-import { UnrealizedPnlDisplay } from './components/UnrealizedPnlDisplay';
+import { UnrealizedPnlDisplay } from '../common/UnrealizedPnlDisplay/index.tsx';
 import {
   PositionExpandedLots,
   type PositionExpandedLotsProps,
@@ -15,6 +15,8 @@ import {
 import './style.css';
 
 export { PositionsTableMemo as PositionsTable, type HoldingRecord };
+
+const PositionsTableMemo = memo(PositionsTable);
 
 function PositionsTable(props: {
   className?: string;
@@ -130,14 +132,17 @@ function PositionsTable(props: {
 
             <Column<HoldingRecord>
               title={<>Unrealized P&L</>}
-              className="unrealized-pnl-percent-cell"
+              className="unrealized-pnl-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
                   <CellSkeleton />
                 ) : (
                   <UnrealizedPnlDisplay
-                    unrealizedPnlPercent={pos.unrealizedPnl?.percent}
+                    className="unrealized-pnl-display"
                     unrealizedPnlAmount={pos.unrealizedPnl?.amount}
+                    unrealizedPnlFraction={
+                      !pos.unrealizedPnl?.percent ? undefined : pos.unrealizedPnl.percent / 100
+                    }
                     currency={pos.currency}
                   />
                 )
@@ -200,5 +205,3 @@ type HoldingRecord = {
 const CellSkeleton = memo(() => {
   return <Skeleton active title={false} paragraph={{ rows: 1 }} />;
 });
-
-const PositionsTableMemo = memo(PositionsTable);
