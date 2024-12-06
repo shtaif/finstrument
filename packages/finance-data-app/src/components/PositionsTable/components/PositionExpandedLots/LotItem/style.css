@@ -17,4 +17,10 @@
   .quantities {
     color: var(--ant-color-text-description);
   }
+
+  .pnl {
+    .pnl-display {
+      font-size: 0.9rem;
+    }
+  }
 }

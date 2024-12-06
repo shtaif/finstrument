@@ -7,6 +7,12 @@
     width: 21%;
   }
 
+  .unrealized-pnl-cell {
+    .unrealized-pnl-display {
+      font-size: 0.9rem;
+    }
+  }
+
   .portfolio-portion-cell {
     .portion {
       font-size: 0.95rem;

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Tag, Typography } from 'antd';
 import { pipe } from 'shared-utils';
 import { PnlArrowIcon } from '../../PnlArrowIcon/index.tsx';
@@ -21,6 +21,17 @@ function UnrealizedPnlDisplay(props: {
     style,
   } = props;
 
+  const pnlValueFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(undefined, {
+        ...(currency && { style: 'currency', currency }),
+        signDisplay: 'always',
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2,
+      }),
+    [currency]
+  );
+
   return (
     <Tag
       className={`cmp-unrealized-pnl-display ${className}`}
@@ -38,30 +49,26 @@ function UnrealizedPnlDisplay(props: {
         {unrealizedPnlAmount === undefined || currency === undefined ? (
           <>-</>
         ) : (
-          unrealizedPnlAmount.toLocaleString(undefined, {
-            style: 'currency',
-            currency,
-            signDisplay: 'always',
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 2,
-          })
+          <>{pnlValueFormatter.format(unrealizedPnlAmount)}</>
         )}
       </Typography.Text>{' '}
+      <Typography.Text className="slash-divider">/</Typography.Text>{' '}
       <Typography.Text
         className={`pnl-percentage-value ${unrealizedPnlAmount > 0 ? 'has-profit' : unrealizedPnlAmount < 0 ? 'has-loss' : ''}`}
       >
-        <Typography.Text type="secondary">/</Typography.Text>{' '}
         {unrealizedPnlFraction === undefined ? (
           <>-</>
         ) : (
-          unrealizedPnlFraction.toLocaleString(undefined, {
-            style: 'percent',
-            signDisplay: 'always',
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 2,
-          })
+          <>{percentFormatter.format(unrealizedPnlFraction)}</>
         )}
       </Typography.Text>
     </Tag>
   );
 }
+
+const percentFormatter = new Intl.NumberFormat(undefined, {
+  style: 'percent',
+  signDisplay: 'always',
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 2,
+});
