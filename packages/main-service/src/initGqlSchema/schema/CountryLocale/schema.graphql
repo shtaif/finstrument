@@ -1,0 +1,20 @@
+type Query {
+  countryLocale(countryCode: ID!): CountryLocale
+}
+
+type CountryLocale {
+  alpha2: ID!
+  alpha3: ID!
+  name: String!
+  alternateNames: [String!]!
+  locales: [String!]!
+  defaultLocale: String!
+  currencyCode: String!
+  currencyName: String!
+  capital: String!
+  region: String!
+  continent: String!
+  languages: [String!]!
+  latitude: Float
+  longitude: Float
+}

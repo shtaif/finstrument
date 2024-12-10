@@ -51,6 +51,24 @@ export type AggregatePnlResultItemTranslated = {
   pnlAmount: Scalars['Float']['output'];
 };
 
+export type CountryLocale = {
+  __typename?: 'CountryLocale';
+  alpha2: Scalars['ID']['output'];
+  alpha3: Scalars['ID']['output'];
+  alternateNames: Array<Scalars['String']['output']>;
+  capital: Scalars['String']['output'];
+  continent: Scalars['String']['output'];
+  currencyCode: Scalars['String']['output'];
+  currencyName: Scalars['String']['output'];
+  defaultLocale: Scalars['String']['output'];
+  languages: Array<Scalars['String']['output']>;
+  latitude?: Maybe<Scalars['Float']['output']>;
+  locales: Array<Scalars['String']['output']>;
+  longitude?: Maybe<Scalars['Float']['output']>;
+  name: Scalars['String']['output'];
+  region: Scalars['String']['output'];
+};
+
 export type CurrencyAdjustedPnlInfo = {
   __typename?: 'CurrencyAdjustedPnlInfo';
   amount: Scalars['Float']['output'];
@@ -369,6 +387,7 @@ export type PriceDataChangeNotification = {
 
 export type Query = {
   __typename?: 'Query';
+  countryLocale?: Maybe<CountryLocale>;
   getSymbolHoldingForTest: HoldingRevenueChangeNotification;
   getSymbolPriceDataForTest: SymbolPriceData;
   hello: Scalars['String']['output'];
@@ -378,6 +397,11 @@ export type Query = {
   me: MeInfo;
   portfolioStats: PortfolioStats;
   portfolioStatsChanges: Array<PortfolioStatsChange>;
+};
+
+
+export type QueryCountryLocaleArgs = {
+  countryCode: Scalars['ID']['input'];
 };
 
 
@@ -578,6 +602,7 @@ export type ResolversTypes = {
   AggregatePnlResultItem: ResolverTypeWrapper<DeepPartial<AggregatePnlResultItem>>;
   AggregatePnlResultItemTranslated: ResolverTypeWrapper<DeepPartial<AggregatePnlResultItemTranslated>>;
   Boolean: ResolverTypeWrapper<DeepPartial<Scalars['Boolean']['output']>>;
+  CountryLocale: ResolverTypeWrapper<DeepPartial<CountryLocale>>;
   CurrencyAdjustedPnlInfo: ResolverTypeWrapper<DeepPartial<CurrencyAdjustedPnlInfo>>;
   DateTime: ResolverTypeWrapper<DeepPartial<Scalars['DateTime']['output']>>;
   ExchangeInfo: ResolverTypeWrapper<DeepPartial<ExchangeInfo>>;
@@ -641,6 +666,7 @@ export type ResolversParentTypes = {
   AggregatePnlResultItem: DeepPartial<AggregatePnlResultItem>;
   AggregatePnlResultItemTranslated: DeepPartial<AggregatePnlResultItemTranslated>;
   Boolean: DeepPartial<Scalars['Boolean']['output']>;
+  CountryLocale: DeepPartial<CountryLocale>;
   CurrencyAdjustedPnlInfo: DeepPartial<CurrencyAdjustedPnlInfo>;
   DateTime: DeepPartial<Scalars['DateTime']['output']>;
   ExchangeInfo: DeepPartial<ExchangeInfo>;
@@ -707,6 +733,24 @@ export type AggregatePnlResultItemResolvers<ContextType = AppGqlContextValue, Pa
 export type AggregatePnlResultItemTranslatedResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['AggregatePnlResultItemTranslated'] = ResolversParentTypes['AggregatePnlResultItemTranslated']> = {
   currency?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   pnlAmount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+};
+
+export type CountryLocaleResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['CountryLocale'] = ResolversParentTypes['CountryLocale']> = {
+  alpha2?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  alpha3?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  alternateNames?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  capital?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  continent?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currencyCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  currencyName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  defaultLocale?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  languages?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  latitude?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  locales?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  longitude?: Resolver<Maybe<ResolversTypes['Float']>, ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  region?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 };
 
@@ -971,6 +1015,7 @@ export type PriceDataChangeNotificationResolvers<ContextType = AppGqlContextValu
 };
 
 export type QueryResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
+  countryLocale?: Resolver<Maybe<ResolversTypes['CountryLocale']>, ParentType, ContextType, RequireFields<QueryCountryLocaleArgs, 'countryCode'>>;
   getSymbolHoldingForTest?: Resolver<ResolversTypes['HoldingRevenueChangeNotification'], ParentType, ContextType>;
   getSymbolPriceDataForTest?: Resolver<ResolversTypes['SymbolPriceData'], ParentType, ContextType>;
   hello?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -1047,6 +1092,7 @@ export type Resolvers<ContextType = AppGqlContextValue> = {
   AggregatePnlChangeResult?: AggregatePnlChangeResultResolvers<ContextType>;
   AggregatePnlResultItem?: AggregatePnlResultItemResolvers<ContextType>;
   AggregatePnlResultItemTranslated?: AggregatePnlResultItemTranslatedResolvers<ContextType>;
+  CountryLocale?: CountryLocaleResolvers<ContextType>;
   CurrencyAdjustedPnlInfo?: CurrencyAdjustedPnlInfoResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
   ExchangeInfo?: ExchangeInfoResolvers<ContextType>;
