@@ -93,12 +93,9 @@ function yahooMarketPricesIterable(params: {
 
                         if (initialMktData) {
                           return (async function* () {
+                            yield initialMktData;
                             while (true) {
-                              yield initialMktData;
-                              const mktData = await marketDataLoader.load(
-                                `${s.baseInstrumentSymbol}`
-                              );
-                              yield mktData;
+                              yield await marketDataLoader.load(`${s.baseInstrumentSymbol}`);
                             }
                           })();
                         }
@@ -194,6 +191,7 @@ function yahooMarketPricesIterable(params: {
 
                           yield {
                             ...instrumentMktData,
+                            currency: s.currencyOverride,
                             regularMarketPrice:
                               instrumentMktData.regularMarketPrice * conversionRate,
                           };
