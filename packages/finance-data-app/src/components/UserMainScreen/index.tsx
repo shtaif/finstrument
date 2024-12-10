@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { useLocalStorage } from 'react-use';
 import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
@@ -27,53 +27,60 @@ function UserMainScreen() {
     number | undefined
   >('last_fetched_holdings_count', undefined);
 
-  const [portfolioCurrencyConf, setPortfolioCurrencyConf] = useLocalStorage<string | undefined>(
-    'portfolio_currency',
-    undefined
-  );
+  const [portfolioCurrencyStoredSetting, setPortfolioCurrencyStoredSetting] = useLocalStorage<
+    string | undefined
+  >('portfolio_currency', undefined);
+
+  const portfolioCurrencySetting = useMemo(() => {
+    if (portfolioCurrencyStoredSetting) {
+      return portfolioCurrencyStoredSetting;
+    }
+    const localeCode = navigator.languages.at(0)?.split('-')[1];
+    if (!localeCode) {
+      return 'USD';
+    }
+    return (async () => {
+      const translatedCurrencyCode = (
+        await gqlClient.query({
+          variables: { countryCode: localeCode },
+          query: countryLocaleCurrencyQuery,
+        })
+      ).data.countryLocale?.currencyCode;
+      if (translatedCurrencyCode) {
+        return translatedCurrencyCode;
+      }
+      return 'USD';
+    })();
+  }, [portfolioCurrencyStoredSetting]);
+
+  useEffect(() => {
+    if (!portfolioCurrencyStoredSetting) {
+      (async () => {
+        const currencyCode = await portfolioCurrencySetting;
+        setPortfolioCurrencyStoredSetting(currencyCode);
+      })();
+    }
+  }, [portfolioCurrencySetting]);
 
   const portfolioStatsIter = useMemo(
     () =>
       pipe(
         itLazyDefer(async () => {
-          const currencyCode = await (async () => {
-            if (portfolioCurrencyConf) {
-              return portfolioCurrencyConf;
-            }
-
-            const localeCode = navigator.languages.at(0)?.split('-')[1];
-
-            if (localeCode) {
-              const translatedCurrencyCode = (
-                await gqlClient.query({
-                  variables: { countryCode: localeCode },
-                  query: countryLocaleCurrencyQuery,
-                })
-              ).data.countryLocale?.currencyCode;
-
-              if (translatedCurrencyCode) {
-                return translatedCurrencyCode;
-              }
-            }
-
-            return 'USD';
-          })();
-
-          setPortfolioCurrencyConf(currencyCode);
-
+          const currencyCode = await portfolioCurrencySetting;
           return createPortfolioStatsIter({ currencyCode });
         }),
         itShare()
       ),
-    []
+    [portfolioCurrencySetting]
   );
 
   const holdingStatsIter = useMemo(() => {
     return pipe(
       itCombineLatest(createCombinedHoldingStatsIter(), portfolioStatsIter),
       itMap(([nextHoldingUpdate, nextPortfolioUpdate]) => {
-        const compositionBySymbol = pipe(nextPortfolioUpdate.stats?.compositionByHoldings, $ =>
-          keyBy($, comp => comp.symbol)
+        const compositionBySymbol = keyBy(
+          nextPortfolioUpdate.stats?.compositionByHoldings,
+          c => c.symbol
         );
 
         const holdingStatsWithPortfolioPortions = nextHoldingUpdate.holdingStats.map(update => ({
@@ -142,8 +149,8 @@ function UserMainScreen() {
 
           <div className="portfolio-options-area">
             <CurrencySelect
-              currency={portfolioCurrencyConf}
-              onCurrencyChange={newCurrency => setPortfolioCurrencyConf(newCurrency)}
+              currency={portfolioCurrencyStoredSetting}
+              onCurrencyChange={newCurrency => setPortfolioCurrencyStoredSetting(newCurrency)}
             />
           </div>
         </div>
