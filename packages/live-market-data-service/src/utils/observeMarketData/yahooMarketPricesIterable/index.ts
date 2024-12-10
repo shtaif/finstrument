@@ -1,6 +1,7 @@
-import { pickBy, isEmpty, partition, pick, mapValues } from 'lodash-es';
+import { pickBy, isEmpty, pick } from 'lodash-es';
 import { asyncMap, asyncFilter, asyncTake, asyncConcat } from 'iter-tools';
 import { of } from '@reactivex/ix-esnext-esm/asynciterable';
+import DataLoader from 'dataloader';
 import yahooFinance from 'yahoo-finance2';
 import {
   itPairwise,
@@ -13,7 +14,7 @@ import {
   itThrottle,
   type MaybeAsyncIterable,
 } from 'iterable-operators';
-import { pipe, asyncPipe, objectFromEntriesTyped, parseSymbol } from 'shared-utils';
+import { pipe, objectFromEntriesTyped, parseSymbol, asyncPipe } from 'shared-utils';
 import { env } from '../../env.js';
 import {
   getSymbolsCurrentPrices,
@@ -39,110 +40,206 @@ function yahooMarketPricesIterable(params: {
     itMap(symbols => symbols.map(parseSymbol)),
     symbolsIter =>
       itLazyDefer(() => {
+        let currSymbolFetchersBySymbol: {
+          [symbol: string]: AsyncIterator<SymbolPriceData>;
+        } = {};
+
         let abortCtrl = new AbortController();
-        let prevPriceData: SymbolPrices = {};
+
+        const marketDataLoader = new DataLoader<string, SymbolPriceData>(async symbols => {
+          marketDataLoader.clearAll();
+          return pipe(
+            await getSymbolsCurrentPrices({
+              signal: abortCtrl.signal,
+              symbols: symbols as string[],
+            }),
+            symbolMarketDatas => symbols.map(symbol => symbolMarketDatas[symbol])
+          );
+        });
 
         return pipe(
           symbolsIter,
-          itSwitchMap(askedSymbols =>
-            pipe(
-              (async function* () {
-                if (askedSymbols.length === 0) {
-                  abortCtrl.abort();
-                  abortCtrl = new AbortController();
-                  return;
-                }
-                while (true) yield;
-              })(),
-              itMap(async () => {
-                const [currencyOverriddenSymbolsAsked, restSymbolsAsked] = partition(
-                  askedSymbols,
-                  s => !!s.currencyOverride
+          itSwitchMap(currAskedSymbols => {
+            if (currAskedSymbols.length === 0) {
+              abortCtrl.abort();
+              abortCtrl = new AbortController();
+              return (async function* () {})();
+            }
+
+            return pipe(
+              itLazyDefer(async () => {
+                currSymbolFetchersBySymbol = pick(
+                  currSymbolFetchersBySymbol,
+                  currAskedSymbols.map(s => s.normalizedFullSymbol)
                 );
 
-                const baseCurrenciesForAskedOverridenSymbols = await asyncPipe(
-                  currencyOverriddenSymbolsAsked,
-                  $ => $.map(s => s.baseInstrumentSymbol),
-                  async $ => {
-                    const [
-                      overriddenSymbolsPresentInPrevData,
-                      overriddenSymbolsMissingFromPrevData,
-                    ] = partition($, baseSymbol => !!prevPriceData[baseSymbol]);
-
-                    return {
-                      ...pick(prevPriceData, overriddenSymbolsPresentInPrevData),
-                      ...(await getSymbolsCurrentPrices({
-                        signal: abortCtrl.signal,
-                        symbols: overriddenSymbolsMissingFromPrevData,
-                      })),
-                    };
-                  },
-                  $ => mapValues($, mktData => mktData?.currency ?? null)
+                const symbolsToAddFetchersFor = currAskedSymbols.filter(
+                  s => !currSymbolFetchersBySymbol[s.normalizedFullSymbol]
                 );
 
-                const symbolsToFetch = [
-                  ...restSymbolsAsked.map(s => s.baseInstrumentSymbol),
-                  ...currencyOverriddenSymbolsAsked.flatMap(s =>
-                    !baseCurrenciesForAskedOverridenSymbols[s.baseInstrumentSymbol]
-                      ? []
-                      : [
-                          `${s.baseInstrumentSymbol}`,
-                          `${baseCurrenciesForAskedOverridenSymbols[s.baseInstrumentSymbol]}${s.currencyOverride}=X`,
-                        ]
-                  ),
-                ];
+                const additionalSymbolFetcherInits = await Promise.all(
+                  symbolsToAddFetchersFor.map(async function initSymbolFetcher(s): Promise<{
+                    symbol: string;
+                    iterator: AsyncIterator<SymbolPriceData, void, void>;
+                  }> {
+                    const mktDataIteratorForSymbol = await (async () => {
+                      const matchForCurrencyExFormat =
+                        s.baseInstrumentSymbol.match(yahooCurrencyExFormatRe);
 
-                return (prevPriceData = await getSymbolsCurrentPrices({
-                  signal: abortCtrl.signal,
-                  symbols: symbolsToFetch,
-                }));
-              }),
-              itCatch(err => {
-                if (abortCtrl.signal.aborted) {
-                  return (async function* () {})();
-                }
-                throw err;
-              }),
-              itMap(priceDatas =>
-                pipe(
-                  askedSymbols
-                    .filter(s => priceDatas[s.baseInstrumentSymbol] !== undefined)
-                    .map(s => {
-                      if (!s.currencyOverride) {
-                        return [
-                          s.normalizedFullSymbol,
-                          priceDatas[s.baseInstrumentSymbol],
-                        ] as const;
+                      if (matchForCurrencyExFormat) {
+                        const initialMktData = await marketDataLoader.load(
+                          `${s.baseInstrumentSymbol}`
+                        );
+
+                        if (initialMktData) {
+                          return (async function* () {
+                            while (true) {
+                              yield initialMktData;
+                              const mktData = await marketDataLoader.load(
+                                `${s.baseInstrumentSymbol}`
+                              );
+                              yield mktData;
+                            }
+                          })();
+                        }
+
+                        const [, origCurrency, targetCurrency] = matchForCurrencyExFormat;
+
+                        if (origCurrency === targetCurrency) {
+                          return (async function* () {
+                            while (true) {
+                              yield {
+                                quoteSourceName: undefined,
+                                currency: undefined,
+                                marketState: undefined,
+                                regularMarketTime: undefined,
+                                regularMarketPrice: 1,
+                              };
+                            }
+                          })();
+                        }
+
+                        return (async function* () {
+                          while (true) {
+                            const [origToCommonExData, commonToTargetExData] = await Promise.all([
+                              marketDataLoader.load(`${origCurrency}USD=X`),
+                              marketDataLoader.load(`USD${targetCurrency}=X`),
+                            ]);
+
+                            if (
+                              !origToCommonExData?.regularMarketPrice ||
+                              !commonToTargetExData?.regularMarketPrice
+                            ) {
+                              break;
+                            }
+
+                            yield {
+                              quoteSourceName: commonToTargetExData.quoteSourceName,
+                              marketState: commonToTargetExData.marketState,
+                              currency: targetCurrency,
+                              regularMarketTime: pipe(
+                                Math.max(
+                                  origToCommonExData.regularMarketTime?.getTime() ?? 0,
+                                  commonToTargetExData.regularMarketTime?.getTime() ?? 0
+                                ),
+                                time => (time === 0 ? undefined : new Date(time))
+                              ),
+                              regularMarketPrice:
+                                origToCommonExData.regularMarketPrice *
+                                commonToTargetExData.regularMarketPrice,
+                            };
+                          }
+                        })();
                       }
 
-                      const instPriceData = priceDatas[s.baseInstrumentSymbol]!;
-                      const overrideCurrencyPriceData =
-                        priceDatas[`${instPriceData.currency}${s.currencyOverride}=X`];
+                      const initialMktData = await marketDataLoader.load(s.baseInstrumentSymbol);
 
-                      const overriddenPriceData = {
-                        quoteSourceName: instPriceData.quoteSourceName,
-                        marketState: instPriceData.marketState,
-                        currency: s.currencyOverride,
-                        regularMarketTime:
-                          (overrideCurrencyPriceData?.regularMarketTime ?? 0) >
-                          (instPriceData?.regularMarketTime ?? 0)
-                            ? overrideCurrencyPriceData?.regularMarketTime
-                            : instPriceData?.regularMarketTime,
-                        regularMarketPrice:
-                          !!instPriceData.regularMarketPrice &&
-                          !!overrideCurrencyPriceData!.regularMarketPrice
-                            ? instPriceData.regularMarketPrice *
-                              overrideCurrencyPriceData!.regularMarketPrice
-                            : undefined,
-                      };
+                      if (!initialMktData) {
+                        return (async function* () {})();
+                      }
 
-                      return [s.normalizedFullSymbol, overriddenPriceData] as const;
-                    }),
-                  $ => objectFromEntriesTyped($)
-                )
-              )
+                      if (
+                        !(
+                          initialMktData.currency &&
+                          s.currencyOverride &&
+                          initialMktData.currency !== s.currencyOverride
+                        )
+                      ) {
+                        return (async function* () {
+                          while (true) {
+                            yield await marketDataLoader.load(`${s.baseInstrumentSymbol}`);
+                          }
+                        })();
+                      }
+
+                      const overrideCurrencyFetcherIterator = (
+                        await initSymbolFetcher(
+                          parseSymbol(`${initialMktData.currency}${s.currencyOverride}=X`)
+                        )
+                      ).iterator;
+
+                      return (async function* () {
+                        while (true) {
+                          const [instrumentMktData, conversionRate] = await Promise.all([
+                            marketDataLoader.load(`${s.baseInstrumentSymbol}`),
+                            (async () => {
+                              const next = await overrideCurrencyFetcherIterator.next();
+                              return next.value?.regularMarketPrice;
+                            })(),
+                          ]);
+
+                          if (!instrumentMktData?.regularMarketPrice || !conversionRate) {
+                            break;
+                          }
+
+                          yield {
+                            ...instrumentMktData,
+                            regularMarketPrice:
+                              instrumentMktData.regularMarketPrice * conversionRate,
+                          };
+                        }
+                      })();
+                    })();
+
+                    return {
+                      symbol: s.normalizedFullSymbol,
+                      iterator: mktDataIteratorForSymbol,
+                    };
+                  })
+                );
+
+                for (const f of additionalSymbolFetcherInits) {
+                  currSymbolFetchersBySymbol[f.symbol] = f.iterator;
+                }
+
+                return pipe(
+                  (async function* () {
+                    while (true) yield;
+                  })()
+                );
+              })
+            );
+          }),
+          itMap(() =>
+            asyncPipe(
+              currSymbolFetchersBySymbol,
+              $ => Object.entries($),
+              $ =>
+                $.map(async ([symbol, iterator]) => {
+                  const next = await iterator.next();
+                  const mktData = next.done ? null : next.value;
+                  return [symbol, mktData] as [string, SymbolPriceData];
+                }),
+              $ => Promise.all($),
+              objectFromEntriesTyped
             )
-          )
+          ),
+          itCatch(err => {
+            if (abortCtrl.signal.aborted) {
+              return (async function* () {})();
+            }
+            throw err;
+          })
         );
       }),
     itThrottle(env.SYMBOL_MARKET_DATA_POLLING_INTERVAL_MS),
@@ -165,7 +262,6 @@ function yahooMarketPricesIterable(params: {
         },
       };
     }),
-    itTap(({ prices }) => console.log('changedFromLast', Object.keys(prices.changedFromLast))),
     myIterableCleanupPatcher(source =>
       itLazyDefer(async function* () {
         // For each newly-obtained iterator, the following first yields all requested symbols' current prices once, and from then on, yield only the set of changed symbol prices;
@@ -183,132 +279,9 @@ function yahooMarketPricesIterable(params: {
           )
         );
       })
-    )
-    // source => ({
-    //   [Symbol.asyncIterator]: () => {
-    //     let it: AsyncIterator<any>;
-    //     return {
-    //       async next() {
-    //         it ??= source[Symbol.asyncIterator]();
-    //         const next = await it.next();
-    //         return next;
-    //       },
-    //       async return() {
-    //         const returnPromise =
-    //           it?.return?.() ?? ({ done: true as const, value: undefined } as any);
-    //         const returnValue = await returnPromise;
-    //         return returnValue;
-    //       },
-    //     };
-    //   },
-    // })
+    ),
+    itTap(changes => console.log('changedFromLast', Object.keys(changes)))
   );
 }
 
-// (async () => {
-//   const iter = pipe(
-//     (async function* () {
-//       try {
-//         while (true) {
-//           yield new Date().toISOString();
-//           await new Promise(resolve => setTimeout(resolve, 1000));
-//         }
-//       } finally {
-//         console.log('DONE');
-//       }
-//     })(),
-//     publish()
-//   );
-
-//   const iterator1 = iter[Symbol.asyncIterator]();
-
-//   console.log(await iterator1.next());
-//   console.log(await iterator1.next());
-
-//   await Promise.all([iterator1.return!()]);
-// })();
-
-// function myIterableCleanupPatcher2(iterable, fn) {
-//   let iterator;
-
-//   const wrappedIterable = (async function* () {
-//     iterator = iterable[Symbol.asyncIterator]();
-//     let resolve;
-
-//     try {
-//       while (true) {
-//         await new Promise((res, rej) => {
-//           resolve = res;
-//           iterator.next().then(resolve).catch(rej);
-//         });
-//         if (item.done) {
-//           break;
-//         }
-//         yield item.value;
-//       }
-//     } finally {
-//       await iterator.return?.();
-//     }
-//   })();
-
-//   const originalReturn = wrappedIterable.return;
-
-//   wrappedIterable.return = function () {
-//     originalReturn.call(this);
-//     console.log('originalReturn CALLED');
-//     return iterator.return();
-//   };
-
-//   return fn(s);
-// }
-
-// function myIterableCleanupPatcher3(iterable, fn) {
-//   const iterator = iterable[Symbol.asyncIterator]();
-//   let lastEmittedPromiseResolve;
-
-//   const wrapperIterable = {
-//     [Symbol.asyncIterator]: () => ({
-//       // ___: '___',
-//       next() {
-//         return new Promise((resolve, reject) => {
-//           lastEmittedPromiseResolve = resolve;
-//           iterator.next().then(resolve).catch(reject);
-//         });
-//       },
-//       return() {
-//         lastEmittedPromiseResolve?.({ done: true, value: undefined });
-//         this.next = () => ({ done: true, value: undefined });
-//         return iterator.return();
-//       },
-//     }),
-//   };
-
-//   return fn(wrapperIterable);
-// }
-
-// function myAsyncFilter(predicate) {
-//   return sourceIter => {
-//     let wasClosed = false;
-
-//     const outputIter = (async function* () {
-//       for await (const item of sourceIter) {
-//         if (await predicate(item)) {
-//           yield item;
-//         }
-//         console.log({ wasClosed });
-//         if (wasClosed) {
-//           break;
-//         }
-//       }
-//     })();
-
-//     const originalReturn = outputIter.return;
-
-//     outputIter.return = function () {
-//       wasClosed = true;
-//       return originalReturn.call(this);
-//     };
-
-//     return outputIter;
-//   };
-// }
+const yahooCurrencyExFormatRe = /([A-Z]{3})([A-Z]{3})=X$/;
