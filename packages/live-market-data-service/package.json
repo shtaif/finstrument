@@ -17,6 +17,7 @@
     "better-sse": "^0.9.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "dataloader": "^2.2.2",
     "express": "^4.19.2",
     "http-terminator": "^3.2.0",
     "iter-tools": "^7.5.3",
@@ -41,7 +42,6 @@
     "eslint": "^8.45.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-config-standard": "^17.1.0",
-    "latest": "link:@types/node/latest",
     "prettier": "^3.3.3",
     "typescript": "5.7.2"
   }
