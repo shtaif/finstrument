@@ -9,6 +9,7 @@ import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'it
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { MainStatsStrip } from './components/MainStatsStrip/index.tsx';
+import { CurrencySelect } from './components/CurrencySelect/index.tsx';
 import { PositionsTable } from '../PositionsTable/index.tsx';
 import { HoldingDataErrorPanel } from './components/HoldingDataErrorPanel';
 import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
@@ -26,7 +27,46 @@ function UserMainScreen() {
     number | undefined
   >('last_fetched_holdings_count', undefined);
 
-  const portfolioStatsIter = useMemo(() => createPortfolioStatsIter(), []);
+  const [portfolioCurrencyConf, setPortfolioCurrencyConf] = useLocalStorage<string | undefined>(
+    'portfolio_currency',
+    undefined
+  );
+
+  const portfolioStatsIter = useMemo(
+    () =>
+      pipe(
+        itLazyDefer(async () => {
+          const currencyCode = await (async () => {
+            if (portfolioCurrencyConf) {
+              return portfolioCurrencyConf;
+            }
+
+            const localeCode = navigator.languages.at(0)?.split('-')[1];
+
+            if (localeCode) {
+              const translatedCurrencyCode = (
+                await gqlClient.query({
+                  variables: { countryCode: localeCode },
+                  query: countryLocaleCurrencyQuery,
+                })
+              ).data.countryLocale?.currencyCode;
+
+              if (translatedCurrencyCode) {
+                return translatedCurrencyCode;
+              }
+            }
+
+            return 'USD';
+          })();
+
+          setPortfolioCurrencyConf(currencyCode);
+
+          return createPortfolioStatsIter({ currencyCode });
+        }),
+        itShare()
+      ),
+    []
+  );
 
   const holdingStatsIter = useMemo(() => {
     return pipe(
@@ -83,20 +123,30 @@ function UserMainScreen() {
       <div>
         <HoldingStatsRealTimeActivityStatus input={holdingStatsIter} />
 
-        <MainStatsStrip
-          data={iterateFormatted(portfolioStatsIter, next =>
-            !next?.stats
-              ? undefined
-              : {
-                  currencyShownIn: next.stats.currencyCombinedBy,
-                  marketValue: next.stats.marketValue,
-                  unrealizedPnl: {
-                    amount: next.stats.unrealizedPnl.amount,
-                    fraction: next.stats.unrealizedPnl.fraction,
-                  },
-                }
-          )}
-        />
+        <div className="portfolio-top-strip">
+          <MainStatsStrip
+            className="portfolio-stats-area"
+            data={iterateFormatted(portfolioStatsIter, next =>
+              !next?.stats
+                ? undefined
+                : {
+                    currencyShownIn: next.stats.currencyCombinedBy,
+                    marketValue: next.stats.marketValue,
+                    unrealizedPnl: {
+                      amount: next.stats.unrealizedPnl.amount,
+                      fraction: next.stats.unrealizedPnl.fraction,
+                    },
+                  }
+            )}
+          />
+
+          <div className="portfolio-options-area">
+            <CurrencySelect
+              currency={portfolioCurrencyConf}
+              onCurrencyChange={newCurrency => setPortfolioCurrencyConf(newCurrency)}
+            />
+          </div>
+        </div>
 
         <Iterate value={holdingStatsIter}>
           {next =>
@@ -208,17 +258,15 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
 type HoldingStatsDataSubscriptionResult = DocumentType<typeof holdingStatsDataSubscription>;
 type HoldingStatsItem = HoldingStatsDataSubscriptionResult['holdingStats'][number]['data'];
 
-function createPortfolioStatsIter(): AsyncIterable<{
+function createPortfolioStatsIter(params: { currencyCode: string }): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;
   stats: undefined | PortfolioStatsUpdate;
 }> {
   return pipe(
-    itLazyDefer(() =>
-      gqlWsClient.iterate<PortfolioStatsSubscriptionResults>({
-        query: gqlPrint(portfolioStatsDataSubscription),
-        variables: { currencyToCombineIn: 'USD' },
-      })
-    ),
+    gqlWsClient.iterate<PortfolioStatsSubscriptionResults>({
+      variables: { currencyToCombineIn: params.currencyCode },
+      query: gqlPrint(portfolioStatsDataSubscription),
+    }),
     itMap(next => ({
       stats: next.data?.combinedPortfolioStats,
       errors: next.errors,
@@ -226,6 +274,14 @@ function createPortfolioStatsIter(): AsyncIterable<{
     itShare()
   );
 }
+
+const countryLocaleCurrencyQuery = graphql(/* GraphQL */ `
+  query CountryLocaleCurrencyQuery($countryCode: ID!) {
+    countryLocale(countryCode: $countryCode) {
+      currencyCode
+    }
+  }
+`);
 
 const portfolioStatsDataSubscription = graphql(/* GraphQL */ `
   subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {

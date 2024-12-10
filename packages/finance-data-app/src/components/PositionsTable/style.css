@@ -3,6 +3,10 @@
     width: 150px;
   }
 
+  .col-header {
+    white-space: nowrap;
+  }
+
   .current-price-cell {
     width: 21%;
   }
