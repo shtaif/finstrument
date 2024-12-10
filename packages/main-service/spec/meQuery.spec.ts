@@ -25,7 +25,7 @@ afterAll(async () => {
   unmockGqlContext();
 });
 
-describe('Query.me ', () => {
+describe('Query.me', () => {
   it('For a non-authenticated caller returns a `null` `user` field', async () => {
     mockGqlContext(ctx => ({
       ...ctx,

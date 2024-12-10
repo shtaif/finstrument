@@ -24,6 +24,7 @@ import { resolvers as observedLotsResolvers } from './schema/ObservedLots/resolv
 import { resolvers as setTradesResultResolvers } from './schema/SetTradesResult/resolvers.js';
 import { resolvers as userResolvers } from './schema/User/resolvers.js';
 import { resolvers as meInfoResolvers } from './schema/MeInfo/resolvers.js';
+import { resolvers as countryLocaleResolvers } from './schema/CountryLocale/resolvers.js';
 
 export { mappedGqlSchema as gqlSchema, mappedGqlSchema as initedGqlSchema, appGqlContext };
 
@@ -32,6 +33,7 @@ const typeDefs = await Promise.all(
     `${import.meta.dirname}/schema/common.graphql`,
     `${import.meta.dirname}/schema/User/schema.graphql`,
     `${import.meta.dirname}/schema/MeInfo/schema.graphql`,
+    `${import.meta.dirname}/schema/CountryLocale/schema.graphql`,
     `${import.meta.dirname}/schema/legacySchemaToSafelyClear.graphql`,
     `${import.meta.dirname}/schema/PortfolioStats/schema.graphql`,
     `${import.meta.dirname}/schema/PortfolioStatsChange/schema.graphql`,
@@ -53,6 +55,7 @@ const resolvers = [
   olderAndProbablyUnusedResolversNeedToSortOut(),
   userResolvers,
   meInfoResolvers,
+  countryLocaleResolvers,
   portfolioStatsResolvers,
   portfolioStatsChangesResolvers,
   holdingStatsResolvers,

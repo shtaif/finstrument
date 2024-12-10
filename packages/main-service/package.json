@@ -25,6 +25,7 @@
     "axios": "^1.6.8",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
+    "country-locale-map": "^1.9.9",
     "csv-parse": "^5.4.0",
     "dataloader": "^2.2.2",
     "eventsource": "^2.0.2",
