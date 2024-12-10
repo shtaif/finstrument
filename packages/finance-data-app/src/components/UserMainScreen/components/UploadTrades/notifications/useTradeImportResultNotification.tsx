@@ -15,7 +15,7 @@ function useTradeImportResultNotification() {
 
   const notifShowWithError = (error: any) => {
     const gqlError = error.graphQLErrors?.[0]?.extensions;
-    console.log({ 'gqlError?.code': gqlError?.code });
+
     if (gqlError?.code === 'DUPLICATE_TRADES') {
       notif.error({
         key: 'trade_import_error_notification',
