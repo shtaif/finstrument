@@ -72,7 +72,7 @@ function PositionsTable(props: {
             }}
           >
             <Column<HoldingRecord>
-              title={<>Symbol</>}
+              title={<span className="col-header">Symbol</span>}
               className="symbol-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
@@ -84,7 +84,7 @@ function PositionsTable(props: {
             />
 
             <Column<HoldingRecord>
-              title={<>Current Price</>}
+              title={<span className="col-header">Current Price</span>}
               className="current-price-cell"
               render={(_, { marketPrice, currency, marketState, timeOfPrice }) =>
                 isLoadingFirstData || loading ? (
@@ -101,7 +101,7 @@ function PositionsTable(props: {
             />
 
             <Column<HoldingRecord>
-              title={<>Break-even Price</>}
+              title={<span className="col-header">Break-even Price</span>}
               className="break-even-price-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
@@ -115,7 +115,7 @@ function PositionsTable(props: {
             />
 
             <Column<HoldingRecord>
-              title={<>Position</>}
+              title={<span className="col-header">Position</span>}
               className="quantity-cell"
               render={(_, { quantity, marketValue, currency }) =>
                 isLoadingFirstData || loading ? (
@@ -131,7 +131,7 @@ function PositionsTable(props: {
             />
 
             <Column<HoldingRecord>
-              title={<>Unrealized P&L</>}
+              title={<span className="col-header">Unrealized P&L</span>}
               className="unrealized-pnl-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
@@ -150,19 +150,22 @@ function PositionsTable(props: {
             />
 
             <Column<HoldingRecord>
-              title={<>Portfolio portion</>}
+              title={<span className="col-header">Portfolio portion</span>}
               className="portfolio-portion-cell"
               render={(_, pos) =>
                 isLoadingFirstData || loading ? (
                   <CellSkeleton />
                 ) : (
                   <Typography.Text className="portion">
-                    {pos.portfolioValuePortion &&
+                    {!pos.portfolioValuePortion ? (
+                      <>-</>
+                    ) : (
                       pos.portfolioValuePortion.toLocaleString(undefined, {
                         style: 'percent',
                         minimumFractionDigits: 1,
                         maximumFractionDigits: 1,
-                      })}
+                      })
+                    )}
                   </Typography.Text>
                 )
               }

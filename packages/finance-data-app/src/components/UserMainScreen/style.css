@@ -10,6 +10,19 @@
     align-self: center;
   }
 
+  .portfolio-top-strip {
+    display: grid;
+    grid-template: auto / 1fr auto;
+
+    .portfolio-stats-area {
+      align-self: flex-start;
+    }
+
+    .portfolio-options-area {
+      align-content: center;
+    }
+  }
+
   .positions-table {
     width: 100%;
   }
