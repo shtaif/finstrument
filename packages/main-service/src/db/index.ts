@@ -31,10 +31,10 @@ export {
 } from './models/LotClosingModel.js';
 
 export {
-  HoldingStatsChangeModel,
-  type HoldingStatsChangeModelAttributes,
-  type HoldingStatsChangeModelCreationAttributes,
-} from './models/HoldingStatsChangeModel.js';
+  PositionChangeModel,
+  type PositionChangeModelAttributes,
+  type PositionChangeModelCreationAttributes,
+} from './models/PositionChangeModel.js';
 
 export {
   CurrencyStatsChangeModel,

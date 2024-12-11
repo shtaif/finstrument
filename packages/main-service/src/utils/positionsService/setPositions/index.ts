@@ -19,7 +19,7 @@ import {
   pgSchemaName,
   TradeRecordModel,
   UserModel,
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   CurrencyStatsChangeModel,
   LotModel,
   LotClosingModel,
@@ -96,7 +96,7 @@ async function setPositions(params: {
         `LOCK TABLE ${[
           TradeRecordModel,
           UserModel,
-          HoldingStatsChangeModel,
+          PositionChangeModel,
           CurrencyStatsChangeModel,
           LotModel,
           LotClosingModel,

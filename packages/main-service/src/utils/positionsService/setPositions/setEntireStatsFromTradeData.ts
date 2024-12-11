@@ -2,7 +2,7 @@ import { Op, Transaction } from 'sequelize';
 import { groupBy, uniq, uniqBy, values, flatMap, map, findIndex } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   PortfolioCompositionChangeModel,
   CurrencyStatsChangeModel,
   type TradeRecordModelAttributes,
@@ -16,7 +16,7 @@ async function setEntireStatsFromTradeData(params: {
   trades: TradeRecordModelAttributes[];
   transaction?: Transaction;
 }): Promise<{
-  holdingChangesCreated: HoldingStatsChangeModel[];
+  holdingChangesCreated: PositionChangeModel[];
   portfolioStatsChangesCreated: CurrencyStatsChangeModel[];
   portfolioCompositionChangesCreated: PortfolioCompositionChangeModel[];
 }> {
@@ -224,7 +224,7 @@ async function setEntireStatsFromTradeData(params: {
     })
   );
 
-  await HoldingStatsChangeModel.destroy({
+  await PositionChangeModel.destroy({
     transaction: params.transaction,
     where: {
       ownerId: params.ownerId,
@@ -232,7 +232,7 @@ async function setEntireStatsFromTradeData(params: {
     },
   });
 
-  const holdingChangesCreated = await HoldingStatsChangeModel.bulkCreate(
+  const holdingChangesCreated = await PositionChangeModel.bulkCreate(
     sortedHoldingStatsData.map(({ trade, holdingStats }) => ({
       ownerId: params.ownerId,
       symbol: trade.symbol,

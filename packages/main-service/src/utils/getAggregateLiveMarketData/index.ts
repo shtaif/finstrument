@@ -324,10 +324,10 @@ type AggregateMarketDataUpdate<TTranslateCurrencies extends string = string> = {
   // const iter = pipe(
   //   getAggregateLiveMarketData2({
   //     specifiers: [
-  //       // { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: undefined },
-  //       // { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
-  //       { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'ADBE' },
-  //       { type: 'HOLDING', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
+  //       // { type: 'POSITION', holdingPortfolioOwnerId: userId, holdingSymbol: undefined },
+  //       // { type: 'POSITION', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
+  //       { type: 'POSITION', holdingPortfolioOwnerId: userId, holdingSymbol: 'ADBE' },
+  //       { type: 'POSITION', holdingPortfolioOwnerId: userId, holdingSymbol: 'AAPL' },
   //       { type: 'LOT', lotId: 'c235e17f-b3e4-4051-8b9b-07b98126664d' },
   //       { type: 'LOT', lotId: '95795a49-9561-4494-ba17-3809f33af0a7' },
   //     ],

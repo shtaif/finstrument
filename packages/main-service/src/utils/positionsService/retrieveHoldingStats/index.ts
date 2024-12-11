@@ -3,7 +3,7 @@ import { mapValues } from 'lodash-es';
 import {
   sequelize,
   pgSchemaName,
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   PortfolioCompositionChangeModel,
   TradeRecordModel,
   UserModel,
@@ -52,7 +52,7 @@ async function retrieveHoldingStats(params: {
     transaction: params.transaction,
   } satisfies typeof params;
 
-  const holdingModelFields = mapValues(HoldingStatsChangeModel.getAttributes(), atr => atr!.field);
+  const positionModelFields = mapValues(PositionChangeModel.getAttributes(), atr => atr!.field);
   const tradeModelFields = mapValues(TradeRecordModel.getAttributes(), atr => atr!.field);
   const userModelFields = mapValues(UserModel.getAttributes(), atr => atr!.field);
   const portfolioCompositionModel = mapValues(
@@ -65,14 +65,14 @@ async function retrieveHoldingStats(params: {
       WITH
         latest_respective_holding_stats AS (
           SELECT
-            DISTINCT ON ("${holdingModelFields.ownerId}", "${holdingModelFields.symbol}")
+            DISTINCT ON ("${positionModelFields.ownerId}", "${positionModelFields.symbol}")
             *
           FROM
-            "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"
+            "${pgSchemaName}"."${PositionChangeModel.tableName}"
           ORDER BY
-            "${holdingModelFields.ownerId}",
-            "${holdingModelFields.symbol}",
-            "${holdingModelFields.changedAt}" DESC
+            "${positionModelFields.ownerId}",
+            "${positionModelFields.symbol}",
+            "${positionModelFields.changedAt}" DESC
         )
 
       SELECT
@@ -91,16 +91,16 @@ async function retrieveHoldingStats(params: {
           ] as const
         )
           .map(
-            ([keyName, alias]) => `hs."${holdingModelFields[keyName]}" AS "${alias ?? keyName}",\n`
+            ([keyName, alias]) => `hs."${positionModelFields[keyName]}" AS "${alias ?? keyName}",\n`
           )
           .join('')}
-        hs."${holdingModelFields.totalPresentInvestedAmount}" / NULLIF(hs."${holdingModelFields.totalQuantity}", 0) AS "breakEvenPrice",
+        hs."${positionModelFields.totalPresentInvestedAmount}" / NULLIF(hs."${positionModelFields.totalQuantity}", 0) AS "breakEvenPrice",
         pcc.${portfolioCompositionModel.portion} AS "currentPortfolioPortion"
 
       FROM
         latest_respective_holding_stats AS hs
         INNER JOIN "${pgSchemaName}"."${UserModel.tableName}" AS u ON
-          hs."${holdingModelFields.ownerId}" = u."${userModelFields.id}"
+          hs."${positionModelFields.ownerId}" = u."${userModelFields.id}"
         LEFT JOIN "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS pcc ON
           pcc."${portfolioCompositionModel.relatedHoldingChangeId}" = (
             SELECT
@@ -113,7 +113,7 @@ async function retrieveHoldingStats(params: {
               "${tradeModelFields.performedAt}" DESC
             LIMIT 1
           ) AND
-          pcc."${portfolioCompositionModel.symbol}" = hs."${holdingModelFields.symbol}"
+          pcc."${portfolioCompositionModel.symbol}" = hs."${positionModelFields.symbol}"
 
       ${buildWhereClauseFromLogicCombinables(normParams.filters, {
         ownerIds: val =>
@@ -121,9 +121,9 @@ async function retrieveHoldingStats(params: {
         ownerAliases: val =>
           !val.length ? '' : `u."${userModelFields.alias}" IN (${sequelizeEscapeArray(val)})`,
         symbols: val =>
-          !val.length ? '' : `hs."${holdingModelFields.symbol}" IN (${sequelizeEscapeArray(val)})`,
+          !val.length ? '' : `hs."${positionModelFields.symbol}" IN (${sequelizeEscapeArray(val)})`,
         totalLotCount: val => {
-          const colExp = `hs."${holdingModelFields.totalLotCount}"`;
+          const colExp = `hs."${positionModelFields.totalLotCount}"`;
           if (typeof val === 'number') {
             return `${colExp} = ${sequelize.escape(val)}`;
           }
@@ -175,81 +175,3 @@ type HoldingStats = {
   breakEvenPrice: number | null;
   lastChangedAt: Date;
 };
-
-// import {
-//   retrieveHoldingStatsChanges,
-//   type RetrieveHoldingStatsChangesParams,
-// } from '../retrieveHoldingStatsChanges';
-
-// export { retrieveHoldingStats, type HoldingStats };
-
-// async function retrieveHoldingStats(params: {
-//   filters: {
-//     symbols?: string[];
-//   } & (
-//     | { ownerIds: string[]; ownerAliases?: undefined }
-//     | { ownerIds?: undefined; ownerAliases: string[] }
-//     | { ownerIds: string[]; ownerAliases: string[] }
-//   );
-//   pagination?: RetrieveHoldingStatsChangesParams['pagination'];
-//   orderBy?: [
-//     (
-//       | Exclude<NonNullable<RetrieveHoldingStatsChangesParams['orderBy']>[0], 'changedAt'>
-//       | 'lastChangedAt'
-//     ),
-//     'ASC' | 'DESC',
-//   ];
-// }): Promise<HoldingStats[]> {
-//   const holdingStatsChanges = await retrieveHoldingStatsChanges({
-//     filters: {
-//       latestPerOwnerAndSymbol: true,
-//       ...params.filters,
-//     },
-//     orderBy: !params.orderBy
-//       ? undefined
-//       : [
-//           params.orderBy[0] === 'lastChangedAt' ? 'changedAt' : params.orderBy[0],
-//           params.orderBy[1],
-//         ],
-//     pagination: params.pagination,
-//   } satisfies RetrieveHoldingStatsChangesParams);
-
-//   return holdingStatsChanges.map(
-//     ({
-//       relatedTradeId,
-//       ownerId,
-//       symbol,
-//       totalLotCount,
-//       totalQuantity,
-//       totalPresentInvestedAmount,
-//       totalRealizedAmount,
-//       portfolioPortion,
-//       breakEvenPrice,
-//       changedAt,
-//     }) => ({
-//       relatedTradeId,
-//       ownerId,
-//       symbol,
-//       totalLotCount,
-//       totalQuantity,
-//       totalPresentInvestedAmount,
-//       totalRealizedAmount,
-//       portfolioPortion,
-//       breakEvenPrice,
-//       lastChangedAt: changedAt,
-//     })
-//   );
-// }
-
-// type HoldingStats = {
-//   ownerId: string;
-//   relatedTradeId: string;
-//   symbol: string;
-//   totalLotCount: number;
-//   totalQuantity: number;
-//   totalPresentInvestedAmount: number;
-//   totalRealizedAmount: number;
-//   portfolioPortion: number;
-//   breakEvenPrice: number;
-//   lastChangedAt: Date;
-// };

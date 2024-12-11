@@ -3,7 +3,7 @@ import { range } from 'lodash-es';
 import { asyncPipe, pipe } from 'shared-utils';
 import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   InstrumentInfoModel,
   CurrencyStatsChangeModel,
   TradeRecordModel,
@@ -132,12 +132,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await CurrencyStatsChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await CurrencyStatsChangeModel.destroy({ where: {} });
   await TradeRecordModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
@@ -148,7 +148,7 @@ afterAll(async () => {
 describe('Subscription.portfolioStats', () => {
   it('Upon subscription immediately emits an initial message with the state of all targeted portfolio stats', async () => {
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[0], symbol: 'ADBE' }]);
-    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);
+    await PositionChangeModel.bulkCreate([{ ...reusableHoldingStats[0], symbol: 'ADBE' }]);
     await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[0].id,
@@ -209,7 +209,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableTradeDatas[0], symbol: 'VUAG' },
       { ...reusableTradeDatas[1], symbol: 'ADBE' },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
+    await PositionChangeModel.bulkCreate([
       { ...reusableHoldingStats[0], symbol: 'VUAG' },
       { ...reusableHoldingStats[1], symbol: 'ADBE' },
     ]);
@@ -255,7 +255,7 @@ describe('Subscription.portfolioStats', () => {
     emissions.push((await subscription.next()).value);
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'AAPL' }]);
-    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'AAPL' }]);
+    await PositionChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'AAPL' }]);
     await CurrencyStatsChangeModel.bulkCreate([
       {
         relatedTradeId: reusableTradeDatas[2].id,
@@ -318,7 +318,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableTradeDatas[0], symbol: 'VUAG', ownerId: mockUserId1 },
       { ...reusableTradeDatas[1], symbol: 'VUAG', ownerId: mockUserId2 },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
+    await PositionChangeModel.bulkCreate([
       { ...reusableHoldingStats[0], symbol: 'VUAG', ownerId: mockUserId1 },
       { ...reusableHoldingStats[1], symbol: 'VUAG', ownerId: mockUserId2 },
     ]);
@@ -367,7 +367,7 @@ describe('Subscription.portfolioStats', () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[2], symbol: 'VUAG', ownerId: mockUserId2 },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         { ...reusableHoldingStats[2], symbol: 'VUAG', ownerId: mockUserId2 },
       ]);
       await CurrencyStatsChangeModel.bulkCreate([
@@ -393,7 +393,7 @@ describe('Subscription.portfolioStats', () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[3], symbol: 'AAPL', ownerId: mockUserId2 },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         { ...reusableHoldingStats[3], symbol: 'AAPL', ownerId: mockUserId2 },
       ]);
       await CurrencyStatsChangeModel.bulkCreate([
@@ -452,7 +452,7 @@ describe('Subscription.portfolioStats', () => {
       { ...reusableTradeDatas[0], symbol: 'VUAG' },
       { ...reusableTradeDatas[1], symbol: 'ADBE' },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
+    await PositionChangeModel.bulkCreate([
       { ...reusableHoldingStats[0], symbol: 'VUAG' },
       { ...reusableHoldingStats[1], symbol: 'ADBE' },
     ]);
@@ -500,7 +500,7 @@ describe('Subscription.portfolioStats', () => {
     emissions.push((await subscription.next()).value);
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[2], symbol: 'VUAG' }]);
-    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
+    await PositionChangeModel.bulkCreate([{ ...reusableHoldingStats[2], symbol: 'VUAG' }]);
     await CurrencyStatsChangeModel.bulkCreate([
       {
         ...initialPStats[0],
@@ -519,7 +519,7 @@ describe('Subscription.portfolioStats', () => {
     // *** Not expecting an emission here (because the `totalRealizedAmount` field which was modified wasn't targeted)...
 
     await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[3], symbol: 'ADBE' }]);
-    await HoldingStatsChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
+    await PositionChangeModel.bulkCreate([{ ...reusableHoldingStats[3], symbol: 'ADBE' }]);
     await CurrencyStatsChangeModel.bulkCreate([
       {
         ...initialPStats[1],
@@ -581,7 +581,7 @@ describe('Subscription.portfolioStats', () => {
         { ...reusableTradeDatas[1], symbol: 'ADBE' },
         { ...reusableTradeDatas[2], symbol: 'AAPL' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         { ...reusableHoldingStats[0], symbol: 'VUAG' },
         { ...reusableHoldingStats[1], symbol: 'ADBE' },
         { ...reusableHoldingStats[2], symbol: 'AAPL' },
@@ -726,7 +726,7 @@ describe('Subscription.portfolioStats', () => {
         { ...reusableTradeDatas[1], symbol: 'ADBE' },
         { ...reusableTradeDatas[2], symbol: 'AAPL' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ...reusableHoldingStats[0],
           symbol: 'VUAG',
@@ -808,7 +808,7 @@ describe('Subscription.portfolioStats', () => {
             { ...reusableTradeDatas[3], symbol: 'VUAG' },
             { ...reusableTradeDatas[4], symbol: 'ADBE' },
           ]);
-          await HoldingStatsChangeModel.bulkCreate([
+          await PositionChangeModel.bulkCreate([
             {
               ...reusableHoldingStats[3],
               symbol: 'VUAG',
@@ -849,7 +849,7 @@ describe('Subscription.portfolioStats', () => {
 
         async () => {
           await TradeRecordModel.bulkCreate([{ ...reusableTradeDatas[5], symbol: 'AAPL' }]);
-          await HoldingStatsChangeModel.bulkCreate([
+          await PositionChangeModel.bulkCreate([
             {
               ...reusableHoldingStats[5],
               symbol: 'AAPL',
@@ -940,7 +940,7 @@ describe('Subscription.portfolioStats', () => {
         { ...reusableTradeDatas[0], symbol: 'VUAG' },
         { ...reusableTradeDatas[1], symbol: 'ADBE' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ...reusableHoldingStats[0],
           symbol: 'VUAG',
@@ -1063,7 +1063,7 @@ describe('Subscription.portfolioStats', () => {
         { ...reusableTradeDatas[1], symbol: 'ADBE' },
         { ...reusableTradeDatas[2], symbol: 'AAPL' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ...reusableHoldingStats[0],
           symbol: 'VUAG',
@@ -1157,7 +1157,7 @@ describe('Subscription.portfolioStats', () => {
           { ...reusableTradeDatas[0], symbol: 'VUAG' },
           { ...reusableTradeDatas[1], symbol: 'ADBE' },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
             symbol: 'VUAG',

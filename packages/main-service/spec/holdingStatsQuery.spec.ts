@@ -1,7 +1,7 @@
 import { range } from 'lodash-es';
 import { afterAll, beforeEach, beforeAll, expect, it } from 'vitest';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   InstrumentInfoModel,
   TradeRecordModel,
   UserModel,
@@ -31,12 +31,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
   await Promise.all([
-    HoldingStatsChangeModel.destroy({ where: {} }),
+    PositionChangeModel.destroy({ where: {} }),
     TradeRecordModel.destroy({ where: {} }),
     InstrumentInfoModel.destroy({ where: {} }),
     UserModel.destroy({ where: {} }),
@@ -80,7 +80,7 @@ it("Retrieves only holdings owned by the active user's own holdings stats", asyn
     },
   ]);
 
-  await HoldingStatsChangeModel.bulkCreate(
+  await PositionChangeModel.bulkCreate(
     trades.map(({ id, ownerId, symbol, performedAt }) => ({
       ownerId,
       symbol,
@@ -134,7 +134,7 @@ it('Handles empty holdings as intended...', async () => {
     },
   ]);
 
-  await HoldingStatsChangeModel.bulkCreate(
+  await PositionChangeModel.bulkCreate(
     trades.map(({ id, ownerId, symbol, performedAt }) => ({
       ownerId,
       symbol,
@@ -263,7 +263,7 @@ it('Testing the testing capabilities 2', async () => {
     },
   ]);
 
-  await HoldingStatsChangeModel.bulkCreate(
+  await PositionChangeModel.bulkCreate(
     trades.map(({ id, ownerId, symbol, performedAt }) => ({
       ownerId,
       symbol,

@@ -3,10 +3,10 @@ import { mapValues } from 'lodash-es';
 import {
   sequelize,
   pgSchemaName,
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   UserModel,
   PortfolioCompositionChangeModel,
-  type HoldingStatsChangeModelAttributes,
+  type PositionChangeModelAttributes,
 } from '../../../db/index.js';
 import {
   buildWhereClauseFromLogicCombinables,
@@ -56,7 +56,7 @@ async function retrieveHoldingStatsChanges(params: {
     orderBy: params.orderBy ?? ['changedAt', 'DESC'],
   } satisfies typeof params;
 
-  const holdingModelFields = mapValues(HoldingStatsChangeModel.getAttributes(), atr => atr!.field);
+  const positionModelFields = mapValues(PositionChangeModel.getAttributes(), atr => atr!.field);
   const userModelFields = mapValues(UserModel.getAttributes(), atr => atr!.field);
   const portfolioCompositionModel = mapValues(
     PortfolioCompositionChangeModel.getAttributes(),
@@ -70,18 +70,18 @@ async function retrieveHoldingStatsChanges(params: {
           const latestRespectiveHoldingStats = `
             SELECT
               DISTINCT ON (
-                "${holdingModelFields.ownerId}",
-                "${holdingModelFields.symbol}"
+                "${positionModelFields.ownerId}",
+                "${positionModelFields.symbol}"
               )
               *
             FROM
-              "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"
+              "${pgSchemaName}"."${PositionChangeModel.tableName}"
             ORDER BY
-              "${holdingModelFields.ownerId}",
-              "${holdingModelFields.symbol}",
-              "${holdingModelFields.changedAt}" DESC
+              "${positionModelFields.ownerId}",
+              "${positionModelFields.symbol}",
+              "${positionModelFields.changedAt}" DESC
           `;
-          const regularHoldingStats = `SELECT * FROM "${pgSchemaName}"."${HoldingStatsChangeModel.tableName}"`;
+          const regularHoldingStats = `SELECT * FROM "${pgSchemaName}"."${PositionChangeModel.tableName}"`;
           return normParams.latestPerOwnerAndSymbol
             ? latestRespectiveHoldingStats
             : regularHoldingStats;
@@ -103,18 +103,18 @@ async function retrieveHoldingStatsChanges(params: {
             'changedAt',
           ] as const
         )
-          .map(modelName => `hs."${holdingModelFields[modelName]}" AS "${modelName}",\n`)
+          .map(modelName => `hs."${positionModelFields[modelName]}" AS "${modelName}",\n`)
           .join('')}
-        hs."${holdingModelFields.totalPresentInvestedAmount}" / hs."${holdingModelFields.totalQuantity}" AS "breakEvenPrice",
+        hs."${positionModelFields.totalPresentInvestedAmount}" / hs."${positionModelFields.totalQuantity}" AS "breakEvenPrice",
         pcc.${portfolioCompositionModel.portion} AS "portfolioPortion"
 
       FROM
         holding_stats_base AS hs
         INNER JOIN "${pgSchemaName}"."${UserModel.tableName}" AS u ON
-          hs."${holdingModelFields.ownerId}" = u."${userModelFields.id}"
+          hs."${positionModelFields.ownerId}" = u."${userModelFields.id}"
         LEFT JOIN "${pgSchemaName}"."${PortfolioCompositionChangeModel.tableName}" AS pcc ON
-          hs."${holdingModelFields.relatedTradeId}" = pcc."${portfolioCompositionModel.relatedHoldingChangeId}" AND
-          pcc."${portfolioCompositionModel.symbol}" = hs."${holdingModelFields.symbol}"
+          hs."${positionModelFields.relatedTradeId}" = pcc."${portfolioCompositionModel.relatedHoldingChangeId}" AND
+          pcc."${portfolioCompositionModel.symbol}" = hs."${positionModelFields.symbol}"
 
       ${buildWhereClauseFromLogicCombinables(normParams.filters, {
         ownerIds: val =>
@@ -122,11 +122,11 @@ async function retrieveHoldingStatsChanges(params: {
         ownerAliases: val =>
           !val.length ? '' : `u."${userModelFields.alias}" IN (${sequelizeEscapeArray(val)})`,
         symbols: val =>
-          !val.length ? '' : `hs."${holdingModelFields.symbol}" IN (${sequelizeEscapeArray(val)})`,
+          !val.length ? '' : `hs."${positionModelFields.symbol}" IN (${sequelizeEscapeArray(val)})`,
         relatedTradeIds: val =>
           !val.length
             ? ''
-            : `hs."${holdingModelFields.relatedTradeId} IN (${sequelizeEscapeArray(val)})`,
+            : `hs."${positionModelFields.relatedTradeId} IN (${sequelizeEscapeArray(val)})`,
       })}
 
       ORDER BY
@@ -149,7 +149,7 @@ async function retrieveHoldingStatsChanges(params: {
 
 type RetrieveHoldingStatsChangesParams = Parameters<typeof retrieveHoldingStatsChanges>[0];
 
-type HoldingStatsChange = HoldingStatsChangeModelAttributes & {
+type HoldingStatsChange = PositionChangeModelAttributes & {
   portfolioPortion: number;
   breakEvenPrice: number;
 };

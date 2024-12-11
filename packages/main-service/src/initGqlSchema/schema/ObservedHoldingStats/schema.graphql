@@ -1,22 +1,22 @@
 type Subscription {
-  holdingStats(filters: HoldingStatsSubscriptionFilters): [ObservedHoldingStatsUpdate!]!
+  positions(filters: PositionsSubscriptionFilters): [ObservedPositionsUpdate!]!
 }
 
-input HoldingStatsSubscriptionFilters {
+input PositionsSubscriptionFilters {
   symbols: [ID!]
 }
 
-type ObservedHoldingStatsUpdate {
-  type: ObservedHoldingStatsUpdateType!
-  data: ObservedHoldingStats!
+type ObservedPositionsUpdate {
+  type: ObservedPositionsUpdateType!
+  data: ObservedPosition!
 }
 
-enum ObservedHoldingStatsUpdateType {
+enum ObservedPositionsUpdateType {
   SET
   REMOVE
 }
 
-type ObservedHoldingStats {
+type ObservedPosition {
   ownerId: ID!
   lastRelatedTradeId: ID!
   symbol: ID!

@@ -10,10 +10,10 @@ export { resolvers };
 
 const resolvers = {
   Subscription: {
-    holdingStats: {
+    positions: {
       resolve: undefined,
       subscribe: authenticatedSessionResolverMiddleware((_, args, ctx, info) => {
-        const requestedFields = gqlFormattedFieldSelectionTree<Subscription['holdingStats']>(info);
+        const requestedFields = gqlFormattedFieldSelectionTree<Subscription['positions']>(info);
 
         const specifiers = args.filters?.symbols?.length
           ? args.filters.symbols.map(symbol => ({
@@ -23,7 +23,7 @@ const resolvers = {
             }))
           : [
               {
-                type: 'HOLDING' as const,
+                type: 'POSITION' as const,
                 holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               },
             ];
@@ -88,8 +88,8 @@ const resolvers = {
               },
             }))
           ),
-          itMap(relevantHoldingUpdates => ({
-            holdingStats: relevantHoldingUpdates,
+          itMap(relevantPositionUpdates => ({
+            positions: relevantPositionUpdates,
           }))
         );
       }),

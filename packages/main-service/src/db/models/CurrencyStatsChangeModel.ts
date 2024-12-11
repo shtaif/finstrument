@@ -2,7 +2,7 @@ import { type BelongsToOptions, type InferAttributes } from 'sequelize';
 import { Model, DataType, Table, Column, BelongsTo } from 'sequelize-typescript';
 import { UserModel } from './UserModel.js';
 import { TradeRecordModel } from './TradeRecordModel.js';
-import { HoldingStatsChangeModel } from './HoldingStatsChangeModel.js';
+import { PositionChangeModel } from './PositionChangeModel.js';
 
 export {
   CurrencyStatsChangeModel,
@@ -94,12 +94,12 @@ class CurrencyStatsChangeModel extends Model<
   } satisfies BelongsToOptions)
   relatedTrade!: Self<TradeRecordModel>;
 
-  @BelongsTo(() => HoldingStatsChangeModel, {
+  @BelongsTo(() => PositionChangeModel, {
     foreignKey: 'relatedTradeId',
     targetKey: 'relatedTradeId',
     // onDelete: 'CASCADE',
   } satisfies BelongsToOptions)
-  relatedHoldingStatsChange!: Self<HoldingStatsChangeModel>;
+  relatedHoldingStatsChange!: Self<PositionChangeModel>;
 }
 
 type CurrencyStatsChangeModelAttributes = InferAttributes<CurrencyStatsChangeModel>;

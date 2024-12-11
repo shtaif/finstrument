@@ -2,7 +2,7 @@ import { afterAll, beforeEach, beforeAll, it, expect, describe } from 'vitest';
 import { pipe } from 'shared-utils';
 import { itTakeFirst } from 'iterable-operators';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   InstrumentInfoModel,
   CurrencyStatsChangeModel,
   LotModel,
@@ -68,7 +68,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await Promise.all([
-    HoldingStatsChangeModel.destroy({ where: {} }),
+    PositionChangeModel.destroy({ where: {} }),
     CurrencyStatsChangeModel.destroy({ where: {} }),
     LotModel.destroy({ where: {} }),
   ]);
@@ -77,7 +77,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await TradeRecordModel.destroy({ where: {} });
   await LotModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await CurrencyStatsChangeModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
   await UserModel.destroy({ where: {} });
@@ -126,7 +126,7 @@ describe('Mutation.setTrades', () => {
       await Promise.all([
         redisEventPromise,
         (async () => (await LotModel.findAll()).map(r => r.dataValues))(),
-        (async () => (await HoldingStatsChangeModel.findAll()).map(r => r.dataValues))(),
+        (async () => (await PositionChangeModel.findAll()).map(r => r.dataValues))(),
         (async () => (await CurrencyStatsChangeModel.findAll()).map(r => r.dataValues))(),
       ]);
 
@@ -193,7 +193,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -422,7 +422,7 @@ describe('Mutation.setTrades', () => {
       ).map(record => record.dataValues);
 
       const initialHoldingStats = (
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: initialTrades[0].id,
@@ -548,7 +548,7 @@ describe('Mutation.setTrades', () => {
         LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
-        HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
         CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -647,7 +647,7 @@ describe('Mutation.setTrades', () => {
       ).map(record => record.dataValues);
 
       const initialHoldingStats = (
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ownerId: mockUserId1,
             relatedTradeId: initialTrades[0].id,
@@ -773,7 +773,7 @@ describe('Mutation.setTrades', () => {
         LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
-        HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+        PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
           recs.map(r => r.dataValues)
         ),
         CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -822,7 +822,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -904,7 +904,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -1050,7 +1050,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -1132,7 +1132,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -1287,7 +1287,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -1370,7 +1370,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -1638,7 +1638,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -1766,7 +1766,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -2000,7 +2000,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -2170,7 +2170,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -2276,7 +2276,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -2422,7 +2422,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -2520,7 +2520,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -2648,7 +2648,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -2842,7 +2842,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -2970,7 +2970,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -3121,7 +3121,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -3283,7 +3283,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -3471,7 +3471,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -3598,7 +3598,7 @@ describe('Mutation.setTrades', () => {
         recs.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(recs => recs.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
         recs.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(recs =>
@@ -3753,7 +3753,7 @@ describe('Mutation.setTrades', () => {
     ).map(record => record.dataValues);
 
     const initialHoldingStats = (
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
           ownerId: mockUserId1,
           relatedTradeId: initialTrades[0].id,
@@ -3880,7 +3880,7 @@ describe('Mutation.setTrades', () => {
         r.map(r => r.dataValues)
       ),
       LotModel.findAll({ order: [['openedAt', 'ASC']] }).then(r => r.map(r => r.dataValues)),
-      HoldingStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>
+      PositionChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>
         r.map(r => r.dataValues)
       ),
       CurrencyStatsChangeModel.findAll({ order: [['changedAt', 'ASC']] }).then(r =>

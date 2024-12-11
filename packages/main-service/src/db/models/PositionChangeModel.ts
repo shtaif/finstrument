@@ -5,9 +5,9 @@ import { TradeRecordModel } from './TradeRecordModel.js';
 import { CurrencyStatsChangeModel } from './CurrencyStatsChangeModel.js';
 
 export {
-  HoldingStatsChangeModel,
-  type HoldingStatsChangeModelAttributes,
-  type HoldingStatsChangeModelCreationAttributes,
+  PositionChangeModel,
+  type PositionChangeModelAttributes,
+  type PositionChangeModelCreationAttributes,
 };
 
 @Table({
@@ -15,9 +15,9 @@ export {
   timestamps: false,
   defaultScope: {},
 })
-class HoldingStatsChangeModel extends Model<
-  HoldingStatsChangeModelAttributes,
-  HoldingStatsChangeModelCreationAttributes
+class PositionChangeModel extends Model<
+  PositionChangeModelAttributes,
+  PositionChangeModelCreationAttributes
 > {
   @Column({
     field: 'related_trade_id',
@@ -117,19 +117,19 @@ class HoldingStatsChangeModel extends Model<
   relatedPortfolioStatsChange!: Self<CurrencyStatsChangeModel>;
 }
 
-type HoldingStatsChangeModelAttributes = InferAttributes<HoldingStatsChangeModel>;
+type PositionChangeModelAttributes = InferAttributes<PositionChangeModel>;
 
-type HoldingStatsChangeModelCreationAttributes = {
-  id?: HoldingStatsChangeModel['id'];
-  ownerId: HoldingStatsChangeModel['ownerId'];
-  symbol: HoldingStatsChangeModel['symbol'];
-  relatedTradeId: HoldingStatsChangeModel['relatedTradeId'];
-  totalLotCount?: HoldingStatsChangeModel['totalLotCount'];
-  totalQuantity?: HoldingStatsChangeModel['totalQuantity'];
-  totalPresentInvestedAmount?: HoldingStatsChangeModel['totalPresentInvestedAmount'];
-  totalRealizedAmount?: HoldingStatsChangeModel['totalRealizedAmount'];
-  totalRealizedProfitOrLossAmount?: HoldingStatsChangeModel['totalRealizedProfitOrLossAmount'];
-  totalRealizedProfitOrLossRate?: HoldingStatsChangeModel['totalRealizedProfitOrLossRate'];
+type PositionChangeModelCreationAttributes = {
+  id?: PositionChangeModel['id'];
+  ownerId: PositionChangeModel['ownerId'];
+  symbol: PositionChangeModel['symbol'];
+  relatedTradeId: PositionChangeModel['relatedTradeId'];
+  totalLotCount?: PositionChangeModel['totalLotCount'];
+  totalQuantity?: PositionChangeModel['totalQuantity'];
+  totalPresentInvestedAmount?: PositionChangeModel['totalPresentInvestedAmount'];
+  totalRealizedAmount?: PositionChangeModel['totalRealizedAmount'];
+  totalRealizedProfitOrLossAmount?: PositionChangeModel['totalRealizedProfitOrLossAmount'];
+  totalRealizedProfitOrLossRate?: PositionChangeModel['totalRealizedProfitOrLossRate'];
   changedAt: Date | string | number;
 };
 

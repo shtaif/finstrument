@@ -3,7 +3,7 @@ import { range } from 'lodash-es';
 import { asyncPipe, pipe } from 'shared-utils';
 import { itCollect, itTake, itTakeFirst } from 'iterable-operators';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   InstrumentInfoModel,
   TradeRecordModel,
   UserModel,
@@ -68,7 +68,7 @@ const reusableTradeDatas = [
   },
 ];
 
-const reusableHoldingStats = reusableTradeDatas.map(({ id, ownerId, symbol, performedAt }) => ({
+const reusablePositions = reusableTradeDatas.map(({ id, ownerId, symbol, performedAt }) => ({
   ownerId,
   symbol,
   relatedTradeId: id,
@@ -102,20 +102,20 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
   await UserModel.destroy({ where: {} });
 
   unmockGqlContext();
 });
 
-describe('Subscription.holdingStats ', () => {
-  it('Upon subscription immediately emits an initial message with the state of all targeted holding stats', async () => {
+describe('Subscription.positions', () => {
+  it('Upon subscription immediately emits an initial message with the state of all targeted positions', async () => {
     const trades = await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -135,7 +135,7 @@ describe('Subscription.holdingStats ', () => {
       },
     ]);
 
-    await HoldingStatsChangeModel.bulkCreate(
+    await PositionChangeModel.bulkCreate(
       trades.map(({ id, ownerId, symbol, performedAt }) => ({
         ownerId,
         symbol,
@@ -153,7 +153,7 @@ describe('Subscription.holdingStats ', () => {
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -169,7 +169,7 @@ describe('Subscription.holdingStats ', () => {
 
     expect(firstItem).toStrictEqual({
       data: {
-        holdingStats: [
+        positions: [
           {
             data: {
               ownerId: mockUserId1,
@@ -191,7 +191,7 @@ describe('Subscription.holdingStats ', () => {
     });
   });
 
-  it('For every newly created holding stats for existing symbols emits corresponding updates correctly', async () => {
+  it('For every newly created positions for existing symbols emits corresponding updates correctly', async () => {
     const trades = await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -211,7 +211,7 @@ describe('Subscription.holdingStats ', () => {
       },
     ]);
 
-    await HoldingStatsChangeModel.bulkCreate(
+    await PositionChangeModel.bulkCreate(
       trades.map(({ id, ownerId, symbol, performedAt }) => ({
         ownerId,
         symbol,
@@ -229,7 +229,7 @@ describe('Subscription.holdingStats ', () => {
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -255,7 +255,7 @@ describe('Subscription.holdingStats ', () => {
           quantity: 1,
           price: 2.2,
         },
-        holdingStatsChange: {
+        positionChange: {
           ownerId: mockUserId1,
           symbol: 'ADBE',
           relatedTradeId: mockTradeIds[2],
@@ -277,7 +277,7 @@ describe('Subscription.holdingStats ', () => {
           quantity: 1,
           price: 2.2,
         },
-        holdingStatsChange: {
+        positionChange: {
           ownerId: mockUserId1,
           symbol: 'ADBE',
           relatedTradeId: mockTradeIds[3],
@@ -292,7 +292,7 @@ describe('Subscription.holdingStats ', () => {
       },
     ]) {
       await TradeRecordModel.create(nextMockData.trade);
-      await HoldingStatsChangeModel.create(nextMockData.holdingStatsChange);
+      await PositionChangeModel.create(nextMockData.positionChange);
 
       await publishUserHoldingChangedRedisEvent({
         ownerId: mockUserId1,
@@ -305,7 +305,7 @@ describe('Subscription.holdingStats ', () => {
     expect(emissions).toStrictEqual([
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -319,7 +319,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -334,14 +334,14 @@ describe('Subscription.holdingStats ', () => {
     ]);
   });
 
-  it('For every newly created holding stats for symbols priorly unheld emits corresponding updates correctly', async () => {
+  it('For every newly created positions for symbols priorly unheld emits corresponding updates correctly', async () => {
     await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-    await HoldingStatsChangeModel.bulkCreate(reusableHoldingStats.slice(0, 2));
+    await PositionChangeModel.bulkCreate(reusablePositions.slice(0, 2));
 
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -360,25 +360,25 @@ describe('Subscription.holdingStats ', () => {
     for (const nextMockData of [
       {
         trade: reusableTradeDatas[2],
-        holdingStatsChange: {
-          ...reusableHoldingStats[2],
+        positionChange: {
+          ...reusablePositions[2],
           totalPresentInvestedAmount: 110,
         },
       },
       {
         trade: reusableTradeDatas[4],
-        holdingStatsChange: {
-          ...reusableHoldingStats[4],
+        positionChange: {
+          ...reusablePositions[4],
           totalPresentInvestedAmount: 120,
         },
       },
     ]) {
       await TradeRecordModel.create(nextMockData.trade);
-      await HoldingStatsChangeModel.create(nextMockData.holdingStatsChange);
+      await PositionChangeModel.create(nextMockData.positionChange);
 
       await publishUserHoldingChangedRedisEvent({
         ownerId: mockUserId1,
-        holdingStats: { set: [nextMockData.holdingStatsChange.symbol] },
+        holdingStats: { set: [nextMockData.positionChange.symbol] },
       });
 
       emissions.push((await subscription.next()).value);
@@ -387,12 +387,12 @@ describe('Subscription.holdingStats ', () => {
     expect(emissions).toStrictEqual([
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
                 symbol: 'ADBE',
-                lastRelatedTradeId: reusableHoldingStats[2].relatedTradeId,
+                lastRelatedTradeId: reusablePositions[2].relatedTradeId,
                 totalPresentInvestedAmount: 110,
               },
             },
@@ -401,12 +401,12 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
                 symbol: 'ADBE',
-                lastRelatedTradeId: reusableHoldingStats[4].relatedTradeId,
+                lastRelatedTradeId: reusablePositions[4].relatedTradeId,
                 totalPresentInvestedAmount: 120,
               },
             },
@@ -416,11 +416,11 @@ describe('Subscription.holdingStats ', () => {
     ]);
   });
 
-  it('Targeting non-existent holding stats emits initial state message with empty data', async () => {
+  it('Targeting non-existent positions emits initial state message with empty data', async () => {
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -436,12 +436,12 @@ describe('Subscription.holdingStats ', () => {
 
     expect(initialMessage).toStrictEqual({
       data: {
-        holdingStats: [],
+        positions: [],
       },
     });
   });
 
-  it("When entire existing symbols' holding stats get erased emits corresponding updates correctly", async () => {
+  it("When entire existing symbols' positions get erased emits corresponding updates correctly", async () => {
     const trades = await TradeRecordModel.bulkCreate([
       {
         id: mockTradeIds[0],
@@ -461,7 +461,7 @@ describe('Subscription.holdingStats ', () => {
       },
     ]);
 
-    await HoldingStatsChangeModel.bulkCreate(
+    await PositionChangeModel.bulkCreate(
       trades.map(({ id, ownerId, symbol, performedAt }) => ({
         ownerId,
         symbol,
@@ -479,7 +479,7 @@ describe('Subscription.holdingStats ', () => {
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             type
             data {
               ownerId
@@ -496,7 +496,7 @@ describe('Subscription.holdingStats ', () => {
 
     await Promise.all([
       TradeRecordModel.destroy({ where: { id: trades[0].id } }),
-      HoldingStatsChangeModel.destroy({ where: { relatedTradeId: trades[0].id } }),
+      PositionChangeModel.destroy({ where: { relatedTradeId: trades[0].id } }),
     ]);
     await publishUserHoldingChangedRedisEvent({
       ownerId: mockUserId1,
@@ -508,7 +508,7 @@ describe('Subscription.holdingStats ', () => {
     expect(emissions).toStrictEqual([
       {
         data: {
-          holdingStats: [
+          positions: [
             expect.objectContaining({ type: 'SET' }),
             expect.objectContaining({ type: 'SET' }),
           ],
@@ -516,7 +516,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               type: 'REMOVE',
               data: {
@@ -532,11 +532,11 @@ describe('Subscription.holdingStats ', () => {
     ]);
   });
 
-  it('Targeting non-existent holding stats will emit a message as soon as such holding stats eventually get created', async () => {
+  it('Targeting non-existent positions will emit a message as soon as such positions eventually get created', async () => {
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -560,7 +560,7 @@ describe('Subscription.holdingStats ', () => {
         price: 1.1,
       }))
     );
-    await HoldingStatsChangeModel.bulkCreate(
+    await PositionChangeModel.bulkCreate(
       trades.map(({ id, ownerId, symbol, performedAt }) => ({
         ownerId,
         symbol,
@@ -583,7 +583,7 @@ describe('Subscription.holdingStats ', () => {
 
     expect(nextMessage).toStrictEqual({
       data: {
-        holdingStats: [
+        positions: [
           {
             data: {
               ownerId: mockUserId1,
@@ -605,14 +605,14 @@ describe('Subscription.holdingStats ', () => {
     });
   });
 
-  it('When targeting only certain stats fields, only holding changes that have any of these fields modified will cause updates to be emitted', async () => {
+  it('When targeting only certain stats fields, only position changes that have any of these fields modified will cause updates to be emitted', async () => {
     await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-    await HoldingStatsChangeModel.bulkCreate(reusableHoldingStats.slice(0, 2));
+    await PositionChangeModel.bulkCreate(reusablePositions.slice(0, 2));
 
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats {
+          positions {
             data {
               ownerId
               symbol
@@ -627,14 +627,14 @@ describe('Subscription.holdingStats ', () => {
     const emissions = [(await subscription.next()).value];
 
     let currTradeData = reusableTradeDatas.at(-1)!;
-    let currHoldingStatsData = reusableHoldingStats.at(-1)!;
+    let currHoldingStatsData = reusablePositions.at(-1)!;
 
     for (const [i, nextDataChanges] of (
       [
         {
           containsChangesInFieldsThatWereObserved: false,
           symbol: 'ADBE',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 2,
             totalRealizedAmount: 100,
@@ -643,7 +643,7 @@ describe('Subscription.holdingStats ', () => {
         {
           containsChangesInFieldsThatWereObserved: true,
           symbol: 'ADBE',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 3,
             totalRealizedAmount: 100,
@@ -652,7 +652,7 @@ describe('Subscription.holdingStats ', () => {
         {
           containsChangesInFieldsThatWereObserved: true,
           symbol: 'ADBE',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 3,
             totalRealizedAmount: 120,
@@ -661,7 +661,7 @@ describe('Subscription.holdingStats ', () => {
         {
           containsChangesInFieldsThatWereObserved: false,
           symbol: 'AAPL',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 2,
             totalRealizedAmount: 100,
@@ -670,7 +670,7 @@ describe('Subscription.holdingStats ', () => {
         {
           containsChangesInFieldsThatWereObserved: true,
           symbol: 'AAPL',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 3,
             totalRealizedAmount: 100,
@@ -679,7 +679,7 @@ describe('Subscription.holdingStats ', () => {
         {
           containsChangesInFieldsThatWereObserved: true,
           symbol: 'AAPL',
-          holdingStatsChange: {
+          positionChange: {
             totalPresentInvestedAmount: 120,
             totalQuantity: 3,
             totalRealizedAmount: 120,
@@ -700,14 +700,14 @@ describe('Subscription.holdingStats ', () => {
 
       currHoldingStatsData = {
         ...currHoldingStatsData,
-        ...nextDataChanges.holdingStatsChange,
+        ...nextDataChanges.positionChange,
         symbol: nextSymbol,
         changedAt: nextDate,
         relatedTradeId: nextTradeId,
       };
 
       await TradeRecordModel.create(currTradeData);
-      await HoldingStatsChangeModel.create(currHoldingStatsData);
+      await PositionChangeModel.create(currHoldingStatsData);
 
       await publishUserHoldingChangedRedisEvent({
         ownerId: mockUserId1,
@@ -723,7 +723,7 @@ describe('Subscription.holdingStats ', () => {
       expect.anything(), // (initial full state emission)
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -737,7 +737,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -751,7 +751,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -765,7 +765,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [
+          positions: [
             {
               data: {
                 ownerId: mockUserId1,
@@ -781,10 +781,10 @@ describe('Subscription.holdingStats ', () => {
   });
 
   describe('With `marketValue` and `unrealizedPnl` fields', () => {
-    it('Emits updates correctly in conjunction with changes to holding symbols market data', async () => {
+    it('Emits updates correctly in conjunction with changes to position symbols market data', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-      await HoldingStatsChangeModel.bulkCreate(
-        reusableHoldingStats.slice(0, 2).map(h => ({
+      await PositionChangeModel.bulkCreate(
+        reusablePositions.slice(0, 2).map(h => ({
           ...h,
           totalLotCount: 1,
           totalQuantity: 3,
@@ -796,7 +796,7 @@ describe('Subscription.holdingStats ', () => {
         gqlWsClientIterateDisposable({
           query: /* GraphQL */ `
             subscription {
-              holdingStats {
+              positions {
                 data {
                   symbol
                   marketValue
@@ -832,7 +832,7 @@ describe('Subscription.holdingStats ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -852,7 +852,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'ADBE',
@@ -865,7 +865,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -879,10 +879,10 @@ describe('Subscription.holdingStats ', () => {
       ]);
     });
 
-    it('Emits updates correctly in conjunction with changes to underlying holding stats', async () => {
+    it('Emits updates correctly in conjunction with changes to underlying positions', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-      await HoldingStatsChangeModel.bulkCreate(
-        reusableHoldingStats.slice(0, 2).map(h => ({
+      await PositionChangeModel.bulkCreate(
+        reusablePositions.slice(0, 2).map(h => ({
           ...h,
           totalLotCount: 1,
           totalQuantity: 2,
@@ -893,7 +893,7 @@ describe('Subscription.holdingStats ', () => {
       await using subscription = gqlWsClientIterateDisposable({
         query: /* GraphQL */ `
           subscription {
-            holdingStats {
+            positions {
               data {
                 symbol
                 marketValue
@@ -920,8 +920,8 @@ describe('Subscription.holdingStats ', () => {
       for (const applyNextChanges of [
         async () => {
           await TradeRecordModel.create(reusableTradeDatas[2]);
-          await HoldingStatsChangeModel.create({
-            ...reusableHoldingStats[2],
+          await PositionChangeModel.create({
+            ...reusablePositions[2],
             symbol: 'ADBE',
             totalLotCount: 2,
             totalQuantity: 4,
@@ -929,13 +929,13 @@ describe('Subscription.holdingStats ', () => {
           });
           await publishUserHoldingChangedRedisEvent({
             ownerId: mockUserId1,
-            holdingStats: { set: [reusableHoldingStats[2].symbol] },
+            holdingStats: { set: [reusablePositions[2].symbol] },
           });
         },
         async () => {
           await TradeRecordModel.create(reusableTradeDatas[3]);
-          await HoldingStatsChangeModel.create({
-            ...reusableHoldingStats[3],
+          await PositionChangeModel.create({
+            ...reusablePositions[3],
             symbol: 'AAPL',
             totalLotCount: 3,
             totalQuantity: 6,
@@ -943,7 +943,7 @@ describe('Subscription.holdingStats ', () => {
           });
           await publishUserHoldingChangedRedisEvent({
             ownerId: mockUserId1,
-            holdingStats: { set: [reusableHoldingStats[3].symbol] },
+            holdingStats: { set: [reusablePositions[3].symbol] },
           });
         },
       ]) {
@@ -955,7 +955,7 @@ describe('Subscription.holdingStats ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -975,7 +975,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'ADBE',
@@ -988,7 +988,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1004,8 +1004,8 @@ describe('Subscription.holdingStats ', () => {
 
     it('When targeting empty past holdings, emits the initial message with zero amount and percent and then continues observing for any relevant future changes as in any regular holding', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-      await HoldingStatsChangeModel.bulkCreate(
-        reusableHoldingStats.slice(0, 2).map(h => ({
+      await PositionChangeModel.bulkCreate(
+        reusablePositions.slice(0, 2).map(h => ({
           ...h,
           totalLotCount: 0,
           totalQuantity: 0,
@@ -1016,7 +1016,7 @@ describe('Subscription.holdingStats ', () => {
       await using subscription = gqlWsClientIterateDisposable({
         query: /* GraphQL */ `
           subscription {
-            holdingStats {
+            positions {
               data {
                 symbol
                 marketValue
@@ -1037,8 +1037,8 @@ describe('Subscription.holdingStats ', () => {
       for (const applyNextChanges of [
         async () => {
           await TradeRecordModel.create(reusableTradeDatas[2]);
-          await HoldingStatsChangeModel.create({
-            ...reusableHoldingStats[2],
+          await PositionChangeModel.create({
+            ...reusablePositions[2],
             totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 16,
@@ -1046,7 +1046,7 @@ describe('Subscription.holdingStats ', () => {
 
           await publishUserHoldingChangedRedisEvent({
             ownerId: mockUserId1,
-            holdingStats: { set: [reusableHoldingStats[2].symbol] },
+            holdingStats: { set: [reusablePositions[2].symbol] },
           });
 
           await mockMarketData.next([{ ADBE: { regularMarketPrice: 11 } }]);
@@ -1054,8 +1054,8 @@ describe('Subscription.holdingStats ', () => {
 
         async () => {
           await TradeRecordModel.create(reusableTradeDatas[3]);
-          await HoldingStatsChangeModel.create({
-            ...reusableHoldingStats[3],
+          await PositionChangeModel.create({
+            ...reusablePositions[3],
             totalLotCount: 2,
             totalQuantity: 4,
             totalPresentInvestedAmount: 36,
@@ -1063,7 +1063,7 @@ describe('Subscription.holdingStats ', () => {
 
           await publishUserHoldingChangedRedisEvent({
             ownerId: mockUserId1,
-            holdingStats: { set: [reusableHoldingStats[3].symbol] },
+            holdingStats: { set: [reusablePositions[3].symbol] },
           });
 
           await mockMarketDataControl.whenNextMarketDataSymbolsRequested();
@@ -1078,7 +1078,7 @@ describe('Subscription.holdingStats ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1098,7 +1098,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'ADBE',
@@ -1111,7 +1111,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1127,15 +1127,15 @@ describe('Subscription.holdingStats ', () => {
 
     it('When targeting empty past holdings, changes in market data do not cause any further updates to be emitted', async () => {
       await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-      await HoldingStatsChangeModel.bulkCreate([
+      await PositionChangeModel.bulkCreate([
         {
-          ...reusableHoldingStats[0],
+          ...reusablePositions[0],
           totalLotCount: 0,
           totalQuantity: 0,
           totalPresentInvestedAmount: 0,
         },
         {
-          ...reusableHoldingStats[1],
+          ...reusablePositions[1],
           totalLotCount: 1,
           totalQuantity: 1,
           totalPresentInvestedAmount: 4,
@@ -1145,7 +1145,7 @@ describe('Subscription.holdingStats ', () => {
       await using subscription = gqlWsClientIterateDisposable({
         query: /* GraphQL */ `
           subscription {
-            holdingStats {
+            positions {
               data {
                 symbol
                 marketValue
@@ -1180,7 +1180,7 @@ describe('Subscription.holdingStats ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1200,7 +1200,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1213,7 +1213,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1227,16 +1227,16 @@ describe('Subscription.holdingStats ', () => {
       ]);
     });
 
-    it('Emits updates correctly in conjunction with changes to holding symbols whose market data cannot be found', async () => {
+    it('Emits updates correctly in conjunction with changes to position symbols whose market data cannot be found', async () => {
       await TradeRecordModel.bulkCreate([
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
         { ...reusableTradeDatas[2], symbol: 'NVDA' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
-        { ...reusableHoldingStats[0], symbol: 'ADBE' },
-        { ...reusableHoldingStats[1], symbol: 'AAPL' },
-        { ...reusableHoldingStats[2], symbol: 'NVDA' },
+      await PositionChangeModel.bulkCreate([
+        { ...reusablePositions[0], symbol: 'ADBE' },
+        { ...reusablePositions[1], symbol: 'AAPL' },
+        { ...reusablePositions[2], symbol: 'NVDA' },
       ]);
 
       await using _ = mockMarketDataControl.start([
@@ -1250,7 +1250,7 @@ describe('Subscription.holdingStats ', () => {
       await using subscription = gqlWsClientIterateDisposable({
         query: /* GraphQL */ `
           subscription {
-            holdingStats {
+            positions {
               data {
                 symbol
                 marketValue
@@ -1281,11 +1281,11 @@ describe('Subscription.holdingStats ', () => {
     });
 
     describe('With `unrealizedPnl.currencyAdjusted` field', () => {
-      it('Emits updates correctly in conjunction with changes to holding symbols currency-adjusted market data', async () => {
+      it('Emits updates correctly in conjunction with changes to position symbols currency-adjusted market data', async () => {
         await TradeRecordModel.bulkCreate(reusableTradeDatas.slice(0, 2));
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
-            ...reusableHoldingStats[0],
+            ...reusablePositions[0],
             totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.2,
@@ -1294,7 +1294,7 @@ describe('Subscription.holdingStats ', () => {
             totalRealizedProfitOrLossRate: 0,
           },
           {
-            ...reusableHoldingStats[1],
+            ...reusablePositions[1],
             totalLotCount: 1,
             totalQuantity: 2,
             totalPresentInvestedAmount: 2.4,
@@ -1323,7 +1323,7 @@ describe('Subscription.holdingStats ', () => {
         await using subscription = gqlWsClientIterateDisposable({
           query: /* GraphQL */ `
             subscription {
-              holdingStats {
+              positions {
                 data {
                   symbol
                   unrealizedPnl {
@@ -1346,7 +1346,7 @@ describe('Subscription.holdingStats ', () => {
         expect(emissions).toStrictEqual([
           {
             data: {
-              holdingStats: [
+              positions: [
                 {
                   data: {
                     symbol: 'AAPL',
@@ -1380,7 +1380,7 @@ describe('Subscription.holdingStats ', () => {
           },
           {
             data: {
-              holdingStats: [
+              positions: [
                 {
                   data: {
                     symbol: 'ADBE',
@@ -1400,7 +1400,7 @@ describe('Subscription.holdingStats ', () => {
           },
           {
             data: {
-              holdingStats: [
+              positions: [
                 {
                   data: {
                     symbol: 'AAPL',
@@ -1423,22 +1423,22 @@ describe('Subscription.holdingStats ', () => {
     });
   });
 
-  it('When targeting holdings using the `filters.symbols` arg, only holdings with corresponding symbols have updates sent for and are watched for further changes', async () => {
+  it('When targeting positions using the `filters.symbols` arg, only positions with corresponding symbols have updates sent for and are watched for further changes', async () => {
     await TradeRecordModel.bulkCreate([
       { ...reusableTradeDatas[0], symbol: 'ADBE' },
       { ...reusableTradeDatas[1], symbol: 'AAPL' },
       { ...reusableTradeDatas[2], symbol: 'NVDA' },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
-      { ...reusableHoldingStats[0], symbol: 'ADBE' },
-      { ...reusableHoldingStats[1], symbol: 'AAPL' },
-      { ...reusableHoldingStats[2], symbol: 'NVDA' },
+    await PositionChangeModel.bulkCreate([
+      { ...reusablePositions[0], symbol: 'ADBE' },
+      { ...reusablePositions[1], symbol: 'AAPL' },
+      { ...reusablePositions[2], symbol: 'NVDA' },
     ]);
 
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats(filters: { symbols: ["ADBE", "AAPL"] }) {
+          positions(filters: { symbols: ["ADBE", "AAPL"] }) {
             data {
               symbol
               totalPresentInvestedAmount
@@ -1455,10 +1455,10 @@ describe('Subscription.holdingStats ', () => {
       { ...reusableTradeDatas[4], symbol: 'AAPL' },
       { ...reusableTradeDatas[5], symbol: 'NVDA' },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
-      { ...reusableHoldingStats[3], symbol: 'ADBE', totalPresentInvestedAmount: 110 },
-      { ...reusableHoldingStats[4], symbol: 'AAPL', totalPresentInvestedAmount: 110 },
-      { ...reusableHoldingStats[5], symbol: 'NVDA', totalPresentInvestedAmount: 110 },
+    await PositionChangeModel.bulkCreate([
+      { ...reusablePositions[3], symbol: 'ADBE', totalPresentInvestedAmount: 110 },
+      { ...reusablePositions[4], symbol: 'AAPL', totalPresentInvestedAmount: 110 },
+      { ...reusablePositions[5], symbol: 'NVDA', totalPresentInvestedAmount: 110 },
     ]);
     await publishUserHoldingChangedRedisEvent({
       ownerId: mockUserId1,
@@ -1471,7 +1471,7 @@ describe('Subscription.holdingStats ', () => {
     expect(emissions).toStrictEqual([
       {
         data: {
-          holdingStats: [
+          positions: [
             { data: { symbol: 'AAPL', totalPresentInvestedAmount: 100 } },
             { data: { symbol: 'ADBE', totalPresentInvestedAmount: 100 } },
           ],
@@ -1480,7 +1480,7 @@ describe('Subscription.holdingStats ', () => {
 
       {
         data: {
-          holdingStats: [
+          positions: [
             { data: { symbol: 'AAPL', totalPresentInvestedAmount: 110 } },
             { data: { symbol: 'ADBE', totalPresentInvestedAmount: 110 } },
           ],
@@ -1489,20 +1489,20 @@ describe('Subscription.holdingStats ', () => {
     ]);
   });
 
-  it("When targeting holdings using the `filters.symbols` arg, if some of the target symbols don't have matching existing holdings, they'll have updates sent for when they eventually do", async () => {
+  it("When targeting positions using the `filters.symbols` arg, if some of the target symbols don't have matching existing holdings, they'll have updates sent for when they eventually do", async () => {
     await TradeRecordModel.bulkCreate([
       { ...reusableTradeDatas[0], symbol: 'ADBE' },
       { ...reusableTradeDatas[1], symbol: 'AAPL' },
     ]);
-    await HoldingStatsChangeModel.bulkCreate([
-      { ...reusableHoldingStats[0], symbol: 'ADBE' },
-      { ...reusableHoldingStats[1], symbol: 'AAPL' },
+    await PositionChangeModel.bulkCreate([
+      { ...reusablePositions[0], symbol: 'ADBE' },
+      { ...reusablePositions[1], symbol: 'AAPL' },
     ]);
 
     await using subscription = gqlWsClientIterateDisposable({
       query: /* GraphQL */ `
         subscription {
-          holdingStats(filters: { symbols: ["ADBE", "AAPL", "NVDA"] }) {
+          positions(filters: { symbols: ["ADBE", "AAPL", "NVDA"] }) {
             data {
               symbol
               totalPresentInvestedAmount
@@ -1515,7 +1515,7 @@ describe('Subscription.holdingStats ', () => {
     const emissions = [(await subscription.next()).value];
 
     await TradeRecordModel.create({ ...reusableTradeDatas[3], symbol: 'NVDA' });
-    await HoldingStatsChangeModel.create({ ...reusableHoldingStats[3], symbol: 'NVDA' });
+    await PositionChangeModel.create({ ...reusablePositions[3], symbol: 'NVDA' });
     await publishUserHoldingChangedRedisEvent({
       ownerId: mockUserId1,
       holdingStats: { set: ['NVDA'] },
@@ -1526,7 +1526,7 @@ describe('Subscription.holdingStats ', () => {
     expect(emissions).toStrictEqual([
       {
         data: {
-          holdingStats: [
+          positions: [
             { data: { symbol: 'AAPL', totalPresentInvestedAmount: 100 } },
             { data: { symbol: 'ADBE', totalPresentInvestedAmount: 100 } },
           ],
@@ -1534,7 +1534,7 @@ describe('Subscription.holdingStats ', () => {
       },
       {
         data: {
-          holdingStats: [{ data: { symbol: 'NVDA', totalPresentInvestedAmount: 100 } }],
+          positions: [{ data: { symbol: 'NVDA', totalPresentInvestedAmount: 100 } }],
         },
       },
     ]);
@@ -1546,15 +1546,15 @@ describe('Subscription.holdingStats ', () => {
         { ...reusableTradeDatas[0], symbol: 'ADBE' },
         { ...reusableTradeDatas[1], symbol: 'AAPL' },
       ]);
-      await HoldingStatsChangeModel.bulkCreate([
-        { ...reusableHoldingStats[0], symbol: 'ADBE' },
-        { ...reusableHoldingStats[1], symbol: 'AAPL' },
+      await PositionChangeModel.bulkCreate([
+        { ...reusablePositions[0], symbol: 'ADBE' },
+        { ...reusablePositions[1], symbol: 'AAPL' },
       ]);
 
       await using subscription = gqlWsClientIterateDisposable({
         query: /* GraphQL */ `
           subscription {
-            holdingStats {
+            positions {
               data {
                 symbol
                 priceData {
@@ -1608,7 +1608,7 @@ describe('Subscription.holdingStats ', () => {
       expect(emissions).toStrictEqual([
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
@@ -1636,7 +1636,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'ADBE',
@@ -1653,7 +1653,7 @@ describe('Subscription.holdingStats ', () => {
         },
         {
           data: {
-            holdingStats: [
+            positions: [
               {
                 data: {
                   symbol: 'AAPL',
