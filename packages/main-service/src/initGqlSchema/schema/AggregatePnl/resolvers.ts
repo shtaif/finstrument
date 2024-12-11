@@ -16,7 +16,7 @@ const resolvers = {
           getAggregateLiveMarketData({
             specifiers: [
               ...(args.holdings ?? []).map(({ symbol }) => ({
-                type: 'HOLDING' as const,
+                type: 'POSITION' as const,
                 holdingSymbol: symbol,
                 holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               })),

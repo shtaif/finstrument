@@ -1,7 +1,7 @@
 import { type HasOneOptions, type BelongsToOptions, type InferAttributes } from 'sequelize';
 import { Sequelize, Model, DataType, Table, Column, BelongsTo, HasOne } from 'sequelize-typescript';
 import { UserModel } from './UserModel.js';
-import { HoldingStatsChangeModel } from './HoldingStatsChangeModel.js';
+import { PositionChangeModel } from './PositionChangeModel.js';
 
 export {
   TradeRecordModel,
@@ -86,10 +86,10 @@ class TradeRecordModel extends Model<
   } satisfies BelongsToOptions)
   owner!: Self<UserModel>;
 
-  @HasOne(() => HoldingStatsChangeModel, {
+  @HasOne(() => PositionChangeModel, {
     foreignKey: 'relatedTradeId',
   } satisfies HasOneOptions)
-  holdingChangeCaused!: Self<HoldingStatsChangeModel>;
+  holdingChangeCaused!: Self<PositionChangeModel>;
 }
 
 type TradeRecordModelAttributes = InferAttributes<TradeRecordModel>;

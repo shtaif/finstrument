@@ -2,7 +2,7 @@ import { afterAll, beforeEach, beforeAll, expect, it, describe } from 'vitest';
 import { asyncPipe } from 'shared-utils';
 import { itCollect, itTake } from 'iterable-operators';
 import {
-  HoldingStatsChangeModel,
+  PositionChangeModel,
   InstrumentInfoModel,
   CurrencyStatsChangeModel,
   TradeRecordModel,
@@ -103,13 +103,13 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await CurrencyStatsChangeModel.destroy({ where: {} });
 });
 
 afterAll(async () => {
   await TradeRecordModel.destroy({ where: {} });
-  await HoldingStatsChangeModel.destroy({ where: {} });
+  await PositionChangeModel.destroy({ where: {} });
   await CurrencyStatsChangeModel.destroy({ where: {} });
   await InstrumentInfoModel.destroy({ where: {} });
   await UserModel.destroy({ where: {} });
@@ -149,7 +149,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
         await TradeRecordModel.bulkCreate(
           ['ADBE', 'VUAG'].map((symbol, i) => ({ ...reusableTradeDatas[i], symbol }))
         );
-        await HoldingStatsChangeModel.bulkCreate(
+        await PositionChangeModel.bulkCreate(
           ['ADBE', 'VUAG'].map((symbol, i) => ({
             ...reusableHoldingStats[i],
             symbol,
@@ -184,7 +184,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
       await (async () => {
         const tradeIds = [reusableTradeDatas[0].id, reusableTradeDatas[1].id];
         await TradeRecordModel.destroy({ where: { id: tradeIds } });
-        await HoldingStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
+        await PositionChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await CurrencyStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await publishUserHoldingChangedRedisEvent({
           ownerId: mockUserId1,
@@ -257,7 +257,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[0], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[1], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
             symbol: 'ADBE',
@@ -324,7 +324,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[2], symbol: 'ADBE', quantity: -1 },
           { ...reusableTradeDatas[3], symbol: 'VUAG', quantity: -1 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[2],
             symbol: 'ADBE',
@@ -378,7 +378,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[4], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[5], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[4],
             symbol: 'ADBE',
@@ -524,7 +524,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
         await TradeRecordModel.bulkCreate(
           ['ADBE', 'VUAG'].map((symbol, i) => ({ ...reusableTradeDatas[i], symbol }))
         );
-        await HoldingStatsChangeModel.bulkCreate(
+        await PositionChangeModel.bulkCreate(
           ['ADBE', 'VUAG'].map((symbol, i) => ({
             ...reusableHoldingStats[i],
             symbol,
@@ -561,7 +561,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
       await (async () => {
         const tradeIds = [reusableTradeDatas[0].id, reusableTradeDatas[1].id];
         await TradeRecordModel.destroy({ where: { id: tradeIds } });
-        await HoldingStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
+        await PositionChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await CurrencyStatsChangeModel.destroy({ where: { relatedTradeId: tradeIds } });
         await publishUserHoldingChangedRedisEvent({
           ownerId: mockUserId1,
@@ -652,7 +652,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[0], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[1], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
             symbol: 'ADBE',
@@ -726,7 +726,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[2], symbol: 'ADBE', quantity: -1 },
           { ...reusableTradeDatas[3], symbol: 'VUAG', quantity: -1 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[2],
             symbol: 'ADBE',
@@ -780,7 +780,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[4], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[5], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[4],
             symbol: 'ADBE',
@@ -929,7 +929,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[0], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[1], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
             symbol: 'ADBE',
@@ -1132,7 +1132,7 @@ describe('◦◦ Subscription.combinedPortfolioStats', () => {
           { ...reusableTradeDatas[0], symbol: 'ADBE', quantity: 2 },
           { ...reusableTradeDatas[1], symbol: 'VUAG', quantity: 2 },
         ]);
-        await HoldingStatsChangeModel.bulkCreate([
+        await PositionChangeModel.bulkCreate([
           {
             ...reusableHoldingStats[0],
             symbol: 'ADBE',

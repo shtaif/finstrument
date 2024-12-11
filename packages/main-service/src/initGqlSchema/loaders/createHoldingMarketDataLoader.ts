@@ -18,7 +18,7 @@ function createHoldingMarketDataLoader(): DataLoader<
       const currMarketData = (await pipe(
         getLiveMarketData({
           specifiers: inputs.map(input => ({
-            type: 'HOLDING',
+            type: 'POSITION',
             holdingPortfolioOwnerId: input.ownerId,
             holdingSymbol: input.symbol,
           })),

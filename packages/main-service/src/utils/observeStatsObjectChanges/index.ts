@@ -153,7 +153,7 @@ type LotObjectSpecifier = {
   lotId: string;
 };
 type HoldingObjectSpecifier = {
-  type: 'HOLDING';
+  type: 'POSITION';
   holdingPortfolioOwnerId: string;
   holdingSymbol?: string | undefined;
 };

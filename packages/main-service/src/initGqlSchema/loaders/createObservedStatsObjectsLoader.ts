@@ -15,7 +15,7 @@ function createObservedStatsObjectsLoader(): DataLoader<
   return new DataLoader(async inputs => {
     const holdingMarketStats = getLiveMarketData({
       specifiers: inputs.map(input => ({
-        type: 'HOLDING',
+        type: 'POSITION',
         holdingPortfolioOwnerId: input.ownerId,
         holdingSymbol: input.symbol,
       })),
