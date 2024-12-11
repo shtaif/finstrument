@@ -4,13 +4,13 @@ import { DisconnectOutlined } from '@ant-design/icons';
 import { BlippingIndicator } from '../../../common/BlippingIndicator/index.tsx';
 import './style.css';
 
-export { HoldingStatsRealTimeActivityStatus };
+export { PositionDataRealTimeActivityStatus };
 
-function HoldingStatsRealTimeActivityStatus(props: {
+function PositionDataRealTimeActivityStatus(props: {
   input: AsyncIterable<unknown>;
 }): React.ReactNode {
   return (
-    <span className="cmp-holding-stats-real-time-activity-status">
+    <span className="cmp-position-data-real-time-activity-status">
       <Iterate value={props.input}>
         {next =>
           next.error ? (

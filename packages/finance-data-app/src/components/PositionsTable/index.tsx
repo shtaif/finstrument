@@ -14,7 +14,7 @@ import {
 } from './components/PositionExpandedLots/index.tsx';
 import './style.css';
 
-export { PositionsTableMemo as PositionsTable, type HoldingRecord };
+export { PositionsTableMemo as PositionsTable, type PositionRecord };
 
 const PositionsTableMemo = memo(PositionsTable);
 
@@ -23,20 +23,20 @@ function PositionsTable(props: {
   style?: React.CSSProperties;
   loading?: boolean;
   loadingStatePlaceholderRowsCount?: number;
-  holdings?: MaybeAsyncIterable<HoldingRecord[]>;
+  positions?: MaybeAsyncIterable<PositionRecord[]>;
 }): ReactElement {
   const {
     className = '',
     style,
     loading = false,
     loadingStatePlaceholderRowsCount = 3,
-    holdings = [],
+    positions = [],
   } = props;
 
   return (
-    <Iterate value={holdings}>
-      {({ pendingFirst: pendingFirstHoldings, value: nextHoldings }) => {
-        const isLoadingFirstData = pendingFirstHoldings && !nextHoldings?.length;
+    <Iterate value={positions}>
+      {({ pendingFirst: pendingFirstPositions, value: nextPositions }) => {
+        const isLoadingFirstData = pendingFirstPositions && !nextPositions?.length;
 
         return (
           <Table
@@ -48,7 +48,7 @@ function PositionsTable(props: {
             dataSource={
               (isLoadingFirstData || loading
                 ? range(loadingStatePlaceholderRowsCount).map((_, i) => ({ symbol: `${i}` }))
-                : nextHoldings) as HoldingRecord[]
+                : nextPositions) as PositionRecord[]
             }
             expandable={{
               expandedRowClassName: () => 'comprising-lots-container',
@@ -71,7 +71,7 @@ function PositionsTable(props: {
                 ),
             }}
           >
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Symbol</span>}
               className="symbol-cell"
               render={(_, pos) =>
@@ -83,7 +83,7 @@ function PositionsTable(props: {
               }
             />
 
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Current Price</span>}
               className="current-price-cell"
               render={(_, { marketPrice, currency, marketState, timeOfPrice }) =>
@@ -100,7 +100,7 @@ function PositionsTable(props: {
               }
             />
 
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Break-even Price</span>}
               className="break-even-price-cell"
               render={(_, pos) =>
@@ -114,7 +114,7 @@ function PositionsTable(props: {
               }
             />
 
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Position</span>}
               className="quantity-cell"
               render={(_, { quantity, marketValue, currency }) =>
@@ -130,7 +130,7 @@ function PositionsTable(props: {
               }
             />
 
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Unrealized P&L</span>}
               className="unrealized-pnl-cell"
               render={(_, pos) =>
@@ -149,7 +149,7 @@ function PositionsTable(props: {
               }
             />
 
-            <Column<HoldingRecord>
+            <Column<PositionRecord>
               title={<span className="col-header">Portfolio portion</span>}
               className="portfolio-portion-cell"
               render={(_, pos) =>
@@ -179,7 +179,7 @@ function PositionsTable(props: {
 
 const { Column } = Table;
 
-type HoldingRecord = {
+type PositionRecord = {
   symbol: string;
   currency?: string;
   portfolioValuePortion?: number;
