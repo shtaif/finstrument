@@ -1,3 +1,5 @@
+scalar DateTime
+
 type RevenueInfo {
   amount: Float!
   percent: Float!
