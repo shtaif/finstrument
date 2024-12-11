@@ -17,7 +17,6 @@ type HoldingStatsChange {
   # breakEvenPrice: Float!
   changedAt: DateTime!
   # marketData: HoldingStatsMarketData!
-  # unrealizedProfit: LotProfitInfo!
   relatedPortfolioStatsChange: PortfolioStatsChange!
 }
 
