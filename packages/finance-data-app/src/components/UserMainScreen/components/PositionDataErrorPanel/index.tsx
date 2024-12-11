@@ -2,9 +2,9 @@ import React from 'react';
 import { Alert } from 'antd';
 import './style.css';
 
-export { HoldingDataErrorPanel };
+export { PositionDataErrorPanel };
 
-function HoldingDataErrorPanel(props: {
+function PositionDataErrorPanel(props: {
   className?: string;
   errors?: readonly { readonly message?: string }[];
 }): React.ReactNode {
@@ -12,7 +12,7 @@ function HoldingDataErrorPanel(props: {
 
   return (
     errors?.length && (
-      <div className={`cmp-holding-data-error-panel ${className ?? ''}`}>
+      <div className={`cmp-position-data-error-panel ${className ?? ''}`}>
         {(Array.isArray(errors) ? errors : [errors]).map((err: any, i) => (
           <Alert
             className="alert-item"

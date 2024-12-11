@@ -11,9 +11,9 @@ import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
 import { MainStatsStrip } from './components/MainStatsStrip/index.tsx';
 import { CurrencySelect } from './components/CurrencySelect/index.tsx';
 import { PositionsTable } from '../PositionsTable/index.tsx';
-import { HoldingDataErrorPanel } from './components/HoldingDataErrorPanel';
+import { PositionDataErrorPanel } from './components/PositionDataErrorPanel/index.tsx';
 import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
-import { HoldingStatsRealTimeActivityStatus } from './components/HoldingStatsRealTimeActivityStatus/index.tsx';
+import { PositionDataRealTimeActivityStatus } from './components/PositionDataRealTimeActivityStatus/index.tsx';
 import { UploadTrades } from './components/UploadTrades/index.tsx';
 import { useServerConnectionErrorNotification } from './notifications/useServerConnectionErrorNotification.tsx';
 import './style.css';
@@ -23,9 +23,9 @@ export { UserMainScreen };
 function UserMainScreen() {
   const serverConnectionErrorNotification = useServerConnectionErrorNotification();
 
-  const [lastFetchedHoldingsCount, setLastFetchedHoldingsCount] = useLocalStorage<
+  const [lastFetchedPositionCount, setLastFetchedPositionCount] = useLocalStorage<
     number | undefined
-  >('last_fetched_holdings_count', undefined);
+  >('last_fetched_positions_count', undefined);
 
   const [portfolioCurrencyStoredSetting, setPortfolioCurrencyStoredSetting] = useLocalStorage<
     string | undefined
@@ -74,16 +74,16 @@ function UserMainScreen() {
     [portfolioCurrencySetting]
   );
 
-  const holdingStatsIter = useMemo(() => {
+  const positionsIter = useMemo(() => {
     return pipe(
-      itCombineLatest(createCombinedHoldingStatsIter(), portfolioStatsIter),
-      itMap(([nextHoldingUpdate, nextPortfolioUpdate]) => {
+      itCombineLatest(createCombinedPositionsIter(), portfolioStatsIter),
+      itMap(([nextPositionUpdate, nextPortfolioUpdate]) => {
         const compositionBySymbol = keyBy(
           nextPortfolioUpdate.stats?.compositionByHoldings,
           c => c.symbol
         );
 
-        const holdingStatsWithPortfolioPortions = nextHoldingUpdate.holdingStats.map(update => ({
+        const positionsWithPortfolioPortions = nextPositionUpdate.positions.map(update => ({
           ...update,
           portionOfPortfolioMarketValue: compositionBySymbol[update.symbol]
             ? compositionBySymbol[update.symbol].portionOfPortfolioMarketValue
@@ -91,18 +91,18 @@ function UserMainScreen() {
         }));
 
         const errors =
-          !nextHoldingUpdate.errors?.length && !nextPortfolioUpdate.errors?.length
+          !nextPositionUpdate.errors?.length && !nextPortfolioUpdate.errors?.length
             ? undefined
-            : [...(nextHoldingUpdate.errors ?? []), ...(nextPortfolioUpdate.errors ?? [])];
+            : [...(nextPositionUpdate.errors ?? []), ...(nextPortfolioUpdate.errors ?? [])];
 
         return {
           errors,
-          holdingStats: holdingStatsWithPortfolioPortions,
+          positions: positionsWithPortfolioPortions,
         };
       }),
       itTap((next, i) => {
         if (i === 0) {
-          setLastFetchedHoldingsCount(next.holdingStats.length);
+          setLastFetchedPositionCount(next.positions.length);
         }
       }),
       itCatch(err => {
@@ -128,7 +128,7 @@ function UserMainScreen() {
       />
 
       <div>
-        <HoldingStatsRealTimeActivityStatus input={holdingStatsIter} />
+        <PositionDataRealTimeActivityStatus input={positionsIter} />
 
         <div className="portfolio-top-strip">
           <MainStatsStrip
@@ -155,19 +155,19 @@ function UserMainScreen() {
           </div>
         </div>
 
-        <Iterate value={holdingStatsIter}>
+        <Iterate value={positionsIter}>
           {next =>
             (next.error || next.value?.errors) && (
-              <HoldingDataErrorPanel errors={next.error ? [next.error] : next.value?.errors} />
+              <PositionDataErrorPanel errors={next.error ? [next.error] : next.value?.errors} />
             )
           }
         </Iterate>
 
         <PositionsTable
           className="positions-table"
-          loadingStatePlaceholderRowsCount={lastFetchedHoldingsCount}
-          holdings={iterateFormatted(holdingStatsIter, next =>
-            next.holdingStats.map(h => ({
+          loadingStatePlaceholderRowsCount={lastFetchedPositionCount}
+          positions={iterateFormatted(positionsIter, next =>
+            next.positions.map(h => ({
               symbol: h.symbol,
               currency: h.priceData.currency ?? undefined,
               portfolioValuePortion: h.portionOfPortfolioMarketValue,
@@ -204,32 +204,32 @@ function UserMainScreen() {
   );
 }
 
-function createCombinedHoldingStatsIter(): AsyncIterable<{
+function createCombinedPositionsIter(): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;
-  holdingStats: HoldingStatsItem[];
+  positions: PositionItem[];
 }> {
   return pipe(
     itLazyDefer(() =>
-      gqlWsClient.iterate<HoldingStatsDataSubscriptionResult>({
-        query: gqlPrint(holdingStatsDataSubscription),
+      gqlWsClient.iterate<PositionDataSubscriptionResult>({
+        query: gqlPrint(positionDataSubscription),
       })
     ),
     $ =>
       itLazyDefer(() => {
-        const allCurrHoldingStats = {} as { [symbol: string]: HoldingStatsItem };
+        const allCurrPositions = {} as { [symbol: string]: PositionItem };
 
         return pipe(
           $,
           itTap(next => {
-            for (const update of next.data?.holdingStats ?? []) {
+            for (const update of next.data?.positions ?? []) {
               ({
-                ['SET']: () => (allCurrHoldingStats[update.data.symbol] = update.data),
-                ['REMOVE']: () => delete allCurrHoldingStats[update.data.symbol],
+                ['SET']: () => (allCurrPositions[update.data.symbol] = update.data),
+                ['REMOVE']: () => delete allCurrPositions[update.data.symbol],
               })[update.type]();
             }
           }),
           itMap(next => ({
-            holdingStats: Object.values(allCurrHoldingStats),
+            positions: Object.values(allCurrPositions),
             errors: next.errors,
           }))
         );
@@ -238,9 +238,9 @@ function createCombinedHoldingStatsIter(): AsyncIterable<{
   );
 }
 
-const holdingStatsDataSubscription = graphql(/* GraphQL */ `
-  subscription HoldingStatsDataSubscription {
-    holdingStats {
+const positionDataSubscription = graphql(/* GraphQL */ `
+  subscription PositionDataSubscription {
+    positions {
       type
       data {
         symbol
@@ -262,8 +262,8 @@ const holdingStatsDataSubscription = graphql(/* GraphQL */ `
   }
 `);
 
-type HoldingStatsDataSubscriptionResult = DocumentType<typeof holdingStatsDataSubscription>;
-type HoldingStatsItem = HoldingStatsDataSubscriptionResult['holdingStats'][number]['data'];
+type PositionDataSubscriptionResult = DocumentType<typeof positionDataSubscription>;
+type PositionItem = PositionDataSubscriptionResult['positions'][number]['data'];
 
 function createPortfolioStatsIter(params: { currencyCode: string }): AsyncIterable<{
   errors: readonly GraphQLError[] | undefined;

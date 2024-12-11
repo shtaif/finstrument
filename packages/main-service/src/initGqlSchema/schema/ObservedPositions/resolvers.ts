@@ -1,7 +1,7 @@
 import { compact } from 'lodash-es';
 import { pipe } from 'shared-utils';
 import { itMap } from 'iterable-operators';
-import { type Resolvers, type Subscription } from '../../../generated/graphql-schema.d.js';
+import { type Resolvers, type Subscription } from '../../../generated/graphql-schema.js';
 import { getLiveMarketData } from '../../../utils/getLiveMarketData/index.js';
 import { gqlFormattedFieldSelectionTree } from '../../../utils/gqlFormattedFieldSelectionTree/index.js';
 import { authenticatedSessionResolverMiddleware } from '../../resolverMiddleware/authenticatedSessionResolverMiddleware.js';
@@ -17,7 +17,7 @@ const resolvers = {
 
         const specifiers = args.filters?.symbols?.length
           ? args.filters.symbols.map(symbol => ({
-              type: 'HOLDING' as const,
+              type: 'POSITION' as const,
               holdingPortfolioOwnerId: ctx.activeSession.activeUserId,
               holdingSymbol: symbol,
             }))

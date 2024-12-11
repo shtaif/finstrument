@@ -33,7 +33,7 @@ function observeStatsObjectChanges(params: {
       return s.type === 'LOT';
     }),
     holding: paramsNorm.specifiers.filter((s): s is HoldingObjectSpecifier => {
-      return s.type === 'HOLDING';
+      return s.type === 'POSITION';
     }),
     portfolio: paramsNorm.specifiers.filter((s): s is PortfolioObjectSpecifier => {
       return s.type === 'PORTFOLIO';
