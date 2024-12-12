@@ -111,7 +111,7 @@ function UserMainScreen() {
       }),
       itShare()
     );
-  }, []);
+  }, [portfolioStatsIter]);
 
   return (
     <div className="cmp-user-main-screen">
