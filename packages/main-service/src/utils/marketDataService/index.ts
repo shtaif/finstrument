@@ -168,7 +168,7 @@ const sharedMarketDataUnderlyingSource = pipe(
               }
             }
           }
-        return [...requestedSymbols.keys()]; // TODO: Design this such that only *changes* in observed symbols are communicated rather than the complete set every time
+        return requestedSymbols.keys().toArray(); // TODO: Design this such that only *changes* in observed symbols are communicated rather than the complete set every time
       })
     ),
   }),
