@@ -3,45 +3,30 @@
   "version": "0.0.1",
   "author": "Dor Shtaif <dorshtaif@gmail.com>",
   "license": "MIT",
-  "type": "module",
-  "homepage___": "https://github.com/shtaif/react-async-iterable",
-  "repository___": {
-    "type": "git",
-    "url": "https://github.com/shtaif/react-async-iterable"
-  },
   "description": "",
+  "type": "module",
   "sideEffects": false,
   "keywords": [],
-  "main___": "./dist/cjs/index.js",
-  "module___": "./dist/esm/index.js",
-  "types___": "./dist/cjs/index.d.ts",
-  "exports___": {
-    ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "default": "./dist/esm/index.js"
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "test": "ts-mocha -p ./tsconfig-cjs.json",
-    "build": "rm -rf ./dist && tsc -p tsconfig-esm.json && tsc -p tsconfig-cjs.json && ts-node ./scripts/set-module-type-in-dist-builds.ts",
-    "check-typings": "tsc --noEmit -p ./tsconfig-esm.json",
-    "prepublishOnly": "npm run build"
-  },
+  "scripts": {},
   "peerDependencies": {
-    "react": "^17 || ^18"
+    "react": ">=17"
   },
   "devDependencies": {
-    "@types/react": "^18.0.37",
-    "@typescript-eslint/eslint-plugin": "^6.2.1",
-    "@typescript-eslint/parser": "^6.2.1",
-    "eslint": "^8.46.0",
-    "eslint-config-prettier": "^8.9.0",
-    "eslint-config-standard": "^17.1.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.5.4"
+    "@eslint/js": "^9.17.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.0.11",
+    "@vitejs/plugin-react-swc": "^3.6.0",
+    "@vitest/ui": "^2.1.8",
+    "eslint": "^9.16.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.13.0",
+    "jsdom": "^25.0.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
+    "vitest": "~2.1.8"
   }
 }
