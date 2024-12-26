@@ -5,9 +5,9 @@ loadEnvFile(`${import.meta.dirname}/../.env.tests.local`);
 
 export default {
   test: {
-    include: ['./spec/**/*.spec.{js,cjs,mjs,ts}'],
-    globalSetup: ['./spec/globalSetup.ts'],
-    setupFiles: ['./spec/setup.ts'],
+    include: [`${import.meta.dirname}/**/*.spec.{js,cjs,mjs,ts}`],
+    globalSetup: [`${import.meta.dirname}/globalSetup.ts`],
+    setupFiles: [`${import.meta.dirname}/setup.ts`],
     isolate: false,
     fileParallelism: false,
     reporters: ['verbose'],

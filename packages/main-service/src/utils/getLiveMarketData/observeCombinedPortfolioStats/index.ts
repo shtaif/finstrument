@@ -1,4 +1,4 @@
-import { values, sumBy, groupBy, maxBy } from 'lodash-es';
+import { values, sumBy, maxBy } from 'lodash-es';
 import { type DeepPartial } from 'utility-types';
 import { objectFromEntriesTyped, pipe } from 'shared-utils';
 import { itMap, itShare } from 'iterable-operators';
@@ -8,7 +8,6 @@ import { normalizeFloatImprecisions } from '../../normalizeFloatImprecisions.js'
 import { calcHoldingRevenue } from '../calcHoldingRevenue.js';
 import { observeStatsWithMarketDataHelper } from '../observeStatsWithMarketDataHelper.js';
 import { portfolioStatsCalcMarketStats } from '../portfolioStatsCalcMarketStats.js';
-import { calcPnlInTranslateCurrencies } from '../calcPnlInTranslateCurrencies.js';
 import { deepObjectPickFields, type DeepObjectFieldsPicked } from '../deepObjectPickFields.js';
 
 export { observeCombinedPortfolioStats, type CombinedPortfolioStats };
@@ -75,23 +74,21 @@ function observeCombinedPortfolioStats(params: {
         $ =>
           $.filter(
             (p): p is typeof p & { forCurrency: NonNullable<typeof p.forCurrency> } =>
-              p.forCurrency !== null
+              p.forCurrency !== null && p.totalPresentInvestedAmount > 0
           ),
-        $ => groupBy($, p => p.ownerId)
+        $ => Object.groupBy($, p => p.ownerId)
       );
 
-      const combinedPortfolios = paramsNorm.portfolioOwnerIds.map(ownerId => {
-        const portfoliosOfOwner = portfolioCurrencyStatsByOwnerId[ownerId] ?? [];
+      return paramsNorm.portfolioOwnerIds
+        .map(ownerId => {
+          const portfoliosOfOwner = portfolioCurrencyStatsByOwnerId[ownerId] ?? [];
 
-        const mostRecentStatsChange = !portfoliosOfOwner.length
-          ? undefined
-          : maxBy(portfoliosOfOwner, p => p.lastChangedAt)!;
+          const mostRecentStatsChange = !portfoliosOfOwner.length
+            ? undefined
+            : maxBy(portfoliosOfOwner, p => p.lastChangedAt)!;
 
-        const exchangeRatesForCombinationCurrency = pipe(
-          portfoliosOfOwner.map((p): [string, number] => {
-            portfoliosOfOwner;
-            currentMarketData;
-            return [
+          const exchangeRatesIntoCombinationCurrency = pipe(
+            portfoliosOfOwner.map((p): [string, number] => [
               p.forCurrency,
               p.forCurrency === paramsNorm.currencyToCombineIn
                 ? 1
@@ -99,133 +96,124 @@ function observeCombinedPortfolioStats(params: {
                     `${p.forCurrency}${paramsNorm.currencyToCombineIn}=X`,
                     $ => currentMarketData[$].regularMarketPrice
                   ),
-            ];
-          }),
-          $ => objectFromEntriesTyped($)
-        );
-
-        const portfolioCostBasis = sumBy(portfoliosOfOwner, p =>
-          p.totalPresentInvestedAmount === 0
-            ? 0
-            : p.totalPresentInvestedAmount * exchangeRatesForCombinationCurrency[p.forCurrency]
-        );
-
-        const portfolioRealizedAmount = sumBy(
-          portfoliosOfOwner,
-          p => p.totalRealizedAmount * exchangeRatesForCombinationCurrency[p.forCurrency]
-        );
-
-        const portfolioRealizedPnlAmount = sumBy(
-          portfoliosOfOwner,
-          p =>
-            p.totalRealizedProfitOrLossAmount * exchangeRatesForCombinationCurrency[p.forCurrency]
-        );
-
-        const portfolioRealizedPnlRate = ifNanThenZero(
-          portfolioRealizedPnlAmount / portfolioRealizedAmount
-        );
-
-        let portfolioUnrealizedPnlAmount;
-        let portfolioUnrealizedPnlFraction;
-        let portfolioMarketValue;
-
-        if (!askedForFieldsRequiringSymbolMarketData) {
-          portfolioUnrealizedPnlAmount = undefined;
-          portfolioUnrealizedPnlFraction = undefined;
-          portfolioMarketValue = undefined;
-        } else {
-          portfolioUnrealizedPnlAmount = sumBy(portfoliosOfOwner, p => {
-            if (p.totalPresentInvestedAmount === 0) {
-              return 0;
-            }
-            const pnlAmountInOrigCurrency = portfolioStatsCalcMarketStats(
-              p,
-              currentMarketData
-            ).pnlAmount;
-            const pnlAmountInUnifiedCurrency = calcPnlInTranslateCurrencies(
-              p.forCurrency,
-              [paramsNorm.currencyToCombineIn],
-              pnlAmountInOrigCurrency,
-              currentMarketData
-            )[0].amount;
-            return pnlAmountInUnifiedCurrency;
-          });
-
-          portfolioUnrealizedPnlFraction = ifNanThenZero(
-            portfolioUnrealizedPnlAmount / portfolioCostBasis
+            ]),
+            $ => objectFromEntriesTyped($)
           );
 
-          portfolioMarketValue = portfolioCostBasis + portfolioUnrealizedPnlAmount;
-        }
+          const portfolioCostBasis = sumBy(portfoliosOfOwner, p =>
+            p.totalPresentInvestedAmount === 0
+              ? 0
+              : p.totalPresentInvestedAmount * exchangeRatesIntoCombinationCurrency[p.forCurrency]
+          );
 
-        const compositionByHoldings = portfoliosOfOwner
-          .flatMap(p => p.resolvedHoldings)
-          .filter(h => h.symbolInfo.currency !== null && h.totalPresentInvestedAmount > 0)
-          .map(h => {
-            const portionOfPortfolioCostBasis = normalizeFloatImprecisions(
-              ifNanThenZero(
-                (h.totalPresentInvestedAmount *
-                  exchangeRatesForCombinationCurrency[h.symbolInfo.currency!]) /
-                  portfolioCostBasis
-              )
+          const portfolioRealizedAmount = sumBy(
+            portfoliosOfOwner,
+            p => p.totalRealizedAmount * exchangeRatesIntoCombinationCurrency[p.forCurrency]
+          );
+
+          const portfolioRealizedPnlAmount = sumBy(
+            portfoliosOfOwner,
+            p =>
+              p.totalRealizedProfitOrLossAmount *
+              exchangeRatesIntoCombinationCurrency[p.forCurrency]
+          );
+
+          const portfolioRealizedPnlRate = ifNanThenZero(
+            portfolioRealizedPnlAmount / portfolioRealizedAmount
+          );
+
+          let portfolioUnrealizedPnlAmount;
+          let portfolioUnrealizedPnlFraction;
+          let portfolioMarketValue;
+
+          if (!askedForFieldsRequiringSymbolMarketData) {
+            portfolioUnrealizedPnlAmount = undefined;
+            portfolioUnrealizedPnlFraction = undefined;
+            portfolioMarketValue = undefined;
+          } else {
+            portfolioUnrealizedPnlAmount = sumBy(portfoliosOfOwner, p =>
+              p.totalPresentInvestedAmount === 0
+                ? 0
+                : portfolioStatsCalcMarketStats(p, currentMarketData).pnlAmount *
+                  exchangeRatesIntoCombinationCurrency[p.forCurrency]
             );
-            const [portionOfPortfolioUnrealizedPnl, portionOfPortfolioMarketValue] =
-              !askedForFieldsRequiringSymbolMarketData
-                ? [undefined, undefined]
-                : (() => {
-                    const pnl = pipe(
-                      calcHoldingRevenue({
-                        holding: h,
-                        priceInfo: currentMarketData[h.symbol],
-                      }),
-                      $ => ({
-                        amount: normalizeFloatImprecisions($.amount),
-                        percent: normalizeFloatImprecisions($.percent),
-                      })
-                    );
 
-                    return [
-                      pipe(
-                        (pnl.amount * exchangeRatesForCombinationCurrency[h.symbolInfo.currency!]) /
-                          portfolioUnrealizedPnlAmount!,
-                        normalizeFloatImprecisions,
-                        ifNanThenZero
-                      ),
-                      pipe(
-                        ((h.totalPresentInvestedAmount + pnl.amount) *
-                          exchangeRatesForCombinationCurrency[h.symbolInfo.currency!]) /
-                          portfolioMarketValue!,
-                        ifNanThenZero,
-                        normalizeFloatImprecisions
-                      ),
-                    ];
-                  })();
+            portfolioUnrealizedPnlFraction = ifNanThenZero(
+              portfolioUnrealizedPnlAmount / portfolioCostBasis
+            );
 
-            return {
-              symbol: h.symbol,
-              portionOfPortfolioCostBasis,
-              portionOfPortfolioUnrealizedPnl,
-              portionOfPortfolioMarketValue,
-            };
-          });
+            portfolioMarketValue = portfolioCostBasis + portfolioUnrealizedPnlAmount;
+          }
 
-        return {
-          ownerId,
-          currencyCombinedBy: paramsNorm.currencyToCombineIn,
-          mostRecentTradeId: mostRecentStatsChange?.relatedTradeId,
-          lastChangedAt: mostRecentStatsChange?.lastChangedAt,
-          costBasis: portfolioCostBasis,
-          realizedAmount: portfolioRealizedAmount,
-          realizedPnlAmount: portfolioRealizedPnlAmount,
-          realizedPnlRate: portfolioRealizedPnlRate,
-          unrealizedPnlAmount: portfolioUnrealizedPnlAmount,
-          unrealizedPnlFraction: portfolioUnrealizedPnlFraction,
-          marketValue: portfolioMarketValue,
-          compositionByHoldings,
-        };
-      });
+          const compositionByHoldings = portfoliosOfOwner
+            .flatMap(p => p.resolvedHoldings)
+            .filter(h => h.totalPresentInvestedAmount > 0)
+            .map(h => {
+              const portionOfPortfolioCostBasis = normalizeFloatImprecisions(
+                ifNanThenZero(
+                  (h.totalPresentInvestedAmount *
+                    exchangeRatesIntoCombinationCurrency[h.symbolInfo.currency!]) /
+                    portfolioCostBasis
+                )
+              );
 
-      return combinedPortfolios.map(p => deepObjectPickFields(p, paramsNorm.fields));
+              const [portionOfPortfolioUnrealizedPnl, portionOfPortfolioMarketValue] =
+                !askedForFieldsRequiringSymbolMarketData
+                  ? [undefined, undefined]
+                  : (() => {
+                      const pnl = pipe(
+                        calcHoldingRevenue({
+                          holding: h,
+                          priceInfo: currentMarketData[h.symbol],
+                        }),
+                        $ => ({
+                          amount: normalizeFloatImprecisions($.amount),
+                          percent: normalizeFloatImprecisions($.percent),
+                        })
+                      );
+
+                      return [
+                        pipe(
+                          (pnl.amount *
+                            exchangeRatesIntoCombinationCurrency[h.symbolInfo.currency!]) /
+                            portfolioUnrealizedPnlAmount!,
+                          normalizeFloatImprecisions,
+                          ifNanThenZero
+                        ),
+                        pipe(
+                          ((h.totalPresentInvestedAmount + pnl.amount) *
+                            exchangeRatesIntoCombinationCurrency[h.symbolInfo.currency!]) /
+                            portfolioMarketValue!,
+                          ifNanThenZero,
+                          normalizeFloatImprecisions
+                        ),
+                      ];
+                    })();
+
+              return {
+                symbol: h.symbol,
+                portionOfPortfolioCostBasis,
+                portionOfPortfolioUnrealizedPnl,
+                portionOfPortfolioMarketValue,
+              };
+            });
+
+          return {
+            ownerId,
+            currencyCombinedBy: paramsNorm.currencyToCombineIn,
+            mostRecentTradeId: mostRecentStatsChange?.relatedTradeId,
+            lastChangedAt: mostRecentStatsChange?.lastChangedAt,
+            costBasis: portfolioCostBasis,
+            realizedAmount: portfolioRealizedAmount,
+            realizedPnlAmount: portfolioRealizedPnlAmount,
+            realizedPnlRate: portfolioRealizedPnlRate,
+            unrealizedPnlAmount: portfolioUnrealizedPnlAmount,
+            unrealizedPnlFraction: portfolioUnrealizedPnlFraction,
+            marketValue: portfolioMarketValue,
+            compositionByHoldings,
+          };
+        })
+        .map(stats => deepObjectPickFields(stats, paramsNorm.fields));
     }),
     itShare()
   );
