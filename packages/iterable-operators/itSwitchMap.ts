@@ -1,3 +1,5 @@
+import { empty } from './empty.js';
+
 export { itSwitchMap };
 
 function itSwitchMap<TSourceVal, TInnerVal>(
@@ -48,15 +50,22 @@ function itSwitchMap<TSourceVal, TInnerVal>(
           }
 
           try {
-            do {
+            while (true) {
               if (stoppedByConsumer) {
                 break;
               }
-              const next = await currInnerIterator.next();
+              const innerIteratorToUse = currInnerIterator;
+              const next = await innerIteratorToUse.next();
               if (!next.done) {
                 return next;
               }
-            } while (!stoppedByConsumer && (await nextInnerIteratorPromise));
+              if (
+                stoppedByConsumer ||
+                (innerIteratorToUse === currInnerIterator && !(await nextInnerIteratorPromise))
+              ) {
+                break;
+              }
+            }
             return { done: true, value: undefined };
           } catch (err) {
             await sourceIterator.return?.();
@@ -83,7 +92,4 @@ function itSwitchMap<TSourceVal, TInnerVal>(
   });
 }
 
-const reusedEmptyIterator = {
-  next: async () => ({ done: true as const, value: undefined }),
-  return: async () => ({ done: true as const, value: undefined }),
-};
+const reusedEmptyIterator = empty()[Symbol.asyncIterator]();
