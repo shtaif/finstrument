@@ -11,9 +11,17 @@ import { PortfolioCompositionChangeModel } from './models/PortfolioCompositionCh
 
 export { sequelize, initDbSchema, pgSchemaName };
 
-const pgSchemaName = new URL(env.POSTGRES_DB_CONNECTION_URL).searchParams.get('schema') ?? 'public';
+const dbUrl = (() => {
+  const url = new URL(env.POSTGRES_DB_CONNECTION_URL);
+  if (env.RENDER && !url.searchParams.has('ssl')) {
+    url.searchParams.set('ssl', 'true'); // For some reason, not including `?ssl=true` with the conn string when it points to render.com's DB fails to connect with a "Error: The server does not support SSL connections"
+  }
+  return url;
+})();
 
-const sequelize = new Sequelize(env.POSTGRES_DB_CONNECTION_URL, {
+const pgSchemaName = dbUrl.searchParams.get('schema') ?? 'public';
+
+const sequelize = new Sequelize(dbUrl.toString(), {
   logging: env.DB_LOGGING ? console.log : undefined,
   schema: pgSchemaName,
   dialect: 'postgres',
