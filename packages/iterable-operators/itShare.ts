@@ -4,18 +4,17 @@ function itShare<TValue>(): (srcIterable: AsyncIterable<TValue>) => AsyncIterabl
   return srcIterable => {
     let sharedSourceIterator: AsyncIterator<TValue>;
     let prevSourceIteratorActiveTearDownPromise: undefined | Promise<unknown>;
-    let nextPromise: undefined | Promise<IteratorResult<TValue, undefined | void>>;
+    let nextPromise: undefined | Promise<IteratorResult<TValue, undefined>>;
     let activeSubIteratorsCount = 0;
 
     return {
       [Symbol.asyncIterator]() {
         let iteratorClosed = false;
+        const whenIteratorCloses = Promise.withResolvers<IteratorReturnResult<undefined>>();
 
         if (++activeSubIteratorsCount === 1) {
           sharedSourceIterator = srcIterable[Symbol.asyncIterator]();
         }
-
-        // TODO: Should wrap each iterator's returned promise such that it can be immediately early-resolved to a "done" result when the iterator gets early-closed?
 
         return {
           async next() {
@@ -28,7 +27,7 @@ function itShare<TValue>(): (srcIterable: AsyncIterable<TValue>) => AsyncIterabl
             nextPromise ??= sharedSourceIterator.next().finally(() => {
               nextPromise = undefined;
             });
-            return nextPromise;
+            return Promise.race([whenIteratorCloses.promise, nextPromise]);
           },
 
           async return() {
@@ -45,6 +44,7 @@ function itShare<TValue>(): (srcIterable: AsyncIterable<TValue>) => AsyncIterabl
                   }
                 })());
               }
+              whenIteratorCloses.resolve({ done: true, value: undefined });
             }
             return { done: true, value: undefined };
           },
