@@ -25,6 +25,7 @@ const sequelize = new Sequelize(dbUrl.toString(), {
   logging: env.DB_LOGGING ? console.log : undefined,
   schema: pgSchemaName,
   dialect: 'postgres',
+  ssl: true,
   pool: {},
   models: [
     UserModel,
