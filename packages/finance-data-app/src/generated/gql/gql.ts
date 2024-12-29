@@ -15,10 +15,10 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
 const documents = {
     "\n  mutation SetTradesMutation($input: SetTradesInput!) {\n    setTrades(input: $input) {\n      tradesAddedCount\n      tradesModifiedCount\n      tradesRemovedCount\n    }\n  }\n": types.SetTradesMutationDocument,
     "\n  subscription PositionDataSubscription {\n    positions {\n      type\n      data {\n        symbol\n        totalQuantity\n        breakEvenPrice\n        marketValue\n        priceData {\n          marketState\n          regularMarketTime\n          regularMarketPrice\n          currency\n        }\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.PositionDataSubscriptionDocument,
-    "\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n": types.CountryLocaleCurrencyQueryDocument,
     "\n  subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {\n    combinedPortfolioStats(currencyToCombineIn: $currencyToCombineIn) {\n      currencyCombinedBy\n      costBasis\n      marketValue\n      unrealizedPnl {\n        amount\n        fraction\n      }\n      compositionByHoldings {\n        symbol\n        portionOfPortfolioMarketValue\n      }\n    }\n  }\n": types.PortfolioStatsDataSubscriptionDocument,
     "\n  query LotsQuery($symbol: ID!) {\n    lots(filters: { symbols: [$symbol] }) {\n      id\n      openedAt\n    }\n  }\n": types.LotsQueryDocument,
     "\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n": types.LotDataSubscriptionDocument,
+    "\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n": types.CountryLocaleCurrencyQueryDocument,
 };
 
 /**
@@ -46,10 +46,6 @@ export function graphql(source: "\n  subscription PositionDataSubscription {\n  
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n"): (typeof documents)["\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n"];
-/**
- * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
- */
 export function graphql(source: "\n  subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {\n    combinedPortfolioStats(currencyToCombineIn: $currencyToCombineIn) {\n      currencyCombinedBy\n      costBasis\n      marketValue\n      unrealizedPnl {\n        amount\n        fraction\n      }\n      compositionByHoldings {\n        symbol\n        portionOfPortfolioMarketValue\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {\n    combinedPortfolioStats(currencyToCombineIn: $currencyToCombineIn) {\n      currencyCombinedBy\n      costBasis\n      marketValue\n      unrealizedPnl {\n        amount\n        fraction\n      }\n      compositionByHoldings {\n        symbol\n        portionOfPortfolioMarketValue\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
@@ -59,6 +55,10 @@ export function graphql(source: "\n  query LotsQuery($symbol: ID!) {\n    lots(f
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  subscription LotDataSubscription($ids: [ID!]!) {\n    lots(filters: { ids: $ids }) {\n      type\n      data {\n        id\n        originalQuantity\n        remainingQuantity\n        unrealizedPnl {\n          amount\n          percent\n        }\n      }\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n"): (typeof documents)["\n  query CountryLocaleCurrencyQuery($countryCode: ID!) {\n    countryLocale(countryCode: $countryCode) {\n      currencyCode\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Divider, Skeleton, Typography } from 'antd';
-import { Iterate } from 'react-async-iterable';
+import { Iterate as It } from 'react-async-iterable';
 import { type MaybeAsyncIterable } from 'iterable-operators';
 import { UnrealizedPnlDisplay } from '../../../common/UnrealizedPnlDisplay/index.tsx';
 import './style.css';
@@ -20,6 +20,7 @@ function MainStatsStrip(props: {
           amount: number;
           fraction: number;
         };
+        loading?: boolean;
       }
   >;
 }) {
@@ -31,9 +32,9 @@ function MainStatsStrip(props: {
         </div>
 
         <div className="mkt-value-content-line">
-          <Iterate value={props.data}>
+          <It value={props.data}>
             {next =>
-              next.pendingFirst || props.loading ? (
+              next.pendingFirst || next.value?.loading || props.loading ? (
                 <>
                   <Skeleton active title={false} paragraph={{ rows: 1, width: '100%' }} />
                 </>
@@ -52,7 +53,7 @@ function MainStatsStrip(props: {
                 </Typography.Text>
               )
             }
-          </Iterate>
+          </It>
         </div>
       </div>
 
@@ -64,7 +65,7 @@ function MainStatsStrip(props: {
         </div>
 
         <div className="unrealized-pnl-content-line">
-          <Iterate value={props.data}>
+          <It value={props.data}>
             {next =>
               next.pendingFirst || props.loading ? (
                 <>
@@ -79,7 +80,7 @@ function MainStatsStrip(props: {
                 />
               )
             }
-          </Iterate>
+          </It>
         </div>
       </div>
     </div>

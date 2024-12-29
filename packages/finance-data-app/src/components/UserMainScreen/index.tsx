@@ -1,16 +1,27 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useLocalStorage } from 'react-use';
 import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { Iterate, iterateFormatted } from 'react-async-iterable';
+import { Iterate as It, iterateFormatted } from 'react-async-iterable';
+import { useAsyncIterState } from 'react-async-iterators';
 import { pipe } from 'shared-utils';
-import { itCatch, itCombineLatest, itLazyDefer, itMap, itShare, itTap } from 'iterable-operators';
+import {
+  itCatch,
+  itCombineLatest,
+  itLazyDefer,
+  itMap,
+  itShare,
+  itSwitchMap,
+  itTap,
+  myIterableCleanupPatcher,
+} from 'iterable-operators';
 import { graphql, type DocumentType } from '../../generated/gql/index.ts';
 import { gqlClient, gqlWsClient } from '../../utils/gqlClient/index.ts';
+import { PositionsTable } from '../PositionsTable/index.tsx';
+import { getCurrentPortfolioCurrencySetting } from './utils/getCurrentPortfolioCurrencySetting.ts';
 import { MainStatsStrip } from './components/MainStatsStrip/index.tsx';
 import { CurrencySelect } from './components/CurrencySelect/index.tsx';
-import { PositionsTable } from '../PositionsTable/index.tsx';
 import { PositionDataErrorPanel } from './components/PositionDataErrorPanel/index.tsx';
 import { AccountMainMenu } from './components/AccountMainMenu/index.tsx';
 import { PositionDataRealTimeActivityStatus } from './components/PositionDataRealTimeActivityStatus/index.tsx';
@@ -27,54 +38,57 @@ function UserMainScreen() {
     number | undefined
   >('last_fetched_positions_count', undefined);
 
-  const [portfolioCurrencyStoredSetting, setPortfolioCurrencyStoredSetting] = useLocalStorage<
-    string | undefined
-  >('portfolio_currency', undefined);
+  const [portfolioCurrencySettingIterBase, setPortfolioCurrencySetting] =
+    useAsyncIterState<string>();
 
-  const portfolioCurrencySetting = useMemo(() => {
-    if (portfolioCurrencyStoredSetting) {
-      return portfolioCurrencyStoredSetting;
-    }
-    const localeCode = navigator.languages.at(0)?.split('-')[1];
-    if (!localeCode) {
-      return 'USD';
-    }
-    return (async () => {
-      const translatedCurrencyCode = (
-        await gqlClient.query({
-          variables: { countryCode: localeCode },
-          query: countryLocaleCurrencyQuery,
-        })
-      ).data.countryLocale?.currencyCode;
-      if (translatedCurrencyCode) {
-        return translatedCurrencyCode;
-      }
-      return 'USD';
-    })();
-  }, [portfolioCurrencyStoredSetting]);
+  const portfolioCurrencySettingIter = useMemo(() => {
+    const initialPortfolioCurrencySetting = getCurrentPortfolioCurrencySetting();
 
-  useEffect(() => {
-    if (!portfolioCurrencyStoredSetting) {
-      (async () => {
-        const currencyCode = await portfolioCurrencySetting;
-        setPortfolioCurrencyStoredSetting(currencyCode);
-      })();
-    }
-  }, [portfolioCurrencySetting]);
+    let currVal =
+      initialPortfolioCurrencySetting instanceof Promise
+        ? undefined
+        : initialPortfolioCurrencySetting;
 
-  const portfolioStatsIter = useMemo(
+    const iter = pipe(
+      portfolioCurrencySettingIterBase,
+      myIterableCleanupPatcher(async function* (source) {
+        if (initialPortfolioCurrencySetting instanceof Promise) {
+          currVal = await initialPortfolioCurrencySetting;
+        }
+        yield currVal!;
+        for await (const nextCurrency of source) {
+          currVal = nextCurrency;
+          window.localStorage.setItem('portfolio_currency', JSON.stringify(nextCurrency));
+          yield nextCurrency;
+        }
+      }),
+      itShare()
+    );
+
+    return Object.assign(iter, {
+      get currentValue() {
+        return currVal;
+      },
+    });
+  }, [portfolioCurrencySettingIterBase, setPortfolioCurrencySetting]);
+
+  const portfolioStatsIters = useMemo(
     () =>
       pipe(
-        itLazyDefer(async () => {
-          const currencyCode = await portfolioCurrencySetting;
-          return createPortfolioStatsIter({ currencyCode });
-        }),
+        portfolioCurrencySettingIter,
+        itMap(currencyCode => ({
+          statsInModifiedCurrency: createPortfolioStatsIter({ currencyCode }),
+        })),
         itShare()
       ),
-    [portfolioCurrencySetting]
+    []
   );
 
   const positionsIter = useMemo(() => {
+    const portfolioStatsIter = pipe(
+      portfolioStatsIters,
+      itSwitchMap(next => next.statsInModifiedCurrency)
+    );
     return pipe(
       itCombineLatest(createCombinedPositionsIter(), portfolioStatsIter),
       itMap(([nextPositionUpdate, nextPortfolioUpdate]) => {
@@ -111,7 +125,7 @@ function UserMainScreen() {
       }),
       itShare()
     );
-  }, [portfolioStatsIter]);
+  }, []);
 
   return (
     <div className="cmp-user-main-screen">
@@ -131,37 +145,43 @@ function UserMainScreen() {
         <PositionDataRealTimeActivityStatus input={positionsIter} />
 
         <div className="portfolio-top-strip">
-          <MainStatsStrip
-            className="portfolio-stats-area"
-            data={iterateFormatted(portfolioStatsIter, next =>
-              !next?.stats
-                ? undefined
-                : {
-                    currencyShownIn: next.stats.currencyCombinedBy,
-                    marketValue: next.stats.marketValue,
-                    unrealizedPnl: {
-                      amount: next.stats.unrealizedPnl.amount,
-                      fraction: next.stats.unrealizedPnl.fraction,
-                    },
-                  }
+          <It value={portfolioStatsIters}>
+            {next => (
+              <MainStatsStrip
+                className="portfolio-stats-area"
+                data={iterateFormatted(next.value?.statsInModifiedCurrency, next =>
+                  !next?.stats
+                    ? undefined
+                    : {
+                        currencyShownIn: next.stats.currencyCombinedBy,
+                        marketValue: next.stats.marketValue,
+                        unrealizedPnl: {
+                          amount: next.stats.unrealizedPnl.amount,
+                          fraction: next.stats.unrealizedPnl.fraction,
+                        },
+                      }
+                )}
+              />
             )}
-          />
+          </It>
 
           <div className="portfolio-options-area">
-            <CurrencySelect
-              currency={portfolioCurrencyStoredSetting}
-              onCurrencyChange={newCurrency => setPortfolioCurrencyStoredSetting(newCurrency)}
-            />
+            <It
+              value={portfolioCurrencySettingIter}
+              initialValue={portfolioCurrencySettingIter.currentValue}
+            >
+              {({ pendingFirst, value: portfolioCurrencyStoredSetting }) => (
+                <CurrencySelect
+                  loading={pendingFirst && !portfolioCurrencyStoredSetting}
+                  currency={portfolioCurrencyStoredSetting}
+                  onCurrencyChange={setPortfolioCurrencySetting}
+                />
+              )}
+            </It>
           </div>
         </div>
 
-        <Iterate value={positionsIter}>
-          {next =>
-            (next.error || next.value?.errors) && (
-              <PositionDataErrorPanel errors={next.error ? [next.error] : next.value?.errors} />
-            )
-          }
-        </Iterate>
+        <PositionDataErrorPanel errors={iterateFormatted(positionsIter, ({ errors }) => errors)} />
 
         <PositionsTable
           className="positions-table"
@@ -282,14 +302,6 @@ function createPortfolioStatsIter(params: { currencyCode: string }): AsyncIterab
   );
 }
 
-const countryLocaleCurrencyQuery = graphql(/* GraphQL */ `
-  query CountryLocaleCurrencyQuery($countryCode: ID!) {
-    countryLocale(countryCode: $countryCode) {
-      currencyCode
-    }
-  }
-`);
-
 const portfolioStatsDataSubscription = graphql(/* GraphQL */ `
   subscription PortfolioStatsDataSubscription($currencyToCombineIn: String!) {
     combinedPortfolioStats(currencyToCombineIn: $currencyToCombineIn) {
@@ -406,6 +418,57 @@ const lotDataSubscription = graphql(/* GraphQL */ `
 `);
 
 type LotDataSubscriptionResult = DocumentType<typeof lotDataSubscription>;
+
+// const renderate: {
+//   <TVal>(
+//     value: TVal,
+//     mapFn: (nextIterationState: IterationResult<TVal>) => React.ReactNode
+//   ): React.ReactNode;
+
+//   <TVal, TInitialVal = undefined>(
+//     value: TVal,
+//     initialValue: TInitialVal,
+//     mapFn: (nextIterationState: IterationResult<TVal, TInitialVal>) => React.ReactNode
+//   ): React.ReactNode;
+// } = <TVal, TInitialVal = undefined>(
+//   ...args:
+//     | [value: unknown, mapFn?: (nextIterationState: unknown) => React.ReactNode]
+//     | [
+//         value: unknown,
+//         initialValue: unknown,
+//         mapFn?: (nextIterationState: unknown) => React.ReactNode,
+//       ]
+// ): React.ReactNode => {
+//   let value: unknown;
+//   let initialValue: unknown;
+//   let mapFn: (nextIterationState: unknown) => React.ReactNode;
+
+//   value = args[0];
+
+//   if (args.length === 3) {
+//     initialValue = args[1];
+//   } else if (args.length === 2) {
+//     if (typeof args[1] === 'function') {
+//       mapFn = args[1] ?? (() => undefined);
+//     }
+//   }
+
+//   if (typeof args[1] === 'function') {
+//     initialValue = undefined;
+//     mapFn = (args[1] ?? (() => undefined)) as (nextIterationState: unknown) => React.ReactNode;
+//   } else {
+//     initialValue = args[1];
+//     if (typeof args[2] === 'function') {
+//       mapFn = args[2] ?? (() => undefined);
+//     }
+//   }
+
+//   return (
+//     <Iterate value={value} initialValue={initialValue}>
+//       {next => mapFn(next)}
+//     </Iterate>
+//   );
+// };
 
 // function useIterSourceExperiment() {
 //   type Item = {
