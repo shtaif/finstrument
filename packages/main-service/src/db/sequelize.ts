@@ -13,6 +13,7 @@ export { sequelize, initDbSchema, pgSchemaName };
 
 const dbUrl = (() => {
   const url = new URL(env.POSTGRES_DB_CONNECTION_URL);
+  console.log('___env___', env);
   if (env.RENDER && !url.searchParams.has('ssl')) {
     url.searchParams.set('ssl', 'true'); // For some reason, not including `?ssl=true` with the conn string when it points to render.com's DB fails to connect with a "Error: The server does not support SSL connections"
   }
