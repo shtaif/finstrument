@@ -49,11 +49,8 @@ function yahooMarketPricesIterable(params: {
         const marketDataLoader = new DataLoader<string, SymbolPriceData>(async symbols => {
           marketDataLoader.clearAll();
           return pipe(
-            await getSymbolsCurrentPrices({
-              signal: abortCtrl.signal,
-              symbols: symbols as string[],
-            }),
-            symbolMarketDatas => symbols.map(symbol => symbolMarketDatas[symbol])
+            await getSymbolsCurrentPrices({ symbols, signal: abortCtrl.signal }),
+            symbolMarketDatas => symbols.map(s => symbolMarketDatas[s])
           );
         });
 
@@ -108,9 +105,11 @@ function yahooMarketPricesIterable(params: {
                               yield {
                                 quoteSourceName: undefined,
                                 currency: undefined,
-                                marketState: undefined,
+                                marketState: 'REGULAR' as const,
                                 regularMarketTime: undefined,
                                 regularMarketPrice: 1,
+                                regularMarketChange: 0,
+                                regularMarketChangeRate: 0,
                               };
                             }
                           })();
@@ -125,25 +124,40 @@ function yahooMarketPricesIterable(params: {
 
                             if (
                               !origToCommonExData?.regularMarketPrice ||
-                              !commonToTargetExData?.regularMarketPrice
+                              !commonToTargetExData?.regularMarketPrice ||
+                              !origToCommonExData?.regularMarketChange ||
+                              !commonToTargetExData?.regularMarketChange
                             ) {
                               break;
                             }
+
+                            const regularMarketTime = pipe(
+                              Math.max(
+                                origToCommonExData.regularMarketTime?.getTime() ?? 0,
+                                commonToTargetExData.regularMarketTime?.getTime() ?? 0
+                              ),
+                              time => (time === 0 ? undefined : new Date(time))
+                            );
+
+                            const regularMarketPrice =
+                              origToCommonExData.regularMarketPrice *
+                              commonToTargetExData.regularMarketPrice;
+
+                            const regularMarketChange =
+                              origToCommonExData.regularMarketChange +
+                              commonToTargetExData.regularMarketChange;
+
+                            const regularMarketChangeRate =
+                              regularMarketChange / (regularMarketPrice - regularMarketChange);
 
                             yield {
                               quoteSourceName: commonToTargetExData.quoteSourceName,
                               marketState: commonToTargetExData.marketState,
                               currency: targetCurrency,
-                              regularMarketTime: pipe(
-                                Math.max(
-                                  origToCommonExData.regularMarketTime?.getTime() ?? 0,
-                                  commonToTargetExData.regularMarketTime?.getTime() ?? 0
-                                ),
-                                time => (time === 0 ? undefined : new Date(time))
-                              ),
-                              regularMarketPrice:
-                                origToCommonExData.regularMarketPrice *
-                                commonToTargetExData.regularMarketPrice,
+                              regularMarketTime,
+                              regularMarketPrice,
+                              regularMarketChange,
+                              regularMarketChangeRate,
                             };
                           }
                         })();
@@ -244,13 +258,11 @@ function yahooMarketPricesIterable(params: {
     itPairwise({} as SymbolPrices),
     itMap(([prevPrices, nowsPrices]) => {
       const changedOrInitialPrices = pickBy(nowsPrices!, (_, symbol) => {
-        const [nowsPriceTime, previousPriceTime, nowsPrice, previousPrice] = [
+        const [nowsPriceTime, previousPriceTime] = [
           nowsPrices[symbol]?.regularMarketTime?.getTime(),
           prevPrices[symbol]?.regularMarketTime?.getTime(),
-          nowsPrices[symbol]?.regularMarketPrice,
-          prevPrices[symbol]?.regularMarketPrice,
         ];
-        return nowsPriceTime !== previousPriceTime || nowsPrice !== previousPrice;
+        return nowsPriceTime !== previousPriceTime;
       });
       // TODO: Possibly, right now, the `prevPrices` prices from which the `changedFromLast` are calculated from are stateful and persisting so might be not up to date when there are some time gaps during consumption of this
       return {

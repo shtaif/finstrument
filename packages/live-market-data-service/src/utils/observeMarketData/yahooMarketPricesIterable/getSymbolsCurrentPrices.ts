@@ -1,77 +1,87 @@
 import { setTimeout } from 'node:timers/promises';
-import { pipe, objectFromEntriesTyped } from 'shared-utils';
+import { O } from 'ts-toolbelt';
 import yahooFinance from 'yahoo-finance2';
+import { type Quote as YahooFinanceQuote } from '../../../../node_modules/yahoo-finance2/dist/esm/src/modules/quote.js'; // Importing this in this manual fashion due to `yahoo-finance2` not making its functions' return types exported, which causes issues with TS on any attempt to reference or infer such types
 // import { env } from '../env.js';
 
 export { getSymbolsCurrentPrices, type SymbolPrices, type SymbolPriceData };
 
-async function getSymbolsCurrentPrices(params: {
-  symbols: string[];
+async function getSymbolsCurrentPrices<T extends string>(params: {
+  symbols: readonly T[];
   signal?: AbortSignal;
-}): Promise<SymbolPrices> {
-  const { symbols, signal: abortSignal } = params;
+}): Promise<SymbolPrices<T>> {
+  const { symbols, signal } = params;
 
   // if (env.MOCK_SYMBOLS_MARKET_DATA) {
-  //   return await getSymbolsCurrentPricesMock2({ symbols, signal: abortSignal });
+  //   return await getSymbolsCurrentPricesMock2({ symbols, signal });
   // }
 
-  const results = await getYahooFinanceQuotesAutoRecoveredFromCookieErrors({
+  const fetchedQuotes = await getYahooFinanceQuotesAutoRecoveredFromCookieErrors({
     symbols,
-    signal: abortSignal,
+    signal,
   });
 
-  return pipe(
-    [
-      ...symbols.map(symbol => [symbol, null]),
-      ...results.map(quote => [
-        quote.symbol,
-        {
-          quoteSourceName: quote.quoteSourceName,
-          marketState: quote.marketState,
-          currency: quote.currency,
-          regularMarketTime: quote.regularMarketTime,
-          regularMarketPrice: quote.regularMarketPrice,
-        },
-      ]),
-    ] as [string, SymbolPriceData][],
-    entries => objectFromEntriesTyped(entries)
-  );
+  return (() => {
+    const res: SymbolPrices = Object.create(null);
+    for (const s of symbols) {
+      res[s] = null;
+    }
+    for (const q of fetchedQuotes) {
+      res[q.symbol] = {
+        quoteSourceName: q.quoteSourceName,
+        marketState: q.marketState,
+        currency: q.currency,
+        regularMarketTime: q.regularMarketTime,
+        regularMarketPrice: q.regularMarketPrice,
+        regularMarketChange: q.regularMarketChange,
+        regularMarketChangeRate:
+          !q.regularMarketPrice || !q.regularMarketChange
+            ? undefined
+            : q.regularMarketChange / (q.regularMarketPrice - q.regularMarketChange),
+      };
+    }
+    return res;
+  })();
 }
 
 async function getYahooFinanceQuotesAutoRecoveredFromCookieErrors(
-  params: { symbols?: string[]; signal?: AbortSignal } = {}
-): Promise<QuoteDataFromYahooFinanceLibPickedProps[]> {
+  params: { symbols?: readonly string[]; signal?: AbortSignal } = {}
+): Promise<YahooFinanceQuotePickedProps[]> {
   const { symbols, signal } = params;
 
   if (!symbols?.length) {
     return [];
   }
 
-  let invalidCookieErrorRetriesDid = 0;
+  const quotes = await (async () => {
+    let invalidCookieErrorRetriesMade = 0;
 
-  const quotes: QuoteDataFromYahooFinanceLibPickedProps[] = await (async () => {
     while (true) {
       try {
         return await yahooFinance.quote(
-          symbols,
-          { fields: yahooFinanceQuotePickedFields },
-          { fetchOptions: { signal } }
+          symbols as string[],
+          { fields: yahooFinanceQuotePickedFields, return: 'array' },
+          { validateResult: true, fetchOptions: { signal } }
         );
       } catch (err: any) {
         // console.error(err);
 
-        if (err.message === 'Invalid Cookie' && invalidCookieErrorRetriesDid < 2) {
-          invalidCookieErrorRetriesDid++;
+        if (err.message === 'Invalid Cookie' && invalidCookieErrorRetriesMade < 2) {
+          invalidCookieErrorRetriesMade++;
           await setTimeout(1000, { signal });
           continue;
         }
 
         if (err.name === 'FailedYahooValidationError') {
-          return err.result.map((quote: QuoteDataFromYahooFinanceLibPickedProps) => ({
-            ...quote,
-            regularMarketTime: !quote.regularMarketTime
+          const quotes = err.result as O.Overwrite<
+            YahooFinanceQuotePickedProps,
+            { regularMarketTime?: number | undefined } // Patching the quote type here because for some reason, when delivered via `err.result` they have their `regularMarketTime` property as number instead of Date
+          >[];
+          return quotes.map(q => ({
+            ...q,
+            regularMarketTime: !q.regularMarketTime
               ? undefined
-              : new Date(quote.regularMarketTime * 1000),
+              : new Date(q.regularMarketTime * 1000),
           }));
         }
 
@@ -80,26 +90,31 @@ async function getYahooFinanceQuotesAutoRecoveredFromCookieErrors(
     }
   })();
 
-  invalidCookieErrorRetriesDid = 0;
-
-  return quotes.map(quote => ({
-    symbol: quote.symbol,
-    regularMarketPrice: quote.regularMarketPrice,
-    currency: quote.currency,
-    quoteSourceName: quote.quoteSourceName,
-    marketState: quote.marketState,
-    regularMarketTime: quote.regularMarketTime,
+  return quotes.map(q => ({
+    symbol: q.symbol,
+    quoteSourceName: q.quoteSourceName,
+    currency: q.currency,
+    marketState: q.marketState,
+    regularMarketTime: q.regularMarketTime,
+    regularMarketPrice: q.regularMarketPrice,
+    regularMarketChange: q.regularMarketChange,
   }));
 }
 
 const yahooFinanceQuotePickedFields = [
   'symbol' as const,
-  'regularMarketPrice' as const,
-  'currency' as const,
   'quoteSourceName' as const,
+  'currency' as const,
   'marketState' as const,
   'regularMarketTime' as const,
+  'regularMarketPrice' as const,
+  'regularMarketChange' as const,
 ];
+
+type YahooFinanceQuotePickedProps = Pick<
+  YahooFinanceQuote,
+  (typeof yahooFinanceQuotePickedFields)[number]
+>;
 
 type SymbolPrices<TSymbols extends string = string> = {
   [K in TSymbols]: SymbolPriceData;
@@ -108,17 +123,12 @@ type SymbolPrices<TSymbols extends string = string> = {
 type SymbolPriceData = null | {
   quoteSourceName: string | undefined;
   currency: string | undefined;
-  marketState: QuoteDataFromYahooFinanceLib['marketState'];
+  marketState: YahooFinanceQuote['marketState'];
   regularMarketTime: Date | undefined;
   regularMarketPrice: number | undefined;
+  regularMarketChange: number | undefined;
+  regularMarketChangeRate: number | undefined;
 };
-
-type QuoteDataFromYahooFinanceLibPickedProps = Pick<
-  QuoteDataFromYahooFinanceLib,
-  (typeof yahooFinanceQuotePickedFields)[number]
->;
-
-type QuoteDataFromYahooFinanceLib = Awaited<ReturnType<typeof yahooFinance.quote>>[number];
 
 // async function getSymbolsCurrentPricesMock(
 //   params: { symbols?: string[]; signal?: AbortSignal } = {}
