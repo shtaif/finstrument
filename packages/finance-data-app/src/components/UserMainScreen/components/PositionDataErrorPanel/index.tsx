@@ -1,8 +1,7 @@
 import React from 'react';
 import { Alert } from 'antd';
-import { useAsyncIter } from 'react-async-iterators';
+import { It, type MaybeAsyncIterable } from 'react-async-iterators';
 import { pipe } from 'shared-utils';
-import { type MaybeAsyncIterable } from 'iterable-operators';
 import './style.css';
 
 export { PositionDataErrorPanel };
@@ -13,27 +12,31 @@ function PositionDataErrorPanel(props: {
 }): React.ReactNode {
   const { className, errors } = props;
 
-  const nextErrors = useAsyncIter(errors);
-
-  const errorsNorm = pipe(
-    nextErrors.error ?? nextErrors.value ?? nextErrors.value,
-    errors => (!errors ? [] : errors),
-    errors => (Array.isArray(errors) ? errors : [errors])
-  );
-
   return (
-    !!errorsNorm.length && (
-      <div className={`cmp-position-data-error-panel ${className ?? ''}`}>
-        {errorsNorm.map((err, i) => (
-          <Alert
-            className="alert-item"
-            key={i}
-            type="error"
-            showIcon
-            message={<>Error: {err.message} </>}
-          />
-        ))}
-      </div>
-    )
+    <It value={errors}>
+      {({ value: errors, error: sourceError }) =>
+        pipe(
+          sourceError ? sourceError : errors,
+          errors => (Array.isArray(errors) ? errors : [errors]),
+          errors => errors.filter(Boolean) as { message?: string }[],
+          errors =>
+            !errors.length ? (
+              <></>
+            ) : (
+              <div className={`cmp-position-data-error-panel ${className ?? ''}`}>
+                {errors.map((err: any, i) => (
+                  <Alert
+                    className="alert-item"
+                    key={i}
+                    type="error"
+                    showIcon
+                    message={<>Error: {err.message} </>}
+                  />
+                ))}
+              </div>
+            )
+        )
+      }
+    </It>
   );
 }

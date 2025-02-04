@@ -1,5 +1,5 @@
 import React from 'react';
-import { Iterate } from 'react-async-iterable';
+import { It } from 'react-async-iterators';
 import { DisconnectOutlined } from '@ant-design/icons';
 import { BlippingIndicator } from '../../../common/BlippingIndicator/index.tsx';
 import './style.css';
@@ -11,7 +11,7 @@ function PositionDataRealTimeActivityStatus(props: {
 }): React.ReactNode {
   return (
     <span className="cmp-position-data-real-time-activity-status">
-      <Iterate value={props.input}>
+      <It value={props.input}>
         {next =>
           next.error ? (
             <>
@@ -27,7 +27,7 @@ function PositionDataRealTimeActivityStatus(props: {
             </>
           )
         }
-      </Iterate>
+      </It>
     </span>
   );
 }

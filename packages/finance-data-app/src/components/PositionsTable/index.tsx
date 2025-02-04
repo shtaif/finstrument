@@ -1,12 +1,14 @@
-import React, { memo, type ReactElement } from 'react';
+import React, { memo, useMemo, type ReactElement } from 'react';
 import { range } from 'lodash-es';
 import { Table, Skeleton, Typography } from 'antd';
-import { type MaybeAsyncIterable } from 'iterable-operators';
-import { Iterate, iterateFormatted } from 'react-async-iterable';
-import { commonDecimalNumCurrencyFormat } from './utils/commonDecimalNumCurrencyFormat';
-import { SymbolNameTag } from './components/SymbolNameTag';
+import { of } from 'ix/Ix.asynciterable';
+import { pipe } from 'shared-utils';
+import { It, iterateFormatted, type MaybeAsyncIterable } from 'react-async-iterators';
+import { asyncIterChannelize } from '../../../../../../react-async-iterators/src/asyncIterChannelize/index.ts';
+import { commonDecimalNumCurrencyFormat } from './utils/commonDecimalNumCurrencyFormat.tsx';
+import { SymbolNameTag } from './components/SymbolNameTag/index.tsx';
 import { PositionSizeDisplay } from './components/PositionSizeDisplay/index.tsx';
-import { CurrentPriceDisplay } from './components/CurrentPriceDisplay';
+import { CurrentPriceDisplay } from './components/CurrentPriceDisplay/index.tsx';
 import { UnrealizedPnlDisplay } from '../common/UnrealizedPnlDisplay/index.tsx';
 import {
   PositionExpandedLots,
@@ -23,157 +25,203 @@ function PositionsTable(props: {
   style?: React.CSSProperties;
   loading?: boolean;
   loadingStatePlaceholderRowsCount?: number;
-  positions?: MaybeAsyncIterable<PositionRecord[]>;
+  positions: MaybeAsyncIterable<PositionRecord[]>;
 }): ReactElement {
   const {
     className = '',
     style,
     loading = false,
     loadingStatePlaceholderRowsCount = 3,
-    positions = [],
+    positions,
   } = props;
 
+  const splitPositionsIter = useMemo(
+    () =>
+      pipe(
+        Symbol.asyncIterator in positions ? positions : of(positions),
+        asyncIterChannelize({ key: p => p.symbol })
+      ),
+    [positions]
+  );
+
   return (
-    <Iterate value={positions}>
-      {({ pendingFirst: pendingFirstPositions, value: nextPositions }) => {
-        const isLoadingFirstData = pendingFirstPositions && !nextPositions?.length;
+    <It value={splitPositionsIter}>
+      {({ pendingFirst: pendingFirstPositions, value: nextPositions = [] }) => {
+        const dataSource =
+          loading || (pendingFirstPositions && !nextPositions?.length)
+            ? range(loadingStatePlaceholderRowsCount).map((_, idx) => ({
+                isLoading: true as const,
+                idx,
+              }))
+            : nextPositions.map(({ /*key,*/ values }) => ({
+                isLoading: false as const,
+                values,
+              }));
 
         return (
-          <Table
+          <Table<(typeof dataSource)[number]>
             className={`cmp-positions-table ${className}`}
             style={style}
             size="small"
-            rowKey={h => h.symbol}
             pagination={false}
-            dataSource={
-              (isLoadingFirstData || loading
-                ? range(loadingStatePlaceholderRowsCount).map((_, i) => ({ symbol: `${i}` }))
-                : nextPositions) as PositionRecord[]
-            }
+            rowKey={item => (item.isLoading ? `${item.idx}` : item.values.value.current.symbol)}
+            dataSource={dataSource}
             expandable={{
               expandedRowClassName: () => 'comprising-lots-container',
               rowExpandable: () => true,
-              expandedRowRender: ({ comprisingLots, currency }, _idx, _indent, expanded) =>
+              expandedRowRender: (item, _i, _indent, expanded) =>
                 expanded &&
-                comprisingLots && (
-                  <PositionExpandedLots
-                    lots={(() => {
-                      const [iterFn, deps] = comprisingLots;
-                      return [
-                        () =>
-                          iterateFormatted(iterFn(), lots =>
-                            lots.map(lot => ({ ...lot, currency }))
-                          ),
-                        deps,
-                      ];
-                    })()}
-                  />
-                ),
+                (item.isLoading ? (
+                  <CellSkeleton />
+                ) : (
+                  <It value={item.values}>
+                    {({ value: p }) => (
+                      <PositionExpandedLots
+                        lots={
+                          !p.comprisingLots
+                            ? undefined
+                            : (() => {
+                                const [iterFn, deps] = p.comprisingLots;
+                                return [
+                                  () =>
+                                    iterateFormatted(iterFn(), lots =>
+                                      lots.map(lot => ({ ...lot, currency: p.currency }))
+                                    ),
+                                  deps,
+                                ];
+                              })()
+                        }
+                      />
+                    )}
+                  </It>
+                )),
             }}
           >
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Symbol</span>}
               className="symbol-cell"
-              render={(_, pos) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
                 ) : (
-                  <SymbolNameTag symbol={pos.symbol} />
+                  <SymbolNameTag symbol={item.values.value.current.symbol} />
                 )
               }
             />
 
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Current Price</span>}
               className="current-price-cell"
-              render={(_, { marketPrice, currency, marketState, timeOfPrice }) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
                 ) : (
-                  <CurrentPriceDisplay
-                    marketPrice={marketPrice}
-                    currency={currency}
-                    marketState={marketState}
-                    timeOfPrice={timeOfPrice}
-                  />
+                  <It>
+                    {iterateFormatted(item.values, p => (
+                      <CurrentPriceDisplay
+                        marketPrice={p.marketPrice}
+                        currency={p.currency}
+                        marketState={p.marketState}
+                        timeOfPrice={p.timeOfPrice}
+                      />
+                    ))}
+                  </It>
                 )
               }
             />
 
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Break-even Price</span>}
               className="break-even-price-cell"
-              render={(_, pos) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
-                ) : pos.breakEvenPrice === undefined ? (
-                  '-'
                 ) : (
-                  <>{commonDecimalNumCurrencyFormat(pos.breakEvenPrice, pos.currency)}</>
+                  <It value={item.values}>
+                    {({ value: p }) =>
+                      p.breakEvenPrice === undefined ? (
+                        <>-</>
+                      ) : (
+                        <>{commonDecimalNumCurrencyFormat(p.breakEvenPrice, p.currency)}</>
+                      )
+                    }
+                  </It>
                 )
               }
             />
 
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Position</span>}
               className="quantity-cell"
-              render={(_, { quantity, marketValue, currency }) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
                 ) : (
-                  <PositionSizeDisplay
-                    quantity={quantity}
-                    marketValue={marketValue}
-                    currency={currency}
-                  />
+                  <It>
+                    {iterateFormatted(item.values, p => (
+                      <PositionSizeDisplay
+                        quantity={p.quantity}
+                        marketValue={p.marketValue}
+                        currency={p.currency}
+                      />
+                    ))}
+                  </It>
                 )
               }
             />
 
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Unrealized P&L</span>}
               className="unrealized-pnl-cell"
-              render={(_, pos) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
                 ) : (
-                  <UnrealizedPnlDisplay
-                    className="unrealized-pnl-display"
-                    unrealizedPnlAmount={pos.unrealizedPnl?.amount}
-                    unrealizedPnlFraction={
-                      !pos.unrealizedPnl?.percent ? undefined : pos.unrealizedPnl.percent / 100
-                    }
-                    currency={pos.currency}
-                  />
+                  <It value={item.values}>
+                    {({ value: p }) => (
+                      <UnrealizedPnlDisplay
+                        className="unrealized-pnl-display"
+                        unrealizedPnlAmount={p.unrealizedPnl?.amount}
+                        unrealizedPnlFraction={
+                          !p.unrealizedPnl?.percent ? undefined : p.unrealizedPnl.percent / 100
+                        }
+                        currency={p.currency}
+                      />
+                    )}
+                  </It>
                 )
               }
             />
 
-            <Column<PositionRecord>
+            <Column<(typeof dataSource)[number]>
               title={<span className="col-header">Portfolio portion</span>}
               className="portfolio-portion-cell"
-              render={(_, pos) =>
-                isLoadingFirstData || loading ? (
+              render={(_, item) =>
+                item.isLoading ? (
                   <CellSkeleton />
                 ) : (
-                  <Typography.Text className="portion">
-                    {!pos.portfolioValuePortion ? (
-                      <>-</>
-                    ) : (
-                      pos.portfolioValuePortion.toLocaleString(undefined, {
-                        style: 'percent',
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })
+                  <It value={item.values}>
+                    {({ value: p }) => (
+                      <Typography.Text className="portion">
+                        {!p.portfolioValuePortion ? (
+                          <>-</>
+                        ) : (
+                          p.portfolioValuePortion.toLocaleString(undefined, {
+                            style: 'percent',
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })
+                        )}
+                      </Typography.Text>
                     )}
-                  </Typography.Text>
+                  </It>
                 )
               }
             />
           </Table>
         );
       }}
-    </Iterate>
+    </It>
   );
 }
 

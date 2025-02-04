@@ -1,10 +1,9 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useLocalStorage } from 'react-use';
 import { keyBy } from 'lodash-es';
 import { print as gqlPrint, type GraphQLError } from 'graphql';
 // import { useQuery, useSubscription } from '@apollo/client';
-import { Iterate as It, iterateFormatted } from 'react-async-iterable';
-import { useAsyncIterState } from 'react-async-iterators';
+import { useAsyncIterState, It, iterateFormatted } from 'react-async-iterators';
 import { pipe } from 'shared-utils';
 import {
   itCatch,
@@ -49,7 +48,7 @@ function UserMainScreen() {
         ? undefined
         : initialPortfolioCurrencySetting;
 
-    const iter = pipe(
+    return pipe(
       portfolioCurrencySettingIterBase,
       myIterableCleanupPatcher(async function* (source) {
         if (initialPortfolioCurrencySetting instanceof Promise) {
@@ -62,14 +61,14 @@ function UserMainScreen() {
           yield nextCurrency;
         }
       }),
-      itShare()
+      itShare(),
+      $ =>
+        Object.assign($, {
+          get value() {
+            return !currVal ? undefined : { current: currVal };
+          },
+        })
     );
-
-    return Object.assign(iter, {
-      get currentValue() {
-        return currVal;
-      },
-    });
   }, [portfolioCurrencySettingIterBase, setPortfolioCurrencySetting]);
 
   const portfolioStatsIters = useMemo(
@@ -131,9 +130,9 @@ function UserMainScreen() {
     <div className="cmp-user-main-screen">
       <>{serverConnectionErrorNotification.placement}</>
 
-      <div>
+      <header>
         <AccountMainMenu />
-      </div>
+      </header>
 
       <UploadTrades
         className="upload-trades"
@@ -144,7 +143,7 @@ function UserMainScreen() {
       <div>
         <PositionDataRealTimeActivityStatus input={positionsIter} />
 
-        <div className="portfolio-top-strip">
+        <section className="portfolio-top-strip">
           <It value={portfolioStatsIters}>
             {next => (
               <MainStatsStrip
@@ -166,22 +165,19 @@ function UserMainScreen() {
           </It>
 
           <div className="portfolio-options-area">
-            <It
-              value={portfolioCurrencySettingIter}
-              initialValue={portfolioCurrencySettingIter.currentValue}
-            >
-              {({ pendingFirst, value: portfolioCurrencyStoredSetting }) => (
+            <It value={portfolioCurrencySettingIter}>
+              {next => (
                 <CurrencySelect
-                  loading={pendingFirst && !portfolioCurrencyStoredSetting}
-                  currency={portfolioCurrencyStoredSetting}
+                  loading={next.pendingFirst}
+                  currency={next.value}
                   onCurrencyChange={setPortfolioCurrencySetting}
                 />
               )}
             </It>
           </div>
-        </div>
+        </section>
 
-        <PositionDataErrorPanel errors={iterateFormatted(positionsIter, ({ errors }) => errors)} />
+        <PositionDataErrorPanel errors={iterateFormatted(positionsIter, p => p.errors)} />
 
         <PositionsTable
           className="positions-table"
@@ -269,9 +265,9 @@ const positionDataSubscription = graphql(/* GraphQL */ `
         marketValue
         priceData {
           marketState
+          currency
           regularMarketTime
           regularMarketPrice
-          currency
         }
         unrealizedPnl {
           amount

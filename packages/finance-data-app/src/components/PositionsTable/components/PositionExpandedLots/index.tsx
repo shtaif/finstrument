@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, type DependencyList } from 'react';
 import { range } from 'lodash-es';
 import { Skeleton } from 'antd';
-import { type MaybeAsyncIterable } from 'iterable-operators';
-import { Iterate } from 'react-async-iterable';
+import { It, type MaybeAsyncIterable } from 'react-async-iterators';
 import { LotItem, type LotItemProps } from './LotItem/index.tsx';
 import './style.css';
 
@@ -16,15 +15,17 @@ export {
 function PositionExpandedLots(props: PositionExpandedLotsProps): React.ReactElement {
   const { lots } = props;
 
-  const resolvedExpandedPositions = useMemo(() => lots[0](), lots[1]);
+  const [fn, deps] = lots ?? [() => undefined, []];
+
+  const resolvedExpandedPositions = useMemo(() => fn(), deps);
 
   return (
     <div className="cmp-position-exapnded-lots">
-      <Iterate value={resolvedExpandedPositions} initialValue={[] as LotItem[]}>
+      <It value={resolvedExpandedPositions} initialValue={[] as LotItem[]}>
         {({ value, pendingFirst }) =>
           pendingFirst
             ? range(2).map(i => <Skeleton key={i} active title={false} paragraph={{ rows: 4 }} />)
-            : value.map(lot => (
+            : value?.map(lot => (
                 <LotItem
                   className="lot-item"
                   key={lot.id}
@@ -36,15 +37,15 @@ function PositionExpandedLots(props: PositionExpandedLotsProps): React.ReactElem
                 />
               ))
         }
-      </Iterate>
+      </It>
     </div>
   );
 }
 
 type PositionExpandedLotsProps = {
-  lots: InputLotsFnWithDeps;
+  lots?: InputLotsFnWithDeps;
 };
 
-type InputLotsFnWithDeps = [fn: () => MaybeAsyncIterable<LotItem[]>, deps: unknown[]];
+type InputLotsFnWithDeps = [fn: () => MaybeAsyncIterable<LotItem[]>, deps: DependencyList];
 
 type LotItem = LotItemProps & { id: string };
