@@ -151,6 +151,8 @@ export type InstrumentMarketData = {
   __typename?: 'InstrumentMarketData';
   currency?: Maybe<Scalars['String']['output']>;
   marketState: HoldingStatsMarketState;
+  regularMarketChange: Scalars['Float']['output'];
+  regularMarketChangeRate: Scalars['Float']['output'];
   regularMarketPrice: Scalars['Float']['output'];
   regularMarketTime: Scalars['DateTime']['output'];
 };
@@ -728,6 +730,8 @@ export type InstrumentInfoResolvers<ContextType = AppGqlContextValue, ParentType
 export type InstrumentMarketDataResolvers<ContextType = AppGqlContextValue, ParentType extends ResolversParentTypes['InstrumentMarketData'] = ResolversParentTypes['InstrumentMarketData']> = {
   currency?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   marketState?: Resolver<ResolversTypes['HoldingStatsMarketState'], ParentType, ContextType>;
+  regularMarketChange?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  regularMarketChangeRate?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   regularMarketPrice?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
   regularMarketTime?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;

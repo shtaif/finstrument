@@ -57,7 +57,7 @@ function iterateMarketDataServiceDataStream(params: {
               return;
             }
             if (process.versions.bun) {
-              ws.close(); // At time of writing Bun's WS implementation was seen to have some weird/inconsistent behavior regarding immediately closing an initiated websocket connection before it was fully established (seemed to remain stuck on readyState = 2, never switcing to 3 and never consequently firing the 'closed' event), so this here is an optimistic less-sophisticated implementation for it
+              ws.close(); // At time of writing, Bun's WS implementation was seen to have some weird/inconsistent behavior regarding immediately closing an initiated websocket connection before it was fully established (seemed to remain stuck on readyState = 2, never switcing to 3 and never consequently firing the 'closed' event), so this here is an optimistic less-sophisticated implementation for it
               return;
             }
             const readyStateBeforeClose = ws.readyState;
@@ -111,6 +111,8 @@ const updatedSymbolPriceMapSchema = z.record(
       marketState: z.enum(['REGULAR', 'CLOSED', 'PRE', 'PREPRE', 'POST', 'POSTPOST']),
       regularMarketTime: z.coerce.date(),
       regularMarketPrice: z.number().positive(),
+      regularMarketChange: z.number(),
+      regularMarketChangeRate: z.number(),
     })
     .nullable()
 );
