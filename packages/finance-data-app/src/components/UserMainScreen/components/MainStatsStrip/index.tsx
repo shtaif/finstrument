@@ -1,7 +1,6 @@
 import React from 'react';
 import { Divider, Skeleton, Typography } from 'antd';
-import { Iterate as It } from 'react-async-iterable';
-import { type MaybeAsyncIterable } from 'iterable-operators';
+import { It, type MaybeAsyncIterable } from 'react-async-iterators';
 import { UnrealizedPnlDisplay } from '../../../common/UnrealizedPnlDisplay/index.tsx';
 import './style.css';
 
