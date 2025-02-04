@@ -10,7 +10,6 @@ import {
   itMap,
   itPairwise,
   itShare,
-  itStartWith,
   itSwitchMap,
   itTakeUntil,
   myIterableCleanupPatcher,
@@ -243,5 +242,7 @@ type SymbolMarketData = {
   marketState: string;
   regularMarketTime: string | Date;
   regularMarketPrice: number;
+  regularMarketChange: number;
+  regularMarketChangeRate: number;
   quoteSourceName?: string;
 };

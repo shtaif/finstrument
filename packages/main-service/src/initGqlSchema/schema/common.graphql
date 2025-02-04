@@ -22,6 +22,8 @@ type InstrumentMarketData {
   marketState: HoldingStatsMarketState!
   regularMarketTime: DateTime!
   regularMarketPrice: Float!
+  regularMarketChange: Float!
+  regularMarketChangeRate: Float!
 }
 
 enum HoldingStatsMarketState {

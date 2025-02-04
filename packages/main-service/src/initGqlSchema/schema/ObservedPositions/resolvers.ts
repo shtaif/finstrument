@@ -57,6 +57,8 @@ const resolvers = {
                   marketState: !!fields?.marketState,
                   regularMarketTime: !!fields?.regularMarketTime,
                   regularMarketPrice: !!fields?.regularMarketPrice,
+                  regularMarketChange: !!fields?.regularMarketChange,
+                  regularMarketChangeRate: !!fields?.regularMarketChangeRate,
                 })),
                 marketValue: !!requestedFields.data?.subFields.marketValue,
                 pnl: pipe(requestedFields.data?.subFields.unrealizedPnl?.subFields, fields => ({
@@ -72,10 +74,10 @@ const resolvers = {
             },
           }),
           itMap(updates =>
-            updates.holdings.map(({ type, holding, priceData, marketValue, pnl }) => ({
+            updates.holdings.map(({ type, holding: pos, priceData, marketValue, pnl }) => ({
               type,
               data: {
-                ...holding,
+                ...pos,
                 priceData,
                 marketValue,
                 unrealizedPnl: !pnl

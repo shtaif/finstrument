@@ -113,8 +113,10 @@ function getLiveMarketData(params: {
     priceData =>
       priceData?.currency ||
       priceData?.marketState ||
+      priceData?.regularMarketTime ||
       priceData?.regularMarketPrice ||
-      priceData?.regularMarketTime
+      priceData?.regularMarketChange ||
+      priceData?.regularMarketChangeRate
   );
 
   const requestedSomeUnrealizedPnlFields = [
@@ -214,6 +216,8 @@ function getLiveMarketData(params: {
                 currency: priceUpdateForSymbol.currency,
                 regularMarketTime: priceUpdateForSymbol.regularMarketTime,
                 regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
+                regularMarketChange: priceUpdateForSymbol.regularMarketChange,
+                regularMarketChangeRate: priceUpdateForSymbol.regularMarketChangeRate,
               };
 
           const marketValue = (() => {
@@ -273,6 +277,8 @@ function getLiveMarketData(params: {
                 marketState: priceUpdateForSymbol.marketState,
                 regularMarketTime: priceUpdateForSymbol.regularMarketTime,
                 regularMarketPrice: priceUpdateForSymbol.regularMarketPrice,
+                regularMarketChange: priceUpdateForSymbol.regularMarketChange,
+                regularMarketChangeRate: priceUpdateForSymbol.regularMarketChangeRate,
               };
 
           const marketValue = (() => {
@@ -453,6 +459,8 @@ type LotsSelectableFields = {
     marketState?: boolean;
     regularMarketTime?: boolean;
     regularMarketPrice?: boolean;
+    regularMarketChange?: boolean;
+    regularMarketChangeRate?: boolean;
   };
   marketValue?: boolean;
   pnl?: {
@@ -487,6 +495,8 @@ type HoldingsSelectableFields = {
     marketState?: boolean;
     regularMarketTime?: boolean;
     regularMarketPrice?: boolean;
+    regularMarketChange?: boolean;
+    regularMarketChangeRate?: boolean;
   };
   marketValue?: boolean;
   pnl?: {
@@ -555,7 +565,12 @@ type LotMarketStatsUpdate<TTranslateCurrencies extends string = string> = {
 
 type InstrumentMarketPriceInfo = Pick<
   NonNullable<UpdatedSymbolPrice>,
-  'marketState' | 'currency' | 'regularMarketTime' | 'regularMarketPrice'
+  | 'marketState'
+  | 'currency'
+  | 'regularMarketTime'
+  | 'regularMarketPrice'
+  | 'regularMarketChange'
+  | 'regularMarketChangeRate'
 >;
 
 type PnlInfo<TTranslateCurrencies extends string> = {
